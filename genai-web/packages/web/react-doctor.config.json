@@ -1,0 +1,9 @@
+{
+  "ignore": {
+    "files": [
+      "src/components/ui/dads/**/*",
+      "src/components/ui/icons/**/*",
+      "src/features/use-case-builder/**/*"
+    ]
+  }
+}

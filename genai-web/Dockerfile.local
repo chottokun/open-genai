@@ -1,0 +1,22 @@
+# Open GENAI: 源内 Web をローカル開発サーバ(Vite)として起動するための Dockerfile
+FROM node:22.22.2-bookworm-slim
+
+WORKDIR /app
+
+# 依存解決に必要なファイルのみ先にコピーしてキャッシュを効かせる。
+# 元の .npmrc (min-release-age=7 / ignore-scripts=true) はこの時点では
+# コピーしないため、npm はデフォルト設定でインストールする。
+COPY package.json package-lock.json ./
+COPY packages/web/package.json packages/web/package.json
+COPY packages/cdk/package.json packages/cdk/package.json
+COPY packages/common/package.json packages/common/package.json
+COPY packages/types/package.json packages/types/package.json
+
+RUN npm install
+
+# 残りのソースをコピー（実行時は compose のバインドマウントで上書きされる）
+COPY . .
+
+EXPOSE 5173
+
+CMD ["npm", "run", "web:dev"]

@@ -1,0 +1,10 @@
+[tools]
+node = "22.22.2"
+npm = "11.11.0"
+pinact = "3.9.0"
+
+
+[tasks]
+patch = "npm version patch --no-tag"
+minor = "npm version minor --no-tag"
+major = "npm version major --no-tag"

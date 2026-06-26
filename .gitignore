@@ -1,0 +1,17 @@
+# --- 秘密情報・ローカル設定（ルート .env は公開しない） ---
+/.env
+
+# --- データベース / キャッシュ ---
+*.db
+**/__pycache__/
+*.pyc
+
+# --- Node ---
+**/node_modules/
+genai-web/packages/web/dist/
+
+# --- デジタル庁オリジナルの 源内 AI アプリ（未改変・別途 clone のため除外） ---
+/genai-ai-api/
+
+# --- その他 ---
+**/.DS_Store

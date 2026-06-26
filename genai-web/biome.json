@@ -1,0 +1,100 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.4.14/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
+  },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
+  "files": {
+    "includes": [
+      "packages/web/*.config.json",
+      "packages/web/*.config.ts",
+      "packages/web/src/**",
+      "packages/web/tests/**",
+      "packages/web/tests/*.ts",
+      "packages/web/tests/*.json",
+      "packages/types/src/**",
+      "packages/common/src/**",
+      "packages/cdk/env-parameters/**",
+      "packages/cdk/lib/**",
+      "packages/cdk/lambda/**",
+      "packages/cdk/test/**",
+      "packages/cdk/*.ts",
+      "packages/cdk/*.json"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentWidth": 2,
+    "indentStyle": "space",
+    "lineWidth": 100,
+    "attributePosition": "auto"
+  },
+  "javascript": {
+    "parser": {
+      "unsafeParameterDecoratorsEnabled": true
+    },
+    "formatter": {
+      "enabled": true,
+      "quoteStyle": "single",
+      "jsxQuoteStyle": "single",
+      "trailingCommas": "all",
+      "semicolons": "always",
+      "arrowParentheses": "always",
+      "quoteProperties": "asNeeded"
+    }
+  },
+  "json": {
+    "formatter": {
+      "lineWidth": 80
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "a11y": {
+        "useAriaPropsForRole": "off",
+        "useButtonType": "off",
+        "useMediaCaption": "off",
+        "useKeyWithClickEvents": "off",
+        "noLabelWithoutControl": "off",
+        "noStaticElementInteractions": "off",
+        "noSvgWithoutTitle": "off"
+      },
+      "correctness": {
+        "useExhaustiveDependencies": "off",
+        "useHookAtTopLevel": "off",
+        "noUnknownFunction": "off"
+      },
+      "complexity": {
+        "useLiteralKeys": "off",
+        "noUselessTernary": "off"
+      },
+      "style": {
+        "useSelfClosingElements": "off",
+        "useImportType": "off",
+        "useTemplate": "off",
+        "noNonNullAssertion": "off",
+        "noDescendingSpecificity": "off"
+      },
+      "suspicious": {
+        "noArrayIndexKey": "off",
+        "useIterableCallbackReturn": "off",
+        "noUselessEscapeInString": "off"
+      }
+    }
+  }
+}

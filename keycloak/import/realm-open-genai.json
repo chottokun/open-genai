@@ -1,0 +1,105 @@
+{
+  "realm": "open-genai",
+  "enabled": true,
+  "displayName": "Open GENAI",
+  "loginTheme": "keycloak",
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "groups": [
+    { "name": "SystemAdminGroup" },
+    { "name": "TeamAdminGroup" },
+    { "name": "UserGroup" }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "admin@example.com",
+      "firstName": "管理",
+      "lastName": "者",
+      "credentials": [
+        { "type": "password", "value": "password", "temporary": false }
+      ],
+      "groups": ["/SystemAdminGroup"]
+    },
+    {
+      "username": "user",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "user@example.com",
+      "firstName": "一般",
+      "lastName": "ユーザー",
+      "credentials": [
+        { "type": "password", "value": "password", "temporary": false }
+      ],
+      "groups": ["/UserGroup"]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "http://localhost:8000/auth/saml/metadata",
+      "name": "Open GENAI SP",
+      "description": "Open GENAI backend (SAML Service Provider)",
+      "protocol": "saml",
+      "enabled": true,
+      "fullScopeAllowed": true,
+      "frontchannelLogout": true,
+      "redirectUris": [
+        "http://localhost:8000/auth/saml/acs",
+        "http://localhost:8000/*"
+      ],
+      "attributes": {
+        "saml.assertion.signature": "true",
+        "saml.server.signature": "true",
+        "saml.client.signature": "false",
+        "saml.encrypt": "false",
+        "saml.authnstatement": "true",
+        "saml.force.post.binding": "true",
+        "saml_name_id_format": "email",
+        "saml_assertion_consumer_url_post": "http://localhost:8000/auth/saml/acs",
+        "saml_single_logout_service_url_redirect": "http://localhost:8000/auth/saml/sls",
+        "saml_signature_algorithm": "RSA_SHA256"
+      },
+      "protocolMappers": [
+        {
+          "name": "email",
+          "protocol": "saml",
+          "protocolMapper": "saml-user-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "email",
+            "attribute.name": "email",
+            "attribute.nameformat": "Basic",
+            "friendly.name": "email"
+          }
+        },
+        {
+          "name": "name",
+          "protocol": "saml",
+          "protocolMapper": "saml-user-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "username",
+            "attribute.name": "name",
+            "attribute.nameformat": "Basic",
+            "friendly.name": "name"
+          }
+        },
+        {
+          "name": "groups",
+          "protocol": "saml",
+          "protocolMapper": "saml-group-membership-mapper",
+          "consentRequired": false,
+          "config": {
+            "attribute.name": "groups",
+            "attribute.nameformat": "Basic",
+            "friendly.name": "groups",
+            "single": "true",
+            "full.path": "false"
+          }
+        }
+      ]
+    }
+  ]
+}

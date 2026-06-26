@@ -1,0 +1,13 @@
+**/.DS_Store
+node_modules/
+cdk.out/
+/*/dist/**
+ToDo.md
+!.gitkeep
+.env
+security-report/
+
+
+# MkDocs documentation
+site*/
+.cache

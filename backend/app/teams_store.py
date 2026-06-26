@@ -1,0 +1,461 @@
+"""チーム / メンバー / AI アプリ(exApp) の永続化レイヤ (SQLite)。
+
+クラウド版 源内 は DynamoDB + Cognito グループで管理するが、
+Open GENAI ではマネージドサービスに依存せず SQLite で完結させる。
+
+- 権限グループ(SystemAdminGroup 等) は Keycloak(SAML) 由来
+- チーム単位の管理権限は team_users.isAdmin で表現
+- 共通チーム(COMMON_TEAM_ID) のアプリは全認証済みユーザーが利用可能
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import sqlite3
+import threading
+import time
+import uuid
+from typing import Any
+
+DB_PATH = os.environ.get("TEAMS_DB_PATH", "/data/open-genai-teams.db")
+
+COMMON_TEAM_ID = "00000000-0000-0000-0000-000000000000"
+
+_lock = threading.Lock()
+
+
+def _now() -> str:
+    # フロントは createdDate/updatedDate を数値(ms)として扱うためエポック(ms)文字列で返す
+    return str(int(time.time() * 1000))
+
+
+def _connect() -> sqlite3.Connection:
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+# ---------------------------------------------------------------------------
+# 初期化 + シード
+# ---------------------------------------------------------------------------
+def init_db(seed_exapps: list[dict[str, Any]] | None = None) -> None:
+    with _lock, _connect() as conn:
+        conn.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS teams (
+                teamId TEXT PRIMARY KEY,
+                teamName TEXT NOT NULL,
+                createdDate TEXT NOT NULL,
+                updatedDate TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS team_users (
+                teamId TEXT NOT NULL,
+                userId TEXT NOT NULL,
+                username TEXT NOT NULL,
+                isAdmin INTEGER NOT NULL DEFAULT 0,
+                createdDate TEXT NOT NULL,
+                updatedDate TEXT NOT NULL,
+                PRIMARY KEY (teamId, userId)
+            );
+
+            CREATE TABLE IF NOT EXISTS exapps (
+                exAppId TEXT PRIMARY KEY,
+                teamId TEXT NOT NULL,
+                exAppName TEXT NOT NULL,
+                endpoint TEXT NOT NULL DEFAULT '',
+                apiKey TEXT NOT NULL DEFAULT '',
+                config TEXT NOT NULL DEFAULT '',
+                placeholder TEXT NOT NULL DEFAULT '',
+                systemPrompt TEXT,
+                systemPromptKeyName TEXT,
+                description TEXT NOT NULL DEFAULT '',
+                howToUse TEXT NOT NULL DEFAULT '',
+                copyable INTEGER NOT NULL DEFAULT 0,
+                status TEXT NOT NULL DEFAULT 'draft',
+                createdDate TEXT NOT NULL,
+                updatedDate TEXT NOT NULL
+            );
+            """
+        )
+        # 共通チーム
+        row = conn.execute(
+            "SELECT teamId FROM teams WHERE teamId = ?", (COMMON_TEAM_ID,)
+        ).fetchone()
+        if not row:
+            now = _now()
+            conn.execute(
+                "INSERT INTO teams (teamId, teamName, createdDate, updatedDate)"
+                " VALUES (?, ?, ?, ?)",
+                (COMMON_TEAM_ID, "共通アプリ", now, now),
+            )
+
+    # 共通チームに既定アプリ(RAG 等)をシード
+    for app in seed_exapps or []:
+        upsert_seed_exapp(app)
+
+
+def upsert_seed_exapp(app: dict[str, Any]) -> None:
+    """固定 exAppId の既定アプリを冪等に登録する（RAG など）。"""
+    with _lock, _connect() as conn:
+        exists = conn.execute(
+            "SELECT exAppId FROM exapps WHERE exAppId = ?", (app["exAppId"],)
+        ).fetchone()
+        if exists:
+            return
+        now = _now()
+        conn.execute(
+            "INSERT INTO exapps (exAppId, teamId, exAppName, endpoint, apiKey, config,"
+            " placeholder, systemPrompt, systemPromptKeyName, description, howToUse,"
+            " copyable, status, createdDate, updatedDate)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (
+                app["exAppId"],
+                app.get("teamId", COMMON_TEAM_ID),
+                app.get("exAppName", ""),
+                app.get("endpoint", ""),
+                app.get("apiKey", ""),
+                app.get("config", ""),
+                app.get("placeholder", ""),
+                app.get("systemPrompt"),
+                app.get("systemPromptKeyName"),
+                app.get("description", ""),
+                app.get("howToUse", ""),
+                1 if app.get("copyable") else 0,
+                app.get("status", "published"),
+                now,
+                now,
+            ),
+        )
+
+
+# ---------------------------------------------------------------------------
+# Team
+# ---------------------------------------------------------------------------
+def _row_to_team(r: sqlite3.Row) -> dict[str, Any]:
+    return {
+        "teamId": r["teamId"],
+        "teamName": r["teamName"],
+        "createdDate": r["createdDate"],
+        "updatedDate": r["updatedDate"],
+    }
+
+
+def list_teams() -> list[dict[str, Any]]:
+    with _lock, _connect() as conn:
+        rows = conn.execute(
+            "SELECT * FROM teams ORDER BY createdDate ASC"
+        ).fetchall()
+    return [_row_to_team(r) for r in rows]
+
+
+def list_teams_for_admin(user_id: str) -> list[dict[str, Any]]:
+    with _lock, _connect() as conn:
+        rows = conn.execute(
+            "SELECT t.* FROM teams t"
+            " JOIN team_users u ON t.teamId = u.teamId"
+            " WHERE u.userId = ? AND u.isAdmin = 1"
+            " ORDER BY t.createdDate ASC",
+            (user_id,),
+        ).fetchall()
+    return [_row_to_team(r) for r in rows]
+
+
+def get_team(team_id: str) -> dict[str, Any] | None:
+    with _lock, _connect() as conn:
+        r = conn.execute(
+            "SELECT * FROM teams WHERE teamId = ?", (team_id,)
+        ).fetchone()
+    return _row_to_team(r) if r else None
+
+
+def create_team(team_name: str, admin_email: str) -> dict[str, Any]:
+    team_id = str(uuid.uuid4())
+    now = _now()
+    with _lock, _connect() as conn:
+        conn.execute(
+            "INSERT INTO teams (teamId, teamName, createdDate, updatedDate)"
+            " VALUES (?, ?, ?, ?)",
+            (team_id, team_name, now, now),
+        )
+        conn.execute(
+            "INSERT INTO team_users (teamId, userId, username, isAdmin, createdDate, updatedDate)"
+            " VALUES (?, ?, ?, 1, ?, ?)",
+            (team_id, admin_email, admin_email, now, now),
+        )
+        team = conn.execute(
+            "SELECT * FROM teams WHERE teamId = ?", (team_id,)
+        ).fetchone()
+        admin_user = conn.execute(
+            "SELECT * FROM team_users WHERE teamId = ? AND userId = ?",
+            (team_id, admin_email),
+        ).fetchone()
+    result = _row_to_team(team)
+    result["teamUser"] = _row_to_team_user(admin_user)
+    return result
+
+
+def update_team(team_id: str, team_name: str) -> dict[str, Any] | None:
+    with _lock, _connect() as conn:
+        conn.execute(
+            "UPDATE teams SET teamName = ?, updatedDate = ? WHERE teamId = ?",
+            (team_name, _now(), team_id),
+        )
+        r = conn.execute(
+            "SELECT * FROM teams WHERE teamId = ?", (team_id,)
+        ).fetchone()
+    return _row_to_team(r) if r else None
+
+
+def delete_team(team_id: str) -> None:
+    with _lock, _connect() as conn:
+        conn.execute("DELETE FROM exapps WHERE teamId = ?", (team_id,))
+        conn.execute("DELETE FROM team_users WHERE teamId = ?", (team_id,))
+        conn.execute("DELETE FROM teams WHERE teamId = ?", (team_id,))
+
+
+# ---------------------------------------------------------------------------
+# Team users (members)
+# ---------------------------------------------------------------------------
+def _row_to_team_user(r: sqlite3.Row) -> dict[str, Any]:
+    return {
+        "teamId": r["teamId"],
+        "userId": r["userId"],
+        "username": r["username"],
+        "isAdmin": bool(r["isAdmin"]),
+        "createdDate": r["createdDate"],
+        "updatedDate": r["updatedDate"],
+    }
+
+
+def list_team_users(team_id: str) -> list[dict[str, Any]]:
+    with _lock, _connect() as conn:
+        rows = conn.execute(
+            "SELECT * FROM team_users WHERE teamId = ? ORDER BY createdDate ASC",
+            (team_id,),
+        ).fetchall()
+    return [_row_to_team_user(r) for r in rows]
+
+
+def get_team_user(team_id: str, user_id: str) -> dict[str, Any] | None:
+    with _lock, _connect() as conn:
+        r = conn.execute(
+            "SELECT * FROM team_users WHERE teamId = ? AND userId = ?",
+            (team_id, user_id),
+        ).fetchone()
+    return _row_to_team_user(r) if r else None
+
+
+def create_team_user(team_id: str, email: str, is_admin: bool) -> dict[str, Any]:
+    now = _now()
+    with _lock, _connect() as conn:
+        conn.execute(
+            "INSERT OR REPLACE INTO team_users"
+            " (teamId, userId, username, isAdmin, createdDate, updatedDate)"
+            " VALUES (?, ?, ?, ?, ?, ?)",
+            (team_id, email, email, 1 if is_admin else 0, now, now),
+        )
+        r = conn.execute(
+            "SELECT * FROM team_users WHERE teamId = ? AND userId = ?",
+            (team_id, email),
+        ).fetchone()
+    return _row_to_team_user(r)
+
+
+def update_team_user(team_id: str, user_id: str, is_admin: bool) -> dict[str, Any] | None:
+    with _lock, _connect() as conn:
+        conn.execute(
+            "UPDATE team_users SET isAdmin = ?, updatedDate = ?"
+            " WHERE teamId = ? AND userId = ?",
+            (1 if is_admin else 0, _now(), team_id, user_id),
+        )
+        r = conn.execute(
+            "SELECT * FROM team_users WHERE teamId = ? AND userId = ?",
+            (team_id, user_id),
+        ).fetchone()
+    return _row_to_team_user(r) if r else None
+
+
+def delete_team_user(team_id: str, user_id: str) -> None:
+    with _lock, _connect() as conn:
+        conn.execute(
+            "DELETE FROM team_users WHERE teamId = ? AND userId = ?",
+            (team_id, user_id),
+        )
+
+
+def count_team_admins(team_id: str) -> int:
+    with _lock, _connect() as conn:
+        r = conn.execute(
+            "SELECT COUNT(*) AS c FROM team_users WHERE teamId = ? AND isAdmin = 1",
+            (team_id,),
+        ).fetchone()
+    return r["c"]
+
+
+def is_team_admin(team_id: str, user_id: str) -> bool:
+    u = get_team_user(team_id, user_id)
+    return bool(u and u["isAdmin"])
+
+
+def is_team_member(team_id: str, user_id: str) -> bool:
+    return get_team_user(team_id, user_id) is not None
+
+
+def user_admins_any_team(user_id: str) -> bool:
+    with _lock, _connect() as conn:
+        r = conn.execute(
+            "SELECT 1 FROM team_users WHERE userId = ? AND isAdmin = 1 LIMIT 1",
+            (user_id,),
+        ).fetchone()
+    return r is not None
+
+
+def list_team_ids_for_user(user_id: str) -> list[str]:
+    with _lock, _connect() as conn:
+        rows = conn.execute(
+            "SELECT teamId FROM team_users WHERE userId = ?", (user_id,)
+        ).fetchall()
+    return [r["teamId"] for r in rows]
+
+
+# ---------------------------------------------------------------------------
+# exApps
+# ---------------------------------------------------------------------------
+def _row_to_exapp(r: sqlite3.Row) -> dict[str, Any]:
+    return {
+        "teamId": r["teamId"],
+        "exAppId": r["exAppId"],
+        "exAppName": r["exAppName"],
+        "endpoint": r["endpoint"],
+        "apiKey": r["apiKey"],
+        "config": r["config"],
+        "placeholder": r["placeholder"],
+        "systemPrompt": r["systemPrompt"],
+        "systemPromptKeyName": r["systemPromptKeyName"],
+        "description": r["description"],
+        "howToUse": r["howToUse"],
+        "copyable": bool(r["copyable"]),
+        "status": r["status"],
+        "createdDate": r["createdDate"],
+        "updatedDate": r["updatedDate"],
+    }
+
+
+def list_team_exapps(team_id: str) -> list[dict[str, Any]]:
+    with _lock, _connect() as conn:
+        rows = conn.execute(
+            "SELECT * FROM exapps WHERE teamId = ? ORDER BY createdDate ASC",
+            (team_id,),
+        ).fetchall()
+    return [_row_to_exapp(r) for r in rows]
+
+
+def get_exapp(team_id: str, ex_app_id: str) -> dict[str, Any] | None:
+    with _lock, _connect() as conn:
+        r = conn.execute(
+            "SELECT * FROM exapps WHERE teamId = ? AND exAppId = ?",
+            (team_id, ex_app_id),
+        ).fetchone()
+    return _row_to_exapp(r) if r else None
+
+
+def get_exapp_by_id(ex_app_id: str) -> dict[str, Any] | None:
+    with _lock, _connect() as conn:
+        r = conn.execute(
+            "SELECT * FROM exapps WHERE exAppId = ?", (ex_app_id,)
+        ).fetchone()
+    return _row_to_exapp(r) if r else None
+
+
+def _write_exapp(conn: sqlite3.Connection, ex_app_id: str, team_id: str, data: dict[str, Any]) -> None:
+    now = _now()
+    conn.execute(
+        "INSERT OR REPLACE INTO exapps (exAppId, teamId, exAppName, endpoint, apiKey,"
+        " config, placeholder, systemPrompt, systemPromptKeyName, description, howToUse,"
+        " copyable, status, createdDate, updatedDate)"
+        " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        (
+            ex_app_id,
+            team_id,
+            data.get("exAppName", ""),
+            data.get("endpoint", ""),
+            data.get("apiKey", ""),
+            data.get("config", ""),
+            data.get("placeholder", ""),
+            data.get("systemPrompt"),
+            data.get("systemPromptKeyName"),
+            data.get("description", ""),
+            data.get("howToUse", ""),
+            1 if data.get("copyable") else 0,
+            data.get("status", "draft"),
+            data.get("createdDate", now),
+            now,
+        ),
+    )
+
+
+def create_exapp(team_id: str, data: dict[str, Any]) -> dict[str, Any]:
+    ex_app_id = str(uuid.uuid4())
+    with _lock, _connect() as conn:
+        _write_exapp(conn, ex_app_id, team_id, data)
+        r = conn.execute(
+            "SELECT * FROM exapps WHERE exAppId = ?", (ex_app_id,)
+        ).fetchone()
+    return _row_to_exapp(r)
+
+
+def update_exapp(team_id: str, ex_app_id: str, data: dict[str, Any]) -> dict[str, Any] | None:
+    current = get_exapp(team_id, ex_app_id)
+    if not current:
+        return None
+    merged = {**current, **{k: v for k, v in data.items() if v is not None}}
+    merged["createdDate"] = current["createdDate"]
+    with _lock, _connect() as conn:
+        _write_exapp(conn, ex_app_id, team_id, merged)
+        r = conn.execute(
+            "SELECT * FROM exapps WHERE exAppId = ?", (ex_app_id,)
+        ).fetchone()
+    return _row_to_exapp(r)
+
+
+def delete_exapp(team_id: str, ex_app_id: str) -> None:
+    with _lock, _connect() as conn:
+        conn.execute(
+            "DELETE FROM exapps WHERE teamId = ? AND exAppId = ?",
+            (team_id, ex_app_id),
+        )
+
+
+def copy_exapp(team_id: str, ex_app_id: str, overrides: dict[str, Any]) -> dict[str, Any] | None:
+    src = get_exapp(team_id, ex_app_id)
+    if not src:
+        return None
+    data = {**src, **{k: v for k, v in overrides.items() if v is not None}}
+    if not overrides.get("exAppName"):
+        data["exAppName"] = f"{src['exAppName']} のコピー"
+    data.pop("createdDate", None)
+    return create_exapp(team_id, data)
+
+
+def list_visible_exapps(user_id: str, is_system_admin: bool) -> list[dict[str, Any]]:
+    """AI アプリ一覧（公開済み）を可視範囲で返す（teamName 付き）。
+
+    - システム管理者: 全チームの公開アプリ
+    - それ以外: 所属チーム + 共通チームの公開アプリ
+    """
+    teams = {t["teamId"]: t["teamName"] for t in list_teams()}
+    with _lock, _connect() as conn:
+        rows = conn.execute(
+            "SELECT * FROM exapps WHERE status = 'published'"
+        ).fetchall()
+    visible_team_ids = set(list_team_ids_for_user(user_id))
+    visible_team_ids.add(COMMON_TEAM_ID)
+    result = []
+    for r in rows:
+        app = _row_to_exapp(r)
+        if is_system_admin or app["teamId"] in visible_team_ids:
+            result.append({**app, "teamName": teams.get(app["teamId"], "")})
+    return result

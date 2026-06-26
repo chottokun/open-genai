@@ -1,0 +1,440 @@
+@import "tailwindcss";
+
+@plugin "@digital-go-jp/tailwind-theme-plugin";
+
+@theme {
+  --breakpoint-sm: 40em;
+  --breakpoint-md: 48em;
+  --breakpoint-lg: 64em;
+  --breakpoint-xl: 80em;
+  --breakpoint-2xl: 96em;
+
+  --spacing-px: 0.0625rem;
+  --spacing-128: 32rem;
+
+  --radius-infinity: calc(infinity * 1px);
+
+  --z-index-1: 1;
+  --z-index-infinity: calc(infinity);
+
+  --animate-copy-highlight: copyHighlight 3s ease-in-out;
+
+  @keyframes copyHighlight {
+    0% {
+      background-color: rgba(197, 215, 251, 0);
+    }
+    45% {
+      background-color: rgba(197, 215, 251, 1);
+    }
+    55% {
+      background-color: rgba(197, 215, 251, 1);
+    }
+    100% {
+      background-color: rgba(197, 215, 251, 0);
+    }
+  }
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
+
+@layer base {
+  :root {
+    --page-width: calc(1440 / 16 * 1rem);
+    --header-height: 3.75rem;
+  }
+
+  :root {
+    overflow-x: clip;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+    scroll-padding-block: var(--header-height);
+    /* override @aws-amplify/ui-react style */
+    scroll-behavior: auto !important;
+  }
+
+  /* NOTE: Dialog 表示中は html の scrollbar-gutter による余白と Dialog 内スクロール領域の
+     スクロールバーが二重表示されるため、html 側のガターは無効化し、
+     #layoutRoot 側でガターを確保してガタつきを防ぐ */
+  /* ネイティブ <dialog> と Headless UI Dialog 対応 */
+  :root:has(:modal),
+  :root:has([role="dialog"][data-open]) {
+    overflow: clip;
+    scrollbar-gutter: auto;
+  }
+
+  :root:has(:modal) #layoutRoot,
+  :root:has([role="dialog"][data-open]) #layoutRoot {
+    overflow: auto;
+    scrollbar-gutter: stable;
+  }
+
+  body {
+    @apply font-sans text-std-16N-170 text-solid-gray-800;
+  }
+
+  @media print {
+    body {
+      -webkit-print-color-adjust: exact;
+    }
+  }
+}
+
+@layer components {
+  .prose {
+    overflow-wrap: anywhere;
+    line-break: strict;
+    text-autospace: normal;
+    text-spacing-trim: trim-start;
+    @apply text-std-16N-170 text-solid-gray-800;
+  }
+
+  .prose > :is(:first-child) {
+    @apply mt-0!;
+  }
+
+  .prose > :is(:last-child) {
+    @apply mb-0!;
+  }
+
+  /* Heading */
+
+  .prose :where(h1, h2, h3, h4, h5, h6) {
+    @apply text-pretty;
+  }
+
+  .prose :where(h1) {
+    @apply mt-0 mb-8 text-std-36B-140;
+  }
+
+  .prose :where(h2) {
+    @apply mt-10 mb-6 text-std-24B-150;
+  }
+
+  .prose :where(h3) {
+    @apply mt-8 mb-4 text-std-20B-150;
+  }
+
+  .prose :where(h4) {
+    @apply mt-6 mb-4 text-std-18B-160;
+  }
+
+  .prose :where(h5) {
+    @apply mt-4 mb-0 text-std-17B-170;
+  }
+
+  .prose :where(h6) {
+    @apply mt-4 mb-0 text-std-16B-170;
+  }
+
+  /* Small size */
+  .prose-sm :where(h1) {
+    @apply mt-10 mb-6 text-std-24B-150;
+  }
+
+  .prose-sm :where(h2) {
+    @apply mt-8 mb-4 text-std-20B-150;
+  }
+
+  .prose-sm :where(h3) {
+    @apply mt-6 mb-4 text-std-18B-160;
+  }
+
+  .prose-sm :where(h4) {
+    @apply mt-4 mb-0 text-std-17B-170;
+  }
+
+  .prose-sm :where(h5) {
+    @apply mt-4 mb-0 text-std-16B-170;
+  }
+  .prose-sm :where(h6) {
+    @apply mt-4 mb-0 text-std-16N-170;
+  }
+  /* Paragraph */
+
+  .prose :where(p),
+  .prose :where(blockquote, ol, ul, dl, table, details) p {
+    @apply my-4;
+  }
+
+  /* List */
+
+  .prose :where(ul),
+  .prose :where(ol),
+  .prose :where(blockquote, ol, ul, dl, table, details) ul,
+  .prose :where(blockquote, ol, ul, dl, table, details) ol {
+    @apply my-4 pl-8;
+  }
+
+  .prose :where(blockquote, ol, ul, dl, table, details) ul,
+  .prose :where(blockquote, ol, ul, dl, table, details) ol {
+    @apply my-2;
+  }
+
+  .prose :where(ul),
+  .prose :where(blockquote, ol, dl, table, details) ul {
+    @apply list-disc;
+  }
+
+  .prose :where(ul ul),
+  .prose :where(blockquote, ol, dl, table, details) ul ul {
+    @apply list-circle;
+  }
+
+  .prose :where(ul ul ul),
+  .prose :where(blockquote, ol, dl, table, details) ul ul ul {
+    @apply list-square;
+  }
+
+  .prose :where(ol),
+  .prose :where(blockquote, ul, dl, table, details) ol {
+    @apply list-decimal;
+  }
+
+  .prose :where(ol ol),
+  .prose :where(blockquote, ul, dl, table, details) ol ol {
+    @apply list-lower-latin;
+  }
+
+  .prose :where(blockquote, ol, ul, dl, table, details) li + li {
+    @apply mt-2;
+  }
+
+  /* Definition list */
+
+  .prose :where(dl) {
+    @apply my-4;
+  }
+
+  .prose :where(dl dt) {
+    @apply mt-4 font-700;
+  }
+
+  .prose :where(dl dd) {
+    @apply my-2 ml-8;
+  }
+
+  /* Blockquote */
+
+  .prose :where(blockquote) {
+    @apply mx-0 mt-4 mb-6 border-l-8 border-solid-gray-536 py-2 pl-6;
+  }
+
+  .prose :where(blockquote) > *:first-child {
+    @apply mt-0;
+  }
+
+  .prose :where(blockquote) > *:last-child {
+    @apply mb-0;
+  }
+
+  /* Table */
+
+  .prose :where(table) {
+    @apply my-4 w-full text-std-16N-170;
+  }
+
+  .prose :where(table) thead {
+    @apply bg-solid-gray-100;
+  }
+
+  .prose :where(table) thead th {
+    @apply border-b border-black;
+  }
+
+  .prose :where(table) th {
+    @apply border-b border-black bg-solid-gray-100 px-3 py-2 text-left align-baseline font-700;
+  }
+
+  .prose :where(table) td {
+    @apply border-b border-solid-gray-420 px-3 py-2 text-left align-baseline;
+  }
+
+  .prose :where(table) th[align="center"],
+  .prose :where(table) td[align="center"] {
+    @apply text-center;
+  }
+
+  .prose :where(table) th[align="right"],
+  .prose :where(table) td[align="right"] {
+    @apply text-right;
+  }
+
+  /* Horizontal rule */
+
+  .prose :where(hr) {
+    @apply my-6 border-t border-solid-gray-420;
+  }
+
+  /* Code block */
+
+  .prose :where(pre) {
+    @apply my-4 overflow-x-auto rounded-8 border border-transparent bg-solid-gray-800 px-3 py-4 text-solid-gray-50;
+  }
+
+  .prose :where(pre) code {
+    @apply block;
+  }
+
+  /* コード */
+  .prose :where(code) {
+    @apply font-mono;
+  }
+
+  /* Print styles */
+
+  @media print {
+    .prose {
+      color: CanvasText;
+    }
+
+    .prose > pre {
+      background-color: Canvas;
+      color: CanvasText;
+      border-color: CanvasText;
+    }
+  }
+}
+
+/* Override Amplify styles for Login */
+@layer base {
+  [data-amplify-authenticator] {
+    @apply h-screen overflow-x-clip overflow-y-auto [scrollbar-gutter:stable];
+  }
+
+  [data-amplify-authenticator] [data-amplify-container] {
+    @apply self-start;
+  }
+
+  [data-amplify-authenticator] [data-amplify-router] {
+    @apply border-solid-gray-420 shadow-none;
+  }
+
+  .amplify-tabs__panel {
+    @apply pt-0;
+  }
+
+  /* Button Focus Styles */
+  .amplify-button:focus {
+    @apply shadow-none outline-0;
+  }
+
+  .amplify-button:focus-visible {
+    @apply ring-[calc(2/16*1rem)] ring-yellow-300 outline-4 outline-offset-[calc(2/16*1rem)] outline-black;
+  }
+
+  /* Primary Button */
+  .amplify-button--primary {
+    @apply min-h-14 rounded-8 bg-blue-900 underline-offset-[calc(3/16*1rem)] transition-none;
+  }
+
+  .amplify-button--primary:hover {
+    @apply bg-blue-1000 underline;
+  }
+
+  .amplify-button--primary:active {
+    @apply bg-blue-1200 shadow-none;
+  }
+
+  .amplify-button--primary[type="submit"] {
+    @apply mt-4;
+  }
+
+  /* Text Button */
+  .amplify-button--link {
+    @apply min-h-12 rounded-8 text-oln-16B-100! text-blue-900 underline underline-offset-[calc(3/16*1rem)] transition-none;
+  }
+
+  .amplify-button--link:hover {
+    @apply bg-blue-50! text-blue-1000;
+  }
+
+  .amplify-button--link:active {
+    @apply bg-blue-100! text-blue-1200;
+  }
+
+  .amplify-button--link:focus {
+    @apply bg-transparent;
+  }
+
+  .amplify-button--link:focus-visible {
+    @apply bg-yellow-300;
+  }
+
+  .amplify-button--loading,
+  .amplify-button--disabled {
+    @apply text-white!;
+  }
+
+  /* Label */
+  .amplify-label {
+    @apply text-std-18B-160 text-solid-gray-800;
+  }
+
+  /* Input */
+  .amplify-input {
+    @apply h-[calc(56/16*1rem)] rounded-8 border-solid-gray-600 transition-none;
+  }
+
+  .amplify-input:hover {
+    @apply border-black;
+  }
+
+  .amplify-input:focus {
+    @apply ring-[calc(2/16*1rem)] ring-yellow-300 outline-4 outline-offset-[calc(2/16*1rem)] outline-black;
+  }
+
+  /* Show Password Button */
+  .amplify-field__show-password {
+    @apply border-solid-gray-600 transition-none;
+  }
+
+  .amplify-field__show-password:hover {
+    @apply border-black bg-solid-gray-50!;
+  }
+
+  .amplify-field__show-password:focus {
+    @apply border-l-0 bg-transparent shadow-none;
+  }
+
+  .amplify-field__show-password:focus-visible {
+    @apply ring-[calc(2/16*1rem)] ring-yellow-300 outline-4 outline-offset-[calc(2/16*1rem)] outline-black;
+  }
+
+  .amplify-field__show-password:active {
+    @apply shadow-none outline-none;
+  }
+
+  /* Tabs */
+  .amplify-tabs__item--active {
+    @apply cursor-default! border-blue-900 text-blue-900!;
+  }
+
+  /* Alert */
+  .amplify-alert {
+    @apply items-start;
+  }
+
+  .amplify-alert__icon {
+    @apply mt-0.5 inline-flex;
+  }
+
+  .amplify-alert__dismiss {
+    @apply hidden;
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "name": "cdk",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "clean": "tsc --build --clean",
+    "test": "vitest run",
+    "test:lambda:watch": "vitest watch --dir tests/lambda",
+    "cdk": "cdk",
+    "format": "biome format --write lib lambda env-parameters tests *config.* parameter* *.json",
+    "lint": "biome lint lib && biome lint lambda"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.161",
+    "@types/node": "^25.5.2",
+    "aws-cdk": "^2.1120.0",
+    "aws-sdk-client-mock": "^4.1.0",
+    "ts-node": "^10.9.2"
+  },
+  "dependencies": {
+    "@aws-crypto/client-node": "^4.2.2",
+    "@aws-lambda-powertools/logger": "^2.32.0",
+    "@aws-sdk/client-bedrock-runtime": "^3.1042.0",
+    "@aws-sdk/client-cloudwatch": "^3.1042.0",
+    "@aws-sdk/client-cloudwatch-logs": "^3.1042.0",
+    "@aws-sdk/client-cognito-identity-provider": "^3.1042.0",
+    "@aws-sdk/client-dynamodb": "^3.1042.0",
+    "@aws-sdk/client-kms": "^3.1042.0",
+    "@aws-sdk/client-s3": "^3.1042.0",
+    "@aws-sdk/client-sagemaker-runtime": "^3.1042.0",
+    "@aws-sdk/client-secrets-manager": "^3.1042.0",
+    "@aws-sdk/client-sesv2": "^3.1042.0",
+    "@aws-sdk/client-sqs": "^3.1042.0",
+    "@aws-sdk/client-ssm": "^3.1042.0",
+    "@aws-sdk/client-sts": "^3.1042.0",
+    "@aws-sdk/client-transcribe": "^3.1042.0",
+    "@aws-sdk/credential-providers": "^3.1042.0",
+    "@aws-sdk/lib-dynamodb": "^3.1042.0",
+    "@aws-sdk/s3-request-presigner": "^3.1042.0",
+    "@aws-solutions-constructs/aws-cloudfront-s3": "^2.101.0",
+    "@cdklabs/deploy-time-build": "^0.1.4",
+    "@smithy/protocol-http": "^5.3.14",
+    "@smithy/signature-v4": "^5.3.14",
+    "aws-cdk-lib": "^2.252.0",
+    "aws-jwt-verify": "^5.1.1",
+    "cdk-nag": "^2.38.2",
+    "constructs": "^10.6.0",
+    "ipaddr.js": "^2.4.0"
+  }
+}

@@ -1,0 +1,2824 @@
+This project incorporates components from the following third-party libraries:
+
+* @antfu/install-pkg (MIT)
+  Authors: Anthony Fu and Contributors
+  Source: https://github.com/antfu/install-pkg
+
+* @asamuzakjp/css-color (MIT)
+  Authors: asamuzaK and Contributors
+  Source: https://github.com/asamuzaK/cssColor
+
+* @asamuzakjp/dom-selector (MIT)
+  Authors: asamuzaK and Contributors
+  Source: https://github.com/asamuzaK/domSelector
+
+* @asamuzakjp/nwsapi (MIT)
+  Authors: Diego Perini and Contributors
+  Source: https://github.com/dperini/nwsapi
+
+* @aws-amplify/analytics (Apache-2.0)
+  Authors: Amazon Web Services and Contributors
+  Source: https://github.com/aws-amplify/amplify-js
+
+* @aws-amplify/api (Apache-2.0)
+  Authors: Amazon Web Services and Contributors
+  Source: https://github.com/aws-amplify/amplify-js
+
+* @aws-amplify/api-graphql (Apache-2.0)
+  Authors: Amazon Web Services and Contributors
+  Source: https://github.com/aws-amplify/amplify-js
+
+* @aws-amplify/api-rest (Apache-2.0)
+  Authors: Amazon Web Services and Contributors
+  Source: https://github.com/aws-amplify/amplify-js
+
+* @aws-amplify/auth (Apache-2.0)
+  Authors: Amazon Web Services and Contributors
+  Source: https://github.com/aws-amplify/amplify-js
+
+* @aws-amplify/core (Apache-2.0)
+  Authors: Amazon Web Services and Contributors
+  Source: https://github.com/aws-amplify/amplify-js
+
+* @aws-amplify/data-schema (Apache-2.0)
+  Source: https://github.com/aws-amplify/amplify-data
+
+* @aws-amplify/data-schema-types (Apache-2.0)
+  Source: N/A
+
+* @aws-amplify/datastore (Apache-2.0)
+  Authors: Amazon Web Services and Contributors
+  Source: https://github.com/aws-amplify/amplify-js
+
+* @aws-amplify/notifications (Apache-2.0)
+  Authors: Amazon Web Services and Contributors
+  Source: https://github.com/aws-amplify/amplify-js
+
+* @aws-amplify/storage (Apache-2.0)
+  Authors: Amazon Web Services and Contributors
+  Source: https://github.com/aws-amplify/amplify-js
+
+* @aws-amplify/ui (Apache-2.0)
+  Source: https://github.com/aws-amplify/amplify-ui
+
+* @aws-amplify/ui-react (Apache-2.0)
+  Source: https://github.com/aws-amplify/amplify-ui
+
+* @aws-amplify/ui-react-core (Apache-2.0)
+  Source: N/A
+
+* @aws-cdk/asset-awscli-v1 (Apache-2.0)
+  Authors: Amazon Web Services and Contributors
+  Source: https://github.com/cdklabs/awscdk-asset-awscli
+
+* @aws-cdk/asset-node-proxy-agent-v6 (Apache-2.0)
+  Authors: Amazon Web Services and Contributors
+  Source: https://github.com/cdklabs/awscdk-asset-node-proxy-agent
+
+* @aws-cdk/cloud-assembly-api (Apache-2.0)
+  Authors: Amazon Web Services and Contributors
+  Source: https://github.com/aws/aws-cdk-cli
+
+* @aws-cdk/cloud-assembly-schema (Apache-2.0)
+  Authors: Amazon Web Services and Contributors
+  Source: https://github.com/aws/aws-cdk-cli
+
+* @aws-crypto/branch-keystore-node (Apache-2.0)
+  Authors: AWS Crypto Tools Team and Contributors
+  Source: N/A
+
+* @aws-crypto/cache-material (Apache-2.0)
+  Authors: AWS Crypto Tools Team and Contributors
+  Source: N/A
+
+* @aws-crypto/caching-materials-manager-node (Apache-2.0)
+  Authors: AWS Crypto Tools Team and Contributors
+  Source: N/A
+
+* @aws-crypto/client-node (Apache-2.0)
+  Authors: AWS Crypto Tools Team and Contributors
+  Source: N/A
+
+* @aws-crypto/crc32 (Apache-2.0)
+  Authors: AWS Crypto Tools Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-crypto-helpers
+
+* @aws-crypto/crc32c (Apache-2.0)
+  Authors: AWS Crypto Tools Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-crypto-helpers
+
+* @aws-crypto/decrypt-node (Apache-2.0)
+  Authors: AWS Crypto Tools Team and Contributors
+  Source: N/A
+
+* @aws-crypto/encrypt-node (Apache-2.0)
+  Authors: AWS Crypto Tools Team and Contributors
+  Source: N/A
+
+* @aws-crypto/hkdf-node (Apache-2.0)
+  Authors: AWS Crypto Tools Team and Contributors
+  Source: N/A
+
+* @aws-crypto/kdf-ctr-mode-node (Apache-2.0)
+  Authors: AWS Crypto Tools Team and Contributors
+  Source: N/A
+
+* @aws-crypto/kms-keyring (Apache-2.0)
+  Authors: AWS Crypto Tools Team and Contributors
+  Source: N/A
+
+* @aws-crypto/kms-keyring-node (Apache-2.0)
+  Authors: AWS Crypto Tools Team and Contributors
+  Source: N/A
+
+* @aws-crypto/material-management (Apache-2.0)
+  Authors: AWS Crypto Tools Team and Contributors
+  Source: N/A
+
+* @aws-crypto/material-management-node (Apache-2.0)
+  Authors: AWS Crypto Tools Team and Contributors
+  Source: N/A
+
+* @aws-crypto/raw-aes-keyring-node (Apache-2.0)
+  Authors: AWS Crypto Tools Team and Contributors
+  Source: N/A
+
+* @aws-crypto/raw-keyring (Apache-2.0)
+  Authors: AWS Crypto Tools Team and Contributors
+  Source: N/A
+
+* @aws-crypto/raw-rsa-keyring-node (Apache-2.0)
+  Authors: AWS Crypto Tools Team and Contributors
+  Source: N/A
+
+* @aws-crypto/serialize (Apache-2.0)
+  Authors: AWS Crypto Tools Team and Contributors
+  Source: N/A
+
+* @aws-crypto/sha1-browser (Apache-2.0)
+  Authors: AWS Crypto Tools Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-crypto-helpers
+
+* @aws-crypto/sha256-browser (Apache-2.0)
+  Authors: AWS Crypto Tools Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-crypto-helpers
+
+* @aws-crypto/sha256-js (Apache-2.0)
+  Authors: AWS Crypto Tools Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-crypto-helpers
+
+* @aws-crypto/supports-web-crypto (Apache-2.0)
+  Authors: AWS Crypto Tools Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-crypto-helpers
+
+* @aws-crypto/util (Apache-2.0)
+  Authors: AWS Crypto Tools Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-crypto-helpers
+
+* @aws-lambda-powertools/commons (MIT-0)
+  Authors: Amazon Web Services and Contributors
+  Source: https://github.com/aws-powertools/powertools-lambda-typescript
+
+* @aws-lambda-powertools/logger (MIT-0)
+  Authors: Amazon Web Services and Contributors
+  Source: https://github.com/aws-powertools/powertools-lambda-typescript
+
+* @aws-sdk/client-bedrock-agent (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/client-bedrock-agent-runtime (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/client-bedrock-runtime (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/client-cloudformation (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/client-cloudwatch (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/client-cloudwatch-logs (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/client-cognito-identity (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/client-cognito-identity-provider (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/client-dynamodb (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/client-firehose (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/client-kinesis (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/client-kms (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/client-lambda (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/client-personalize-events (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/client-s3 (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/client-sagemaker-runtime (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/client-secrets-manager (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/client-sesv2 (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/client-sqs (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/client-ssm (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/client-sts (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/client-transcribe (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/core (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/crc64-nvme (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/credential-provider-cognito-identity (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/credential-provider-env (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/credential-provider-http (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/credential-provider-ini (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/credential-provider-login (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/credential-provider-node (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/credential-provider-process (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/credential-provider-sso (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/credential-provider-web-identity (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/credential-providers (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/dynamodb-codec (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/endpoint-cache (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/eventstream-handler-node (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/lib-dynamodb (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/middleware-bucket-endpoint (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/middleware-endpoint-discovery (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/middleware-eventstream (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/middleware-expect-continue (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/middleware-flexible-checksums (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/middleware-host-header (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/middleware-location-constraint (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/middleware-logger (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/middleware-recursion-detection (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/middleware-sdk-s3 (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/middleware-sdk-sqs (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/middleware-ssec (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/middleware-user-agent (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/middleware-websocket (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/nested-clients (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/region-config-resolver (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/s3-request-presigner (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/signature-v4-multi-region (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/token-providers (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/types (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/util-arn-parser (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/util-dynamodb (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/util-endpoints (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/util-format-url (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/util-locate-window (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/util-user-agent-browser (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/util-user-agent-node (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-sdk/xml-builder (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/aws/aws-sdk-js-v3
+
+* @aws-solutions-constructs/aws-cloudfront-s3 (Apache-2.0)
+  Authors: Amazon Web Services and Contributors
+  Source: https://github.com/awslabs/aws-solutions-constructs
+
+* @aws-solutions-constructs/core (Apache-2.0)
+  Authors: Amazon Web Services and Contributors
+  Source: https://github.com/awslabs/aws-solutions-constructs
+
+* @aws-solutions-constructs/resources (Apache-2.0)
+  Authors: Amazon Web Services and Contributors
+  Source: https://github.com/awslabs/aws-solutions-constructs
+
+* @aws/lambda-invoke-store (Apache-2.0)
+  Authors: Amazon Web Services and Contributors
+  Source: https://github.com/awslabs/aws-lambda-invoke-store
+
+* @babel/code-frame (MIT)
+  Authors: The Babel Team and Contributors
+  Source: https://github.com/babel/babel
+
+* @babel/helper-validator-identifier (MIT)
+  Authors: The Babel Team and Contributors
+  Source: https://github.com/babel/babel
+
+* @babel/runtime (MIT)
+  Authors: The Babel Team and Contributors
+  Source: https://github.com/babel/babel
+
+* @balena/dockerignore (Apache-2.0)
+  Source: https://github.com/balena-io-modules/dockerignore
+
+* @biomejs/biome (MIT OR Apache-2.0)
+  Authors: Emanuele Stoppa and Contributors
+  Source: https://github.com/biomejs/biome
+
+* @biomejs/cli-darwin-arm64 (MIT OR Apache-2.0)
+  Source: https://github.com/biomejs/biome
+
+* @borewit/text-codec (MIT)
+  Authors: Borewit and Contributors
+  Source: https://github.com/Borewit/text-codec
+
+* @braintree/sanitize-url (MIT)
+  Source: https://github.com/braintree/sanitize-url
+
+* @bramus/specificity (MIT)
+  Authors: Bramus Van Damme and Contributors
+  Source: https://github.com/bramus/specificity
+
+* @cdklabs/deploy-time-build (Apache-2.0)
+  Authors: Amazon Web Services and Contributors
+  Source: https://github.com/cdklabs/deploy-time-build
+
+* @chevrotain/cst-dts-gen (Apache-2.0)
+  Source: https://github.com/Chevrotain/chevrotain
+
+* @chevrotain/gast (Apache-2.0)
+  Source: https://github.com/Chevrotain/chevrotain
+
+* @chevrotain/regexp-to-ast (Apache-2.0)
+  Source: https://github.com/Chevrotain/chevrotain
+
+* @chevrotain/types (Apache-2.0)
+  Authors: Shahar Soel and Contributors
+  Source: https://github.com/Chevrotain/chevrotain
+
+* @chevrotain/utils (Apache-2.0)
+  Authors: Shahar Soel and Contributors
+  Source: https://github.com/Chevrotain/chevrotain
+
+* @cspotcode/source-map-support (MIT)
+  Source: https://github.com/cspotcode/node-source-map-support
+
+* @csstools/color-helpers (MIT-0)
+  Source: https://github.com/csstools/postcss-plugins
+
+* @csstools/css-calc (MIT)
+  Source: https://github.com/csstools/postcss-plugins
+
+* @csstools/css-color-parser (MIT)
+  Source: https://github.com/csstools/postcss-plugins
+
+* @csstools/css-parser-algorithms (MIT)
+  Source: https://github.com/csstools/postcss-plugins
+
+* @csstools/css-syntax-patches-for-csstree (MIT-0)
+  Source: https://github.com/csstools/postcss-plugins
+
+* @csstools/css-tokenizer (MIT)
+  Source: https://github.com/csstools/postcss-plugins
+
+* @digital-go-jp/tailwind-theme-plugin (MIT)
+  Authors: Digital Agency and Contributors
+  Source: https://github.com/digital-go-jp/tailwind-theme-plugin
+
+* @emnapi/core (MIT)
+  Authors: toyobayashi and Contributors
+  Source: https://github.com/toyobayashi/emnapi
+
+* @emnapi/runtime (MIT)
+  Authors: toyobayashi and Contributors
+  Source: https://github.com/toyobayashi/emnapi
+
+* @emnapi/wasi-threads (MIT)
+  Authors: toyobayashi and Contributors
+  Source: https://github.com/toyobayashi/emnapi
+
+* @esbuild/darwin-arm64 (MIT)
+  Source: https://github.com/evanw/esbuild
+
+* @exodus/bytes (MIT)
+  Authors: Exodus Movement, Inc. and Contributors
+  Source: https://github.com/ExodusOSS/bytes
+
+* @floating-ui/core (MIT)
+  Authors: atomiks and Contributors
+  Source: https://github.com/floating-ui/floating-ui
+
+* @floating-ui/dom (MIT)
+  Authors: atomiks and Contributors
+  Source: https://github.com/floating-ui/floating-ui
+
+* @floating-ui/react (MIT)
+  Authors: atomiks and Contributors
+  Source: https://github.com/floating-ui/floating-ui
+
+* @floating-ui/react-dom (MIT)
+  Authors: atomiks and Contributors
+  Source: https://github.com/floating-ui/floating-ui
+
+* @floating-ui/utils (MIT)
+  Authors: atomiks and Contributors
+  Source: https://github.com/floating-ui/floating-ui
+
+* @headlessui/react (MIT)
+  Source: https://github.com/tailwindlabs/headlessui
+
+* @hookform/resolvers (MIT)
+  Authors: bluebill1049 and Contributors
+  Source: https://github.com/react-hook-form/resolvers
+
+* @iconify/types (MIT)
+  Authors: Vjacheslav Trushkin and Contributors
+  Source: https://github.com/iconify/iconify
+
+* @iconify/utils (MIT)
+  Authors: Vjacheslav Trushkin and Contributors
+  Source: https://github.com/iconify/iconify
+
+* @icons/material (MIT)
+  Authors: case and Contributors
+  Source: https://github.com/at-icons/material
+
+* @jridgewell/gen-mapping (MIT)
+  Authors: Justin Ridgewell and Contributors
+  Source: https://github.com/jridgewell/sourcemaps
+
+* @jridgewell/remapping (MIT)
+  Authors: Justin Ridgewell and Contributors
+  Source: https://github.com/jridgewell/sourcemaps
+
+* @jridgewell/resolve-uri (MIT)
+  Authors: Justin Ridgewell and Contributors
+  Source: https://github.com/jridgewell/resolve-uri
+
+* @jridgewell/sourcemap-codec (MIT)
+  Authors: Justin Ridgewell and Contributors
+  Source: https://github.com/jridgewell/sourcemaps
+
+* @jridgewell/trace-mapping (MIT)
+  Authors: Justin Ridgewell and Contributors
+  Source: https://github.com/jridgewell/sourcemaps
+
+* @mermaid-js/parser (MIT)
+  Authors: Yokozuna59 and Contributors
+  Source: https://github.com/mermaid-js/mermaid
+
+* @napi-rs/wasm-runtime (MIT)
+  Authors: LongYinan and Contributors
+  Source: https://github.com/napi-rs/napi-rs
+
+* @oxc-project/types (MIT)
+  Authors: Boshen and oxc contributors and Contributors
+  Source: https://github.com/oxc-project/oxc
+
+* @radix-ui/number (MIT)
+  Source: https://github.com/radix-ui/primitives
+
+* @radix-ui/primitive (MIT)
+  Source: https://github.com/radix-ui/primitives
+
+* @radix-ui/react-arrow (MIT)
+  Source: https://github.com/radix-ui/primitives
+
+* @radix-ui/react-collection (MIT)
+  Source: https://github.com/radix-ui/primitives
+
+* @radix-ui/react-compose-refs (MIT)
+  Source: https://github.com/radix-ui/primitives
+
+* @radix-ui/react-context (MIT)
+  Source: https://github.com/radix-ui/primitives
+
+* @radix-ui/react-direction (MIT)
+  Source: https://github.com/radix-ui/primitives
+
+* @radix-ui/react-dismissable-layer (MIT)
+  Source: https://github.com/radix-ui/primitives
+
+* @radix-ui/react-dropdown-menu (MIT)
+  Source: https://github.com/radix-ui/primitives
+
+* @radix-ui/react-focus-guards (MIT)
+  Source: https://github.com/radix-ui/primitives
+
+* @radix-ui/react-focus-scope (MIT)
+  Source: https://github.com/radix-ui/primitives
+
+* @radix-ui/react-id (MIT)
+  Source: https://github.com/radix-ui/primitives
+
+* @radix-ui/react-menu (MIT)
+  Source: https://github.com/radix-ui/primitives
+
+* @radix-ui/react-popper (MIT)
+  Source: https://github.com/radix-ui/primitives
+
+* @radix-ui/react-portal (MIT)
+  Source: https://github.com/radix-ui/primitives
+
+* @radix-ui/react-presence (MIT)
+  Source: https://github.com/radix-ui/primitives
+
+* @radix-ui/react-primitive (MIT)
+  Source: https://github.com/radix-ui/primitives
+
+* @radix-ui/react-roving-focus (MIT)
+  Source: https://github.com/radix-ui/primitives
+
+* @radix-ui/react-slider (MIT)
+  Source: https://github.com/radix-ui/primitives
+
+* @radix-ui/react-slot (MIT)
+  Source: https://github.com/radix-ui/primitives
+
+* @radix-ui/react-use-callback-ref (MIT)
+  Source: https://github.com/radix-ui/primitives
+
+* @radix-ui/react-use-controllable-state (MIT)
+  Source: https://github.com/radix-ui/primitives
+
+* @radix-ui/react-use-effect-event (MIT)
+  Source: https://github.com/radix-ui/primitives
+
+* @radix-ui/react-use-escape-keydown (MIT)
+  Source: https://github.com/radix-ui/primitives
+
+* @radix-ui/react-use-layout-effect (MIT)
+  Source: https://github.com/radix-ui/primitives
+
+* @radix-ui/react-use-previous (MIT)
+  Source: https://github.com/radix-ui/primitives
+
+* @radix-ui/react-use-rect (MIT)
+  Source: https://github.com/radix-ui/primitives
+
+* @radix-ui/react-use-size (MIT)
+  Source: https://github.com/radix-ui/primitives
+
+* @radix-ui/rect (MIT)
+  Source: https://github.com/radix-ui/primitives
+
+* @react-aria/focus (Apache-2.0)
+  Source: https://github.com/adobe/react-spectrum
+
+* @react-aria/interactions (Apache-2.0)
+  Source: https://github.com/adobe/react-spectrum
+
+* @react-aria/ssr (Apache-2.0)
+  Source: https://github.com/adobe/react-spectrum
+
+* @react-aria/utils (Apache-2.0)
+  Source: https://github.com/adobe/react-spectrum
+
+* @react-stately/flags (Apache-2.0)
+  Source: https://github.com/adobe/react-spectrum
+
+* @react-stately/utils (Apache-2.0)
+  Source: https://github.com/adobe/react-spectrum
+
+* @react-types/shared (Apache-2.0)
+  Source: https://github.com/adobe/react-spectrum
+
+* @rolldown/binding-darwin-arm64 (MIT)
+  Source: https://github.com/rolldown/rolldown
+
+* @rolldown/pluginutils (MIT)
+  Source: https://github.com/rolldown/rolldown
+
+* @shikijs/core (MIT)
+  Authors: Pine Wu and Contributors
+  Source: https://github.com/shikijs/shiki
+
+* @shikijs/engine-javascript (MIT)
+  Authors: Anthony Fu and Contributors
+  Source: https://github.com/shikijs/shiki
+
+* @shikijs/engine-oniguruma (MIT)
+  Authors: Anthony Fu and Contributors
+  Source: https://github.com/shikijs/shiki
+
+* @shikijs/langs (MIT)
+  Authors: Anthony Fu and Contributors
+  Source: https://github.com/shikijs/shiki
+
+* @shikijs/primitive (MIT)
+  Authors: Anthony Fu and Contributors
+  Source: https://github.com/shikijs/shiki
+
+* @shikijs/themes (MIT)
+  Authors: Anthony Fu and Contributors
+  Source: https://github.com/shikijs/shiki
+
+* @shikijs/types (MIT)
+  Authors: Anthony Fu and Contributors
+  Source: https://github.com/shikijs/shiki
+
+* @shikijs/vscode-textmate (MIT)
+  Authors: Microsoft Corporation and Contributors
+  Source: https://github.com/shikijs/vscode-textmate
+
+* @sinonjs/commons (BSD-3-Clause)
+  Source: https://github.com/sinonjs/commons
+
+* @sinonjs/fake-timers (BSD-3-Clause)
+  Authors: Christian Johansen and Contributors
+  Source: https://github.com/sinonjs/fake-timers
+
+* @sinonjs/samsam (BSD-3-Clause)
+  Authors: Christian Johansen and Contributors
+  Source: https://github.com/sinonjs/samsam
+
+* @sinonjs/text-encoding ((Unlicense OR Apache-2.0))
+  Authors: Joshua Bell and Contributors
+  Source: https://github.com/sinonjs/text-encoding
+
+* @smithy/chunked-blob-reader (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/smithy-lang/smithy-typescript
+
+* @smithy/chunked-blob-reader-native (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/smithy-lang/smithy-typescript
+
+* @smithy/config-resolver (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/smithy-lang/smithy-typescript
+
+* @smithy/core (Apache-2.0)
+  Authors: AWS Smithy Team and Contributors
+  Source: https://github.com/smithy-lang/smithy-typescript
+
+* @smithy/credential-provider-imds (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/smithy-lang/smithy-typescript
+
+* @smithy/eventstream-codec (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/smithy-lang/smithy-typescript
+
+* @smithy/eventstream-serde-browser (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/smithy-lang/smithy-typescript
+
+* @smithy/eventstream-serde-config-resolver (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/smithy-lang/smithy-typescript
+
+* @smithy/eventstream-serde-node (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/smithy-lang/smithy-typescript
+
+* @smithy/eventstream-serde-universal (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/smithy-lang/smithy-typescript
+
+* @smithy/fetch-http-handler (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/smithy-lang/smithy-typescript
+
+* @smithy/hash-blob-browser (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/smithy-lang/smithy-typescript
+
+* @smithy/hash-node (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/smithy-lang/smithy-typescript
+
+* @smithy/hash-stream-node (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/smithy-lang/smithy-typescript
+
+* @smithy/invalid-dependency (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/smithy-lang/smithy-typescript
+
+* @smithy/is-array-buffer (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/awslabs/smithy-typescript
+
+* @smithy/md5-js (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/awslabs/smithy-typescript
+
+* @smithy/middleware-compression (Apache-2.0)
+  Source: https://github.com/smithy-lang/smithy-typescript
+
+* @smithy/middleware-content-length (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/smithy-lang/smithy-typescript
+
+* @smithy/middleware-endpoint (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/smithy-lang/smithy-typescript
+
+* @smithy/middleware-retry (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/smithy-lang/smithy-typescript
+
+* @smithy/middleware-serde (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/smithy-lang/smithy-typescript
+
+* @smithy/middleware-stack (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/smithy-lang/smithy-typescript
+
+* @smithy/node-config-provider (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/smithy-lang/smithy-typescript
+
+* @smithy/node-http-handler (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/smithy-lang/smithy-typescript
+
+* @smithy/property-provider (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/smithy-lang/smithy-typescript
+
+* @smithy/protocol-http (Apache-2.0)
+  Authors: AWS Smithy Team and Contributors
+  Source: https://github.com/smithy-lang/smithy-typescript
+
+* @smithy/querystring-builder (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/smithy-lang/smithy-typescript
+
+* @smithy/querystring-parser (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/smithy-lang/smithy-typescript
+
+* @smithy/service-error-classification (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/smithy-lang/smithy-typescript
+
+* @smithy/shared-ini-file-loader (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/smithy-lang/smithy-typescript
+
+* @smithy/signature-v4 (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/smithy-lang/smithy-typescript
+
+* @smithy/smithy-client (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/smithy-lang/smithy-typescript
+
+* @smithy/types (Apache-2.0)
+  Authors: AWS Smithy Team and Contributors
+  Source: https://github.com/awslabs/smithy-typescript
+
+* @smithy/url-parser (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/smithy-lang/smithy-typescript
+
+* @smithy/util-base64 (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/awslabs/smithy-typescript
+
+* @smithy/util-body-length-browser (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/smithy-lang/smithy-typescript
+
+* @smithy/util-body-length-node (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/smithy-lang/smithy-typescript
+
+* @smithy/util-buffer-from (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/awslabs/smithy-typescript
+
+* @smithy/util-config-provider (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/smithy-lang/smithy-typescript
+
+* @smithy/util-defaults-mode-browser (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/smithy-lang/smithy-typescript
+
+* @smithy/util-defaults-mode-node (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/smithy-lang/smithy-typescript
+
+* @smithy/util-endpoints (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/smithy-lang/smithy-typescript
+
+* @smithy/util-hex-encoding (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/awslabs/smithy-typescript
+
+* @smithy/util-middleware (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/smithy-lang/smithy-typescript
+
+* @smithy/util-retry (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/smithy-lang/smithy-typescript
+
+* @smithy/util-stream (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/smithy-lang/smithy-typescript
+
+* @smithy/util-uri-escape (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/smithy-lang/smithy-typescript
+
+* @smithy/util-utf8 (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/awslabs/smithy-typescript
+
+* @smithy/util-waiter (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/smithy-lang/smithy-typescript
+
+* @smithy/uuid (Apache-2.0)
+  Authors: AWS SDK for JavaScript Team and Contributors
+  Source: https://github.com/smithy-lang/smithy-typescript
+
+* @standard-schema/spec (MIT)
+  Authors: Colin McDonnell and Contributors
+  Source: https://github.com/standard-schema/standard-schema
+
+* @standard-schema/utils (MIT)
+  Authors: Fabian Hiller and Contributors
+  Source: https://github.com/standard-schema/standard-schema
+
+* @swc/helpers (Apache-2.0)
+  Authors: 강동윤 and Contributors
+  Source: https://github.com/swc-project/swc
+
+* @tailwindcss/node (MIT)
+  Source: https://github.com/tailwindlabs/tailwindcss
+
+* @tailwindcss/oxide (MIT)
+  Source: https://github.com/tailwindlabs/tailwindcss
+
+* @tailwindcss/oxide-darwin-arm64 (MIT)
+  Source: https://github.com/tailwindlabs/tailwindcss
+
+* @tailwindcss/vite (MIT)
+  Source: https://github.com/tailwindlabs/tailwindcss
+
+* @tanstack/react-virtual (MIT)
+  Authors: Tanner Linsley and Contributors
+  Source: https://github.com/TanStack/virtual
+
+* @tanstack/virtual-core (MIT)
+  Authors: Tanner Linsley and Contributors
+  Source: https://github.com/TanStack/virtual
+
+* @testing-library/dom (MIT)
+  Authors: Kent C. Dodds and Contributors
+  Source: https://github.com/testing-library/dom-testing-library
+
+* @testing-library/react (MIT)
+  Authors: Kent C. Dodds and Contributors
+  Source: https://github.com/testing-library/react-testing-library
+
+* @testing-library/user-event (MIT)
+  Authors: Giorgio Polvara and Contributors
+  Source: https://github.com/testing-library/user-event
+
+* @tokenizer/inflate (MIT)
+  Authors: Borewit and Contributors
+  Source: https://github.com/Borewit/tokenizer-inflate
+
+* @tokenizer/token (MIT)
+  Authors: Borewit and Contributors
+  Source: https://github.com/Borewit/tokenizer-token
+
+* @tsconfig/node10 (MIT)
+  Source: https://github.com/tsconfig/bases
+
+* @tsconfig/node12 (MIT)
+  Source: https://github.com/tsconfig/bases
+
+* @tsconfig/node14 (MIT)
+  Source: https://github.com/tsconfig/bases
+
+* @tsconfig/node16 (MIT)
+  Source: https://github.com/tsconfig/bases
+
+* @tybys/wasm-util (MIT)
+  Authors: toyobayashi and Contributors
+  Source: https://github.com/toyobayashi/wasm-util
+
+* @types/aria-query (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/aws-lambda (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/chai (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/d3 (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/d3-array (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/d3-axis (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/d3-brush (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/d3-chord (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/d3-color (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/d3-contour (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/d3-delaunay (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/d3-dispatch (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/d3-drag (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/d3-dsv (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/d3-ease (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/d3-fetch (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/d3-force (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/d3-format (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/d3-geo (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/d3-hierarchy (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/d3-interpolate (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/d3-path (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/d3-polygon (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/d3-quadtree (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/d3-random (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/d3-scale (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/d3-scale-chromatic (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/d3-selection (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/d3-shape (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/d3-time (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/d3-time-format (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/d3-timer (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/d3-transition (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/d3-zoom (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/debug (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/deep-eql (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/duplexify (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/estree (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/estree-jsx (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/geojson (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/hast (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/json-schema (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/lru-cache (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/mdast (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/ms (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/node (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/react (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/react-color (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/react-dom (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/react-signature-canvas (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/reactcss (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/signature_pad (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/sinon (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/sinonjs__fake-timers (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/trusted-types (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/unist (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @types/uuid (MIT)
+  Source: https://github.com/DefinitelyTyped/DefinitelyTyped
+
+* @ungap/structured-clone (ISC)
+  Authors: Andrea Giammarchi and Contributors
+  Source: https://github.com/ungap/structured-clone
+
+* @upsetjs/venn.js (MIT)
+  Authors: Ben Frederickson and Contributors
+  Source: https://github.com/upsetjs/venn.js
+
+* @vitejs/plugin-react (MIT)
+  Authors: Evan You and Contributors
+  Source: https://github.com/vitejs/vite-plugin-react
+
+* @vitest/expect (MIT)
+  Source: https://github.com/vitest-dev/vitest
+
+* @vitest/mocker (MIT)
+  Source: https://github.com/vitest-dev/vitest
+
+* @vitest/pretty-format (MIT)
+  Source: https://github.com/vitest-dev/vitest
+
+* @vitest/runner (MIT)
+  Source: https://github.com/vitest-dev/vitest
+
+* @vitest/snapshot (MIT)
+  Source: https://github.com/vitest-dev/vitest
+
+* @vitest/spy (MIT)
+  Source: https://github.com/vitest-dev/vitest
+
+* @vitest/utils (MIT)
+  Source: https://github.com/vitest-dev/vitest
+
+* @xstate/react (MIT)
+  Authors: David Khourshid and Contributors
+  Source: https://github.com/statelyai/xstate
+
+* acorn (MIT)
+  Source: https://github.com/acornjs/acorn
+
+* acorn-walk (MIT)
+  Source: https://github.com/acornjs/acorn
+
+* ajv (MIT)
+  Authors: Evgeny Poberezkin and Contributors
+  Source: https://github.com/ajv-validator/ajv
+
+* ansi-regex (MIT)
+  Authors: Sindre Sorhus and Contributors
+  Source: https://github.com/chalk/ansi-regex
+
+* ansi-styles (MIT)
+  Authors: Sindre Sorhus and Contributors
+  Source: https://github.com/chalk/ansi-styles
+
+* arg (MIT)
+  Authors: Josh Junon and Contributors
+  Source: https://github.com/zeit/arg
+
+* aria-hidden (MIT)
+  Authors: Anton Korzunov and Contributors
+  Source: https://github.com/theKashey/aria-hidden
+
+* aria-query (Apache-2.0)
+  Authors: Jesse Beach and Contributors
+  Source: https://github.com/A11yance/aria-query
+
+* asn1.js (MIT)
+  Authors: Fedor Indutny and Contributors
+  Source: https://github.com/indutny/asn1.js
+
+* assertion-error (MIT)
+  Authors: Jake Luer and Contributors
+  Source: https://github.com/chaijs/assertion-error
+
+* astral-regex (MIT)
+  Authors: Kevin Mårtensson and Contributors
+  Source: https://github.com/kevva/astral-regex
+
+* aws-amplify (Apache-2.0)
+  Authors: Amazon Web Services and Contributors
+  Source: https://github.com/aws-amplify/amplify-js
+
+* aws-cdk (Apache-2.0)
+  Authors: Amazon Web Services and Contributors
+  Source: https://github.com/aws/aws-cdk-cli
+
+* aws-cdk-lib (Apache-2.0)
+  Authors: Amazon Web Services and Contributors
+  Source: https://github.com/aws/aws-cdk
+
+* aws-jwt-verify (Apache-2.0)
+  Authors: Amazon Web Services and Contributors
+  Source: https://github.com/awslabs/aws-jwt-verify
+
+* aws-sdk-client-mock (MIT)
+  Authors: Maciej Radzikowski and Contributors
+  Source: https://github.com/m-radzikowski/aws-sdk-client-mock
+
+* bail (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/wooorm/bail
+
+* balanced-match (MIT)
+  Source: https://github.com/juliangruber/balanced-match
+
+* base64-js (MIT)
+  Authors: T. Jameson Little and Contributors
+  Source: https://github.com/beatgammit/base64-js
+
+* bidi-js (MIT)
+  Authors: Jason Johnston and Contributors
+  Source: https://github.com/lojjic/bidi-js
+
+* bn.js (MIT)
+  Authors: Fedor Indutny and Contributors
+  Source: https://github.com/indutny/bn.js
+
+* bowser (MIT)
+  Authors: Dustin Diaz and Contributors
+  Source: https://github.com/lancedikson/bowser
+
+* brace-expansion (MIT)
+  Source: https://github.com/juliangruber/brace-expansion
+
+* buffer (MIT)
+  Authors: Feross Aboukhadijeh and Contributors
+  Source: https://github.com/feross/buffer
+
+* camelcase (MIT)
+  Authors: Sindre Sorhus and Contributors
+  Source: https://github.com/sindresorhus/camelcase
+
+* case ((MIT OR GPL-3.0-or-later))
+  Authors: Nathan Bubna and Contributors
+  Source: https://github.com/nbubna/Case
+
+* ccount (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/wooorm/ccount
+
+* cdk-nag (Apache-2.0)
+  Authors: Arun Donti and Contributors
+  Source: https://github.com/cdklabs/cdk-nag
+
+* chai (MIT)
+  Authors: Jake Luer and Contributors
+  Source: https://github.com/chaijs/chai
+
+* character-entities (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/wooorm/character-entities
+
+* character-entities-html4 (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/wooorm/character-entities-html4
+
+* character-entities-legacy (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/wooorm/character-entities-legacy
+
+* character-reference-invalid (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/wooorm/character-reference-invalid
+
+* chevrotain (Apache-2.0)
+  Authors: Shahar Soel and Contributors
+  Source: https://github.com/Chevrotain/chevrotain
+
+* chevrotain-allstar (MIT)
+  Authors: TypeFox and Contributors
+  Source: https://github.com/langium/chevrotain-allstar
+
+* cliui (ISC)
+  Authors: Ben Coe and Contributors
+  Source: https://github.com/yargs/cliui
+
+* clsx (MIT)
+  Authors: Luke Edwards and Contributors
+  Source: https://github.com/lukeed/clsx
+
+* color-convert (MIT)
+  Authors: Heather Arthur and Contributors
+  Source: https://github.com/Qix-/color-convert
+
+* color-name (MIT)
+  Authors: DY and Contributors
+  Source: https://github.com/colorjs/color-name
+
+* comma-separated-tokens (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/wooorm/comma-separated-tokens
+
+* commander (MIT)
+  Authors: TJ Holowaychuk and Contributors
+  Source: https://github.com/tj/commander.js
+
+* confbox (MIT)
+  Source: https://github.com/unjs/confbox
+
+* constructs (Apache-2.0)
+  Authors: Amazon Web Services and Contributors
+  Source: https://github.com/aws/constructs
+
+* convert-source-map (MIT)
+  Authors: Thorsten Lorenz and Contributors
+  Source: https://github.com/thlorenz/convert-source-map
+
+* cookie (MIT)
+  Authors: Roman Shtylman and Contributors
+  Source: https://github.com/jshttp/cookie
+
+* cose-base (MIT)
+  Source: https://github.com/iVis-at-Bilkent/cose-base
+
+* crc-32 (Apache-2.0)
+  Authors: sheetjs and Contributors
+  Source: https://github.com/SheetJS/js-crc32
+
+* create-require (MIT)
+  Source: https://github.com/nuxt-contrib/create-require
+
+* css-tree (MIT)
+  Authors: Roman Dvornov and Contributors
+  Source: https://github.com/csstree/csstree
+
+* csstype (MIT)
+  Authors: Fredrik Nicol and Contributors
+  Source: https://github.com/frenic/csstype
+
+* cytoscape (MIT)
+  Source: https://github.com/cytoscape/cytoscape.js
+
+* cytoscape-cose-bilkent (MIT)
+  Source: https://github.com/cytoscape/cytoscape.js-cose-bilkent
+
+* cytoscape-fcose (MIT)
+  Authors: iVis-at-Bilkent and Contributors
+  Source: https://github.com/iVis-at-Bilkent/cytoscape.js-fcose
+
+* d3 (ISC)
+  Authors: Mike Bostock and Contributors
+  Source: https://github.com/d3/d3
+
+* d3-array (BSD-3-Clause)
+  Authors: Mike Bostock and Contributors
+  Source: https://github.com/d3/d3-array
+
+* d3-axis (ISC)
+  Authors: Mike Bostock and Contributors
+  Source: https://github.com/d3/d3-axis
+
+* d3-brush (ISC)
+  Authors: Mike Bostock and Contributors
+  Source: https://github.com/d3/d3-brush
+
+* d3-chord (ISC)
+  Authors: Mike Bostock and Contributors
+  Source: https://github.com/d3/d3-chord
+
+* d3-color (ISC)
+  Authors: Mike Bostock and Contributors
+  Source: https://github.com/d3/d3-color
+
+* d3-contour (ISC)
+  Authors: Mike Bostock and Contributors
+  Source: https://github.com/d3/d3-contour
+
+* d3-delaunay (ISC)
+  Authors: Mike Bostock and Contributors
+  Source: https://github.com/d3/d3-delaunay
+
+* d3-dispatch (ISC)
+  Authors: Mike Bostock and Contributors
+  Source: https://github.com/d3/d3-dispatch
+
+* d3-drag (ISC)
+  Authors: Mike Bostock and Contributors
+  Source: https://github.com/d3/d3-drag
+
+* d3-dsv (ISC)
+  Authors: Mike Bostock and Contributors
+  Source: https://github.com/d3/d3-dsv
+
+* d3-ease (BSD-3-Clause)
+  Authors: Mike Bostock and Contributors
+  Source: https://github.com/d3/d3-ease
+
+* d3-fetch (ISC)
+  Authors: Mike Bostock and Contributors
+  Source: https://github.com/d3/d3-fetch
+
+* d3-force (ISC)
+  Authors: Mike Bostock and Contributors
+  Source: https://github.com/d3/d3-force
+
+* d3-format (ISC)
+  Authors: Mike Bostock and Contributors
+  Source: https://github.com/d3/d3-format
+
+* d3-geo (ISC)
+  Authors: Mike Bostock and Contributors
+  Source: https://github.com/d3/d3-geo
+
+* d3-hierarchy (ISC)
+  Authors: Mike Bostock and Contributors
+  Source: https://github.com/d3/d3-hierarchy
+
+* d3-interpolate (ISC)
+  Authors: Mike Bostock and Contributors
+  Source: https://github.com/d3/d3-interpolate
+
+* d3-path (BSD-3-Clause)
+  Authors: Mike Bostock and Contributors
+  Source: https://github.com/d3/d3-path
+
+* d3-polygon (ISC)
+  Authors: Mike Bostock and Contributors
+  Source: https://github.com/d3/d3-polygon
+
+* d3-quadtree (ISC)
+  Authors: Mike Bostock and Contributors
+  Source: https://github.com/d3/d3-quadtree
+
+* d3-random (ISC)
+  Authors: Mike Bostock and Contributors
+  Source: https://github.com/d3/d3-random
+
+* d3-sankey (BSD-3-Clause)
+  Authors: Mike Bostock and Contributors
+  Source: https://github.com/d3/d3-sankey
+
+* d3-scale (ISC)
+  Authors: Mike Bostock and Contributors
+  Source: https://github.com/d3/d3-scale
+
+* d3-scale-chromatic (ISC)
+  Authors: Mike Bostock and Contributors
+  Source: https://github.com/d3/d3-scale-chromatic
+
+* d3-selection (ISC)
+  Authors: Mike Bostock and Contributors
+  Source: https://github.com/d3/d3-selection
+
+* d3-shape (BSD-3-Clause)
+  Authors: Mike Bostock and Contributors
+  Source: https://github.com/d3/d3-shape
+
+* d3-time (ISC)
+  Authors: Mike Bostock and Contributors
+  Source: https://github.com/d3/d3-time
+
+* d3-time-format (ISC)
+  Authors: Mike Bostock and Contributors
+  Source: https://github.com/d3/d3-time-format
+
+* d3-timer (ISC)
+  Authors: Mike Bostock and Contributors
+  Source: https://github.com/d3/d3-timer
+
+* d3-transition (ISC)
+  Authors: Mike Bostock and Contributors
+  Source: https://github.com/d3/d3-transition
+
+* d3-zoom (ISC)
+  Authors: Mike Bostock and Contributors
+  Source: https://github.com/d3/d3-zoom
+
+* dagre-d3-es (MIT)
+  Source: https://github.com/tbo47/dagre-es
+
+* data-urls (MIT)
+  Authors: Domenic Denicola and Contributors
+  Source: https://github.com/jsdom/data-urls
+
+* dayjs (MIT)
+  Authors: iamkun and Contributors
+  Source: https://github.com/iamkun/dayjs
+
+* debug (MIT)
+  Authors: Josh Junon and Contributors
+  Source: https://github.com/debug-js/debug
+
+* decamelize (MIT)
+  Authors: Sindre Sorhus and Contributors
+  Source: https://github.com/sindresorhus/decamelize
+
+* decimal.js (MIT)
+  Authors: Michael Mclaughlin and Contributors
+  Source: https://github.com/MikeMcl/decimal.js
+
+* decode-named-character-reference (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/wooorm/decode-named-character-reference
+
+* deep-diff (MIT)
+  Authors: Phillip Clark and Contributors
+  Source: https://github.com/flitbit/diff
+
+* deepmerge (MIT)
+  Source: https://github.com/TehShrike/deepmerge
+
+* delaunator (ISC)
+  Authors: Vladimir Agafonkin and Contributors
+  Source: https://github.com/mapbox/delaunator
+
+* dequal (MIT)
+  Authors: Luke Edwards and Contributors
+  Source: https://github.com/lukeed/dequal
+
+* detect-libc (Apache-2.0)
+  Authors: Lovell Fuller and Contributors
+  Source: https://github.com/lovell/detect-libc
+
+* detect-node-es (MIT)
+  Authors: Ilya Kantor and Contributors
+  Source: https://github.com/thekashey/detect-node
+
+* devlop (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/wooorm/devlop
+
+* diff (BSD-3-Clause)
+  Source: https://github.com/kpdecker/jsdiff
+
+* dijkstrajs (MIT)
+  Source: https://github.com/tcort/dijkstrajs
+
+* dom-accessibility-api (MIT)
+  Source: https://github.com/eps1lon/dom-accessibility-api
+
+* dompurify ((MPL-2.0 OR Apache-2.0))
+  Authors: Dr.-Ing. Mario Heiderich, Cure53 and Contributors
+  Source: https://github.com/cure53/DOMPurify
+
+* duplexify (MIT)
+  Authors: Mathias Buus and Contributors
+  Source: https://github.com/mafintosh/duplexify
+
+* emoji-regex (MIT)
+  Authors: Mathias Bynens and Contributors
+  Source: https://github.com/mathiasbynens/emoji-regex
+
+* encode-utf8 (MIT)
+  Source: https://github.com/LinusU/encode-utf8
+
+* end-of-stream (MIT)
+  Authors: Mathias Buus and Contributors
+  Source: https://github.com/mafintosh/end-of-stream
+
+* enhanced-resolve (MIT)
+  Authors: Tobias Koppers @sokra and Contributors
+  Source: https://github.com/webpack/enhanced-resolve
+
+* entities (BSD-2-Clause)
+  Authors: Felix Boehm and Contributors
+  Source: https://github.com/fb55/entities
+
+* es-module-lexer (MIT)
+  Authors: Guy Bedford and Contributors
+  Source: https://github.com/guybedford/es-module-lexer
+
+* esbuild (MIT)
+  Source: https://github.com/evanw/esbuild
+
+* escape-string-regexp (MIT)
+  Authors: Sindre Sorhus and Contributors
+  Source: https://github.com/sindresorhus/escape-string-regexp
+
+* estree-util-is-identifier-name (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/syntax-tree/estree-util-is-identifier-name
+
+* estree-walker (MIT)
+  Authors: Rich Harris and Contributors
+  Source: https://github.com/Rich-Harris/estree-walker
+
+* expect-type (Apache-2.0)
+  Source: https://github.com/mmkal/expect-type
+
+* extend (MIT)
+  Authors: Stefan Thomas and Contributors
+  Source: https://github.com/justmoon/node-extend
+
+* fast-deep-equal (MIT)
+  Authors: Evgeny Poberezkin and Contributors
+  Source: https://github.com/epoberezkin/fast-deep-equal
+
+* fast-uri (BSD-3-Clause)
+  Authors: Vincent Le Goff and Contributors
+  Source: https://github.com/fastify/fast-uri
+
+* fast-xml-builder (MIT)
+  Authors: Amit Gupta and Contributors
+  Source: https://github.com/NaturalIntelligence/fast-xml-builder
+
+* fast-xml-parser (MIT)
+  Authors: Amit Gupta and Contributors
+  Source: https://github.com/NaturalIntelligence/fast-xml-parser
+
+* fdir (MIT)
+  Authors: thecodrr and Contributors
+  Source: https://github.com/thecodrr/fdir
+
+* fflate (MIT)
+  Authors: Arjun Barrett and Contributors
+  Source: https://github.com/101arrowz/fflate
+
+* file-type (MIT)
+  Authors: Sindre Sorhus and Contributors
+  Source: https://github.com/sindresorhus/file-type
+
+* find-up (MIT)
+  Authors: Sindre Sorhus and Contributors
+  Source: https://github.com/sindresorhus/find-up
+
+* fs-extra (MIT)
+  Authors: JP Richardson and Contributors
+  Source: https://github.com/jprichardson/node-fs-extra
+
+* fsevents (MIT)
+  Source: https://github.com/fsevents/fsevents
+
+* get-caller-file (ISC)
+  Authors: Stefan Penner and Contributors
+  Source: https://github.com/stefanpenner/get-caller-file
+
+* get-nonce (MIT)
+  Authors: Anton Korzunov and Contributors
+  Source: https://github.com/theKashey/get-nonce
+
+* graceful-fs (ISC)
+  Source: https://github.com/isaacs/node-graceful-fs
+
+* graphql (MIT)
+  Source: https://github.com/graphql/graphql-js
+
+* hachure-fill (MIT)
+  Authors: Preet Shihn and Contributors
+  Source: https://github.com/pshihn/hachure-fill
+
+* has-flag (MIT)
+  Authors: Sindre Sorhus and Contributors
+  Source: https://github.com/sindresorhus/has-flag
+
+* hast-util-parse-selector (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/syntax-tree/hast-util-parse-selector
+
+* hast-util-to-html (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/syntax-tree/hast-util-to-html
+
+* hast-util-to-jsx-runtime (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/syntax-tree/hast-util-to-jsx-runtime
+
+* hast-util-whitespace (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/syntax-tree/hast-util-whitespace
+
+* hastscript (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/syntax-tree/hastscript
+
+* html-encoding-sniffer (MIT)
+  Authors: Domenic Denicola and Contributors
+  Source: https://github.com/jsdom/html-encoding-sniffer
+
+* html-url-attributes (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/rehypejs/rehype-minify/tree/main/packages/html-url-attributes
+
+* html-void-elements (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/wooorm/html-void-elements
+
+* iconv-lite (MIT)
+  Authors: Alexander Shtuchkin and Contributors
+  Source: https://github.com/ashtuchkin/iconv-lite
+
+* idb (ISC)
+  Authors: Jake Archibald and Contributors
+  Source: https://github.com/jakearchibald/idb
+
+* ieee754 (BSD-3-Clause)
+  Authors: Feross Aboukhadijeh and Contributors
+  Source: https://github.com/feross/ieee754
+
+* ignore (MIT)
+  Authors: kael and Contributors
+  Source: https://github.com/kaelzhang/node-ignore
+
+* immer (MIT)
+  Authors: Michel Weststrate and Contributors
+  Source: https://github.com/immerjs/immer
+
+* inherits (ISC)
+  Source: https://github.com/isaacs/inherits
+
+* inline-style-parser (MIT)
+  Source: https://github.com/remarkablemark/inline-style-parser
+
+* internmap (ISC)
+  Authors: Mike Bostock and Contributors
+  Source: https://github.com/mbostock/internmap
+
+* is-alphabetical (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/wooorm/is-alphabetical
+
+* is-alphanumerical (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/wooorm/is-alphanumerical
+
+* is-decimal (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/wooorm/is-decimal
+
+* is-fullwidth-code-point (MIT)
+  Authors: Sindre Sorhus and Contributors
+  Source: https://github.com/sindresorhus/is-fullwidth-code-point
+
+* is-hexadecimal (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/wooorm/is-hexadecimal
+
+* is-plain-obj (MIT)
+  Authors: Sindre Sorhus and Contributors
+  Source: https://github.com/sindresorhus/is-plain-obj
+
+* is-potential-custom-element-name (MIT)
+  Authors: Mathias Bynens and Contributors
+  Source: https://github.com/mathiasbynens/is-potential-custom-element-name
+
+* isarray (MIT)
+  Authors: Julian Gruber and Contributors
+  Source: https://github.com/juliangruber/isarray
+
+* jiti (MIT)
+  Source: https://github.com/unjs/jiti
+
+* js-cookie (MIT)
+  Authors: Klaus Hartl and Contributors
+  Source: https://github.com/js-cookie/js-cookie
+
+* js-tokens (MIT)
+  Authors: Simon Lydell and Contributors
+  Source: https://github.com/lydell/js-tokens
+
+* jsdom (MIT)
+  Source: https://github.com/jsdom/jsdom
+
+* json-schema-traverse (MIT)
+  Authors: Evgeny Poberezkin and Contributors
+  Source: https://github.com/epoberezkin/json-schema-traverse
+
+* jsonfile (MIT)
+  Authors: JP Richardson and Contributors
+  Source: https://github.com/jprichardson/node-jsonfile
+
+* jsonschema (MIT)
+  Authors: Tom de Grunt and Contributors
+  Source: https://github.com/tdegrunt/jsonschema
+
+* just-extend (MIT)
+  Authors: Angus Croll and Contributors
+  Source: https://github.com/angus-c/just
+
+* katex (MIT)
+  Source: https://github.com/KaTeX/KaTeX
+
+* khroma (MIT*)
+  Source: https://github.com/fabiospampinato/khroma
+
+* langium (MIT)
+  Authors: TypeFox and Contributors
+  Source: https://github.com/eclipse-langium/langium
+
+* layout-base (MIT)
+  Source: https://github.com/iVis-at-Bilkent/layout-base
+
+* lightningcss (MPL-2.0)
+  Source: https://github.com/parcel-bundler/lightningcss
+
+* lightningcss-darwin-arm64 (MPL-2.0)
+  Source: https://github.com/parcel-bundler/lightningcss
+
+* locate-path (MIT)
+  Authors: Sindre Sorhus and Contributors
+  Source: https://github.com/sindresorhus/locate-path
+
+* lodash (MIT)
+  Authors: John-David Dalton and Contributors
+  Source: https://github.com/lodash/lodash
+
+* lodash-es (MIT)
+  Authors: John-David Dalton and Contributors
+  Source: https://github.com/lodash/lodash
+
+* lodash.truncate (MIT)
+  Authors: John-David Dalton and Contributors
+  Source: https://github.com/lodash/lodash
+
+* longest-streak (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/wooorm/longest-streak
+
+* loose-envify (MIT)
+  Authors: Andres Suarez and Contributors
+  Source: https://github.com/zertosh/loose-envify
+
+* lru-cache (BlueOak-1.0.0)
+  Authors: Isaac Z. Schlueter and Contributors
+  Source: https://github.com/isaacs/node-lru-cache
+
+* lz-string (MIT)
+  Authors: pieroxy and Contributors
+  Source: https://github.com/pieroxy/lz-string
+
+* magic-string (MIT)
+  Authors: Rich Harris and Contributors
+  Source: https://github.com/Rich-Harris/magic-string
+
+* make-error (ISC)
+  Authors: Julien Fontanet and Contributors
+  Source: https://github.com/JsCommunity/make-error
+
+* markdown-table (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/wooorm/markdown-table
+
+* marked (MIT)
+  Authors: Christopher Jeffrey and Contributors
+  Source: https://github.com/markedjs/marked
+
+* material-colors (ISC)
+  Authors: Shuhei Kagawa and Contributors
+  Source: https://github.com/shuhei/material-colors
+
+* mdast-util-directive (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/syntax-tree/mdast-util-directive
+
+* mdast-util-find-and-replace (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/syntax-tree/mdast-util-find-and-replace
+
+* mdast-util-from-markdown (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/syntax-tree/mdast-util-from-markdown
+
+* mdast-util-gfm (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/syntax-tree/mdast-util-gfm
+
+* mdast-util-gfm-autolink-literal (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/syntax-tree/mdast-util-gfm-autolink-literal
+
+* mdast-util-gfm-footnote (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/syntax-tree/mdast-util-gfm-footnote
+
+* mdast-util-gfm-strikethrough (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/syntax-tree/mdast-util-gfm-strikethrough
+
+* mdast-util-gfm-table (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/syntax-tree/mdast-util-gfm-table
+
+* mdast-util-gfm-task-list-item (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/syntax-tree/mdast-util-gfm-task-list-item
+
+* mdast-util-mdx-expression (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/syntax-tree/mdast-util-mdx-expression
+
+* mdast-util-mdx-jsx (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/syntax-tree/mdast-util-mdx-jsx
+
+* mdast-util-mdxjs-esm (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/syntax-tree/mdast-util-mdxjs-esm
+
+* mdast-util-newline-to-break (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/syntax-tree/mdast-util-newline-to-break
+
+* mdast-util-phrasing (MIT)
+  Authors: Victor Felder and Contributors
+  Source: https://github.com/syntax-tree/mdast-util-phrasing
+
+* mdast-util-to-hast (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/syntax-tree/mdast-util-to-hast
+
+* mdast-util-to-markdown (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/syntax-tree/mdast-util-to-markdown
+
+* mdast-util-to-string (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/syntax-tree/mdast-util-to-string
+
+* mdn-data (CC0-1.0)
+  Authors: Mozilla Developer Network and Contributors
+  Source: https://github.com/mdn/data
+
+* mermaid (MIT)
+  Authors: Knut Sveidqvist and Contributors
+  Source: https://github.com/mermaid-js/mermaid
+
+* micromark (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/micromark/micromark/tree/main/packages/micromark
+
+* micromark-core-commonmark (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/micromark/micromark/tree/main/packages/micromark-core-commonmark
+
+* micromark-extension-directive (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/micromark/micromark-extension-directive
+
+* micromark-extension-gfm (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/micromark/micromark-extension-gfm
+
+* micromark-extension-gfm-autolink-literal (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/micromark/micromark-extension-gfm-autolink-literal
+
+* micromark-extension-gfm-footnote (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/micromark/micromark-extension-gfm-footnote
+
+* micromark-extension-gfm-strikethrough (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/micromark/micromark-extension-gfm-strikethrough
+
+* micromark-extension-gfm-table (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/micromark/micromark-extension-gfm-table
+
+* micromark-extension-gfm-tagfilter (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/micromark/micromark-extension-gfm-tagfilter
+
+* micromark-extension-gfm-task-list-item (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/micromark/micromark-extension-gfm-task-list-item
+
+* micromark-factory-destination (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/micromark/micromark/tree/main/packages/micromark-factory-destination
+
+* micromark-factory-label (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/micromark/micromark/tree/main/packages/micromark-factory-label
+
+* micromark-factory-space (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/micromark/micromark/tree/main/packages/micromark-factory-space
+
+* micromark-factory-title (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/micromark/micromark/tree/main/packages/micromark-factory-title
+
+* micromark-factory-whitespace (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/micromark/micromark/tree/main/packages/micromark-factory-whitespace
+
+* micromark-util-character (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/micromark/micromark/tree/main/packages/micromark-util-character
+
+* micromark-util-chunked (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/micromark/micromark/tree/main/packages/micromark-util-chunked
+
+* micromark-util-classify-character (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/micromark/micromark/tree/main/packages/micromark-util-classify-character
+
+* micromark-util-combine-extensions (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/micromark/micromark/tree/main/packages/micromark-util-combine-extensions
+
+* micromark-util-decode-numeric-character-reference (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/micromark/micromark/tree/main/packages/micromark-util-decode-numeric-character-reference
+
+* micromark-util-decode-string (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/micromark/micromark/tree/main/packages/micromark-util-decode-string
+
+* micromark-util-encode (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/micromark/micromark/tree/main/packages/micromark-util-encode
+
+* micromark-util-html-tag-name (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/micromark/micromark/tree/main/packages/micromark-util-html-tag-name
+
+* micromark-util-normalize-identifier (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/micromark/micromark/tree/main/packages/micromark-util-normalize-identifier
+
+* micromark-util-resolve-all (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/micromark/micromark/tree/main/packages/micromark-util-resolve-all
+
+* micromark-util-sanitize-uri (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/micromark/micromark/tree/main/packages/micromark-util-sanitize-uri
+
+* micromark-util-subtokenize (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/micromark/micromark/tree/main/packages/micromark-util-subtokenize
+
+* micromark-util-symbol (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/micromark/micromark/tree/main/packages/micromark-util-symbol
+
+* micromark-util-types (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/micromark/micromark/tree/main/packages/micromark-util-types
+
+* mime-db (MIT)
+  Source: https://github.com/jshttp/mime-db
+
+* mime-types (MIT)
+  Source: https://github.com/jshttp/mime-types
+
+* minimalistic-assert (ISC)
+  Source: https://github.com/calvinmetcalf/minimalistic-assert
+
+* minimatch (BlueOak-1.0.0)
+  Authors: Isaac Z. Schlueter and Contributors
+  Source: https://github.com/isaacs/minimatch
+
+* mlly (MIT)
+  Source: https://github.com/unjs/mlly
+
+* mnemonist (MIT)
+  Authors: Guillaume Plique and Contributors
+  Source: https://github.com/yomguithereal/mnemonist
+
+* ms (MIT)
+  Source: https://github.com/vercel/ms
+
+* nanoid (MIT)
+  Authors: Andrey Sitnik and Contributors
+  Source: https://github.com/ai/nanoid
+
+* nise (BSD-3-Clause)
+  Source: https://github.com/sinonjs/nise
+
+* npmlog (ISC)
+  Authors: GitHub Inc. and Contributors
+  Source: https://github.com/npm/npmlog
+
+* object-assign (MIT)
+  Authors: Sindre Sorhus and Contributors
+  Source: https://github.com/sindresorhus/object-assign
+
+* obliterator (MIT)
+  Authors: Guillaume Plique and Contributors
+  Source: https://github.com/yomguithereal/obliterator
+
+* obug (MIT)
+  Authors: Kevin Deng and Contributors
+  Source: https://github.com/sxzz/obug
+
+* once (ISC)
+  Authors: Isaac Z. Schlueter and Contributors
+  Source: https://github.com/isaacs/once
+
+* oniguruma-parser (MIT)
+  Authors: Steven Levithan and Contributors
+  Source: https://github.com/slevithan/oniguruma-parser
+
+* oniguruma-to-es (MIT)
+  Authors: Steven Levithan and Contributors
+  Source: https://github.com/slevithan/oniguruma-to-es
+
+* p-limit (MIT)
+  Authors: Sindre Sorhus and Contributors
+  Source: https://github.com/sindresorhus/p-limit
+
+* p-locate (MIT)
+  Authors: Sindre Sorhus and Contributors
+  Source: https://github.com/sindresorhus/p-locate
+
+* p-try (MIT)
+  Authors: Sindre Sorhus and Contributors
+  Source: https://github.com/sindresorhus/p-try
+
+* package-manager-detector (MIT)
+  Authors: Anthony Fu and Contributors
+  Source: https://github.com/antfu-collective/package-manager-detector
+
+* parse-entities (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/wooorm/parse-entities
+
+* parse5 (MIT)
+  Authors: Ivan Nikulin and Contributors
+  Source: https://github.com/inikulin/parse5
+
+* path-data-parser (MIT)
+  Authors: Preet Shihn and Contributors
+  Source: https://github.com/pshihn/path-data-parser
+
+* path-exists (MIT)
+  Authors: Sindre Sorhus and Contributors
+  Source: https://github.com/sindresorhus/path-exists
+
+* path-expression-matcher (MIT)
+  Authors: Amit Gupta and Contributors
+  Source: https://github.com/NaturalIntelligence/path-expression-matcher
+
+* path-to-regexp (MIT)
+  Source: https://github.com/pillarjs/path-to-regexp
+
+* pathe (MIT)
+  Source: https://github.com/unjs/pathe
+
+* picocolors (ISC)
+  Authors: Alexey Raspopov and Contributors
+  Source: https://github.com/alexeyraspopov/picocolors
+
+* picomatch (MIT)
+  Authors: Jon Schlinkert and Contributors
+  Source: https://github.com/micromatch/picomatch
+
+* pkg-types (MIT)
+  Source: https://github.com/unjs/pkg-types
+
+* pngjs (MIT)
+  Source: https://github.com/lukeapage/pngjs
+
+* points-on-curve (MIT)
+  Authors: Preet Shihn and Contributors
+  Source: https://github.com/pshihn/bezier-points
+
+* points-on-path (MIT)
+  Authors: Preet Shihn and Contributors
+  Source: https://github.com/pshihn/points-on-path
+
+* postcss (MIT)
+  Authors: Andrey Sitnik and Contributors
+  Source: https://github.com/postcss/postcss
+
+* pretty-format (MIT)
+  Authors: James Kyle and Contributors
+  Source: https://github.com/facebook/jest
+
+* prop-types (MIT)
+  Source: https://github.com/facebook/prop-types
+
+* property-information (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/wooorm/property-information
+
+* punycode (MIT)
+  Authors: Mathias Bynens and Contributors
+  Source: https://github.com/mathiasbynens/punycode.js
+
+* qrcode (MIT)
+  Authors: Ryan Day and Contributors
+  Source: https://github.com/soldair/node-qrcode
+
+* react (MIT)
+  Source: https://github.com/facebook/react
+
+* react-color (MIT)
+  Authors: case and Contributors
+  Source: https://github.com/casesandberg/react-color
+
+* react-dom (MIT)
+  Source: https://github.com/facebook/react
+
+* react-error-boundary (MIT)
+  Authors: Brian Vaughn and Contributors
+  Source: https://github.com/bvaughn/react-error-boundary
+
+* react-hook-form (MIT)
+  Source: https://github.com/react-hook-form/react-hook-form
+
+* react-icons (MIT)
+  Authors: Goran Gajic and Contributors
+  Source: https://github.com/react-icons/react-icons
+
+* react-is (MIT)
+  Source: https://github.com/facebook/react
+
+* react-markdown (MIT)
+  Authors: Espen Hovlandsdal and Contributors
+  Source: https://github.com/remarkjs/react-markdown
+
+* react-remove-scroll (MIT)
+  Authors: Anton Korzunov and Contributors
+  Source: https://github.com/theKashey/react-remove-scroll
+
+* react-remove-scroll-bar (MIT)
+  Authors: Anton Korzunov and Contributors
+  Source: https://github.com/theKashey/react-remove-scroll-bar
+
+* react-router (MIT)
+  Authors: Remix Software and Contributors
+  Source: https://github.com/remix-run/react-router
+
+* react-signature-canvas (Apache-2.0)
+  Authors: Anton Gilgur and Contributors
+  Source: https://github.com/agilgur5/react-signature-canvas
+
+* react-style-singleton (MIT)
+  Authors: Anton Korzunov and Contributors
+  Source: https://github.com/theKashey/react-style-singleton
+
+* reactcss (MIT)
+  Authors: case and Contributors
+  Source: https://github.com/casesandberg/reactcss
+
+* readable-stream (MIT)
+  Source: https://github.com/nodejs/readable-stream
+
+* regex (MIT)
+  Authors: Steven Levithan and Contributors
+  Source: https://github.com/slevithan/regex
+
+* regex-recursion (MIT)
+  Authors: Steven Levithan and Contributors
+  Source: https://github.com/slevithan/regex-recursion
+
+* regex-utilities (MIT)
+  Authors: Steven Levithan and Contributors
+  Source: https://github.com/slevithan/regex-utilities
+
+* remark-breaks (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/remarkjs/remark-breaks
+
+* remark-directive (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/remarkjs/remark-directive
+
+* remark-directive-rehype (Unlicense)
+  Authors: Igor Gassmann and Contributors
+  Source: https://github.com/IGassmann/remark-directive-rehype
+
+* remark-gfm (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/remarkjs/remark-gfm
+
+* remark-parse (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/remarkjs/remark/tree/main/packages/remark-parse
+
+* remark-rehype (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/remarkjs/remark-rehype
+
+* remark-stringify (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/remarkjs/remark/tree/main/packages/remark-stringify
+
+* require-directory (MIT)
+  Authors: Troy Goode and Contributors
+  Source: https://github.com/troygoode/node-require-directory
+
+* require-from-string (MIT)
+  Authors: Vsevolod Strukchinsky and Contributors
+  Source: https://github.com/floatdrop/require-from-string
+
+* require-main-filename (ISC)
+  Authors: Ben Coe and Contributors
+  Source: https://github.com/yargs/require-main-filename
+
+* robust-predicates (Unlicense)
+  Authors: Vladimir Agafonkin and Contributors
+  Source: https://github.com/mourner/robust-predicates
+
+* rolldown (MIT)
+  Source: https://github.com/rolldown/rolldown
+
+* roughjs (MIT)
+  Authors: Preet Shihn and Contributors
+  Source: https://github.com/pshihn/rough
+
+* rw (BSD-3-Clause)
+  Authors: Mike Bostock and Contributors
+  Source: https://github.com/mbostock/rw
+
+* rxjs (Apache-2.0)
+  Authors: Ben Lesh and Contributors
+  Source: https://github.com/reactivex/rxjs
+
+* safe-buffer (MIT)
+  Authors: Feross Aboukhadijeh and Contributors
+  Source: https://github.com/feross/safe-buffer
+
+* safer-buffer (MIT)
+  Authors: Nikita Skovoroda and Contributors
+  Source: https://github.com/ChALkeR/safer-buffer
+
+* saxes (ISC)
+  Authors: Louis-Dominique Dubeau and Contributors
+  Source: https://github.com/lddubeau/saxes
+
+* scheduler (MIT)
+  Source: https://github.com/facebook/react
+
+* semver (ISC)
+  Authors: GitHub Inc. and Contributors
+  Source: https://github.com/npm/node-semver
+
+* set-blocking (ISC)
+  Authors: Ben Coe and Contributors
+  Source: https://github.com/yargs/set-blocking
+
+* set-cookie-parser (MIT)
+  Authors: Nathan Friedly and Contributors
+  Source: https://github.com/nfriedly/set-cookie-parser
+
+* shiki (MIT)
+  Authors: Pine Wu and Contributors
+  Source: https://github.com/shikijs/shiki
+
+* siginfo (ISC)
+  Authors: Emil Bay and Contributors
+  Source: https://github.com/emilbayes/siginfo
+
+* signature_pad (MIT)
+  Authors: Szymon Nowak and Contributors
+  Source: https://github.com/szimek/signature_pad
+
+* sinon (BSD-3-Clause)
+  Authors: Christian Johansen and Contributors
+  Source: https://github.com/sinonjs/sinon
+
+* slice-ansi (MIT)
+  Source: https://github.com/chalk/slice-ansi
+
+* source-map-js (BSD-3-Clause)
+  Authors: Valentin 7rulnik Semirulnik and Contributors
+  Source: https://github.com/7rulnik/source-map-js
+
+* space-separated-tokens (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/wooorm/space-separated-tokens
+
+* stackback (MIT)
+  Authors: Roman Shtylman and Contributors
+  Source: https://github.com/shtylman/node-stackback
+
+* std-env (MIT)
+  Source: https://github.com/unjs/std-env
+
+* stream-shift (MIT)
+  Authors: Mathias Buus and Contributors
+  Source: https://github.com/mafintosh/stream-shift
+
+* string_decoder (MIT)
+  Source: https://github.com/nodejs/string_decoder
+
+* string-width (MIT)
+  Authors: Sindre Sorhus and Contributors
+  Source: https://github.com/sindresorhus/string-width
+
+* stringify-entities (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/wooorm/stringify-entities
+
+* strip-ansi (MIT)
+  Authors: Sindre Sorhus and Contributors
+  Source: https://github.com/chalk/strip-ansi
+
+* strnum (MIT)
+  Authors: Amit Gupta and Contributors
+  Source: https://github.com/NaturalIntelligence/strnum
+
+* strtok3 (MIT)
+  Authors: Borewit and Contributors
+  Source: https://github.com/Borewit/strtok3
+
+* style-to-js (MIT)
+  Authors: Mark and Contributors
+  Source: https://github.com/remarkablemark/style-to-js
+
+* style-to-object (MIT)
+  Authors: Mark and Contributors
+  Source: https://github.com/remarkablemark/style-to-object
+
+* stylis (MIT)
+  Authors: Sultan Tarimo and Contributors
+  Source: https://github.com/thysultan/stylis.js
+
+* supports-color (MIT)
+  Authors: Sindre Sorhus and Contributors
+  Source: https://github.com/chalk/supports-color
+
+* swr (MIT)
+  Source: https://github.com/vercel/swr
+
+* symbol-tree (MIT)
+  Authors: Joris van der Wel and Contributors
+  Source: https://github.com/jsdom/js-symbol-tree
+
+* tabbable (MIT)
+  Authors: David Clark and Contributors
+  Source: https://github.com/focus-trap/tabbable
+
+* table (BSD-3-Clause)
+  Authors: Gajus Kuizinas and Contributors
+  Source: https://github.com/gajus/table
+
+* tailwindcss (MIT)
+  Source: https://github.com/tailwindlabs/tailwindcss
+
+* tapable (MIT)
+  Authors: Tobias Koppers @sokra and Contributors
+  Source: https://github.com/webpack/tapable
+
+* tinybench (MIT)
+  Source: https://github.com/tinylibs/tinybench
+
+* tinycolor2 (MIT)
+  Authors: Brian Grinstead and Contributors
+  Source: https://github.com/bgrins/TinyColor
+
+* tinyexec (MIT)
+  Authors: James Garbutt and Contributors
+  Source: https://github.com/tinylibs/tinyexec
+
+* tinyglobby (MIT)
+  Authors: Superchupu and Contributors
+  Source: https://github.com/SuperchupuDev/tinyglobby
+
+* tinyrainbow (MIT)
+  Source: https://github.com/tinylibs/tinyrainbow
+
+* tldts (MIT)
+  Authors: Rémi Berson and Contributors
+  Source: https://github.com/remusao/tldts
+
+* tldts-core (MIT)
+  Authors: Rémi Berson and Contributors
+  Source: https://github.com/remusao/tldts
+
+* token-types (MIT)
+  Authors: Borewit and Contributors
+  Source: https://github.com/Borewit/token-types
+
+* tough-cookie (BSD-3-Clause)
+  Authors: Jeremy Stashewsky and Contributors
+  Source: https://github.com/salesforce/tough-cookie
+
+* tr46 (MIT)
+  Authors: Sebastian Mayr and Contributors
+  Source: https://github.com/jsdom/tr46
+
+* trim-canvas (Apache-2.0)
+  Authors: Anton Gilgur and Contributors
+  Source: https://github.com/agilgur5/trim-canvas
+
+* trim-lines (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/wooorm/trim-lines
+
+* trough (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/wooorm/trough
+
+* ts-dedent (MIT)
+  Authors: Tamino Martinius and Contributors
+  Source: https://github.com/tamino-martinius/node-ts-dedent
+
+* ts-node (MIT)
+  Authors: Blake Embrey and Contributors
+  Source: https://github.com/TypeStrong/ts-node
+
+* tslib (0BSD)
+  Authors: Microsoft Corp. and Contributors
+  Source: https://github.com/Microsoft/tslib
+
+* type-detect (MIT)
+  Authors: Jake Luer and Contributors
+  Source: https://github.com/chaijs/type-detect
+
+* typescript (Apache-2.0)
+  Authors: Microsoft Corp. and Contributors
+  Source: https://github.com/microsoft/TypeScript
+
+* ufo (MIT)
+  Source: https://github.com/unjs/ufo
+
+* uint8array-extras (MIT)
+  Authors: Sindre Sorhus and Contributors
+  Source: https://github.com/sindresorhus/uint8array-extras
+
+* ulid (MIT)
+  Authors: Alizain Feerasta and Contributors
+  Source: https://github.com/ulid/javascript
+
+* undici (MIT)
+  Source: https://github.com/nodejs/undici
+
+* undici-types (MIT)
+  Source: https://github.com/nodejs/undici
+
+* unified (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/unifiedjs/unified
+
+* unist-util-is (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/syntax-tree/unist-util-is
+
+* unist-util-map (MIT)
+  Authors: azu and Contributors
+  Source: https://github.com/syntax-tree/unist-util-map
+
+* unist-util-position (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/syntax-tree/unist-util-position
+
+* unist-util-stringify-position (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/syntax-tree/unist-util-stringify-position
+
+* unist-util-visit (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/syntax-tree/unist-util-visit
+
+* unist-util-visit-parents (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/syntax-tree/unist-util-visit-parents
+
+* universalify (MIT)
+  Authors: Ryan Zimmerman and Contributors
+  Source: https://github.com/RyanZim/universalify
+
+* use-callback-ref (MIT)
+  Authors: theKashey and Contributors
+  Source: https://github.com/theKashey/use-callback-ref
+
+* use-isomorphic-layout-effect (MIT)
+  Source: https://github.com/Andarist/use-isomorphic-layout-effect
+
+* use-sidecar (MIT)
+  Authors: theKashey and Contributors
+  Source: https://github.com/theKashey/use-sidecar
+
+* use-sync-external-store (MIT)
+  Source: https://github.com/facebook/react
+
+* util-deprecate (MIT)
+  Authors: Nathan Rajlich and Contributors
+  Source: https://github.com/TooTallNate/util-deprecate
+
+* uuid (MIT)
+  Source: https://github.com/uuidjs/uuid
+
+* v8-compile-cache-lib (MIT)
+  Authors: Andrew Bradley and Contributors
+  Source: https://github.com/cspotcode/v8-compile-cache-lib
+
+* vfile (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/vfile/vfile
+
+* vfile-message (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/vfile/vfile-message
+
+* vite (MIT)
+  Authors: Evan You and Contributors
+  Source: https://github.com/vitejs/vite
+
+* vitest (MIT)
+  Authors: Anthony Fu and Contributors
+  Source: https://github.com/vitest-dev/vitest
+
+* vscode-jsonrpc (MIT)
+  Authors: Microsoft Corporation and Contributors
+  Source: https://github.com/Microsoft/vscode-languageserver-node
+
+* vscode-languageserver (MIT)
+  Authors: Microsoft Corporation and Contributors
+  Source: https://github.com/Microsoft/vscode-languageserver-node
+
+* vscode-languageserver-protocol (MIT)
+  Authors: Microsoft Corporation and Contributors
+  Source: https://github.com/Microsoft/vscode-languageserver-node
+
+* vscode-languageserver-textdocument (MIT)
+  Authors: Microsoft Corporation and Contributors
+  Source: https://github.com/Microsoft/vscode-languageserver-node
+
+* vscode-languageserver-types (MIT)
+  Authors: Microsoft Corporation and Contributors
+  Source: https://github.com/Microsoft/vscode-languageserver-node
+
+* vscode-uri (MIT)
+  Authors: Microsoft and Contributors
+  Source: https://github.com/microsoft/vscode-uri
+
+* w3c-xmlserializer (MIT)
+  Source: https://github.com/jsdom/w3c-xmlserializer
+
+* webidl-conversions (BSD-2-Clause)
+  Authors: Domenic Denicola and Contributors
+  Source: https://github.com/jsdom/webidl-conversions
+
+* whatwg-mimetype (MIT)
+  Authors: Domenic Denicola and Contributors
+  Source: https://github.com/jsdom/whatwg-mimetype
+
+* whatwg-url (MIT)
+  Authors: Sebastian Mayr and Contributors
+  Source: https://github.com/jsdom/whatwg-url
+
+* which-module (ISC)
+  Authors: nexdrew and Contributors
+  Source: https://github.com/nexdrew/which-module
+
+* why-is-node-running (MIT)
+  Authors: Mathias Buus and Contributors
+  Source: https://github.com/mafintosh/why-is-node-running
+
+* wrap-ansi (MIT)
+  Authors: Sindre Sorhus and Contributors
+  Source: https://github.com/chalk/wrap-ansi
+
+* wrappy (ISC)
+  Authors: Isaac Z. Schlueter and Contributors
+  Source: https://github.com/npm/wrappy
+
+* xml-name-validator (Apache-2.0)
+  Authors: Domenic Denicola and Contributors
+  Source: https://github.com/jsdom/xml-name-validator
+
+* xmlchars (MIT)
+  Authors: Louis-Dominique Dubeau and Contributors
+  Source: https://github.com/lddubeau/xmlchars
+
+* xstate (MIT)
+  Authors: David Khourshid and Contributors
+  Source: https://github.com/statelyai/xstate
+
+* y18n (ISC)
+  Authors: Ben Coe and Contributors
+  Source: https://github.com/yargs/y18n
+
+* yaml (ISC)
+  Authors: Eemeli Aro and Contributors
+  Source: https://github.com/eemeli/yaml
+
+* yargs (MIT)
+  Source: https://github.com/yargs/yargs
+
+* yargs-parser (ISC)
+  Authors: Ben Coe and Contributors
+  Source: https://github.com/yargs/yargs-parser
+
+* yn (MIT)
+  Authors: Sindre Sorhus and Contributors
+  Source: https://github.com/sindresorhus/yn
+
+* zod (MIT)
+  Authors: Colin McDonnell and Contributors
+  Source: https://github.com/colinhacks/zod
+
+* zustand (MIT)
+  Authors: Paul Henschel and Contributors
+  Source: https://github.com/pmndrs/zustand
+
+* zwitch (MIT)
+  Authors: Titus Wormer and Contributors
+  Source: https://github.com/wooorm/zwitch
+

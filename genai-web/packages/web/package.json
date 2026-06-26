@@ -1,0 +1,53 @@
+{
+  "name": "web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "format": "biome format --write *.config.json && biome format --write src",
+    "format:test": "biome format --write tests",
+    "lint": "biome lint src",
+    "preview": "vite preview",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@digital-go-jp/tailwind-theme-plugin": "^0.3.4",
+    "@floating-ui/react": "^0.27.19",
+    "@headlessui/react": "^2.2.10",
+    "@hookform/resolvers": "^5.2.2",
+    "file-type": "^22.0.1",
+    "immer": "^11.1.4",
+    "mermaid": "^11.15.0",
+    "react": "^19.2.5",
+    "react-color": "^2.19.3",
+    "react-dom": "^19.2.5",
+    "react-error-boundary": "^6.1.1",
+    "react-hook-form": "^7.75.0",
+    "react-icons": "^5.6.0",
+    "react-markdown": "^10.1.0",
+    "react-router": "^7.15.0",
+    "react-signature-canvas": "^1.0.6",
+    "remark-breaks": "^4.0.0",
+    "remark-directive": "^4.0.0",
+    "remark-directive-rehype": "^1.0.0",
+    "remark-gfm": "^4.0.1",
+    "swr": "^2.4.1",
+    "unist-util-visit": "^5.1.0",
+    "zustand": "^5.0.13"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.2.2",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/react": "^19.2.14",
+    "@types/react-color": "^3.0.13",
+    "@types/react-dom": "^19.2.3",
+    "@types/react-signature-canvas": "^1.0.7",
+    "@vitejs/plugin-react": "^6.0.1",
+    "jsdom": "^29.0.2",
+    "shiki": "^4.0.2",
+    "tailwindcss": "^4.2.2",
+    "vite": "^8.0.8"
+  }
+}

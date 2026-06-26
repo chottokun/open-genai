@@ -1,0 +1,13 @@
+# backend / rag-app はリポジトリルートをビルドコンテキストにするため、
+# 不要・巨大なディレクトリを除外してコンテキストを小さく保つ。
+.git
+genai-web
+genai-ai-api
+whisper-app
+sd-app
+keycloak
+terminals
+**/__pycache__
+**/*.pyc
+*.db
+.env
