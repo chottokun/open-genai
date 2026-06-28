@@ -1,6 +1,6 @@
 # 🌐 ハイブリッド RAG 構成・導入ガイド
 
-本ガイドでは、**「チャット推論はクラウド LLM（Google Gemini 等）を利用し、埋め込み（Embedding）はローカル環境（`embedding_jp_api` を使用した日本語特化モデル `ruri-v3`）で行う」** という、コスト・セキュリティ・精度をすべて両立した最強のハイブリッド環境の構築・設定方法について解説します。
+本ガイドでは、**「チャット推論はクラウド LLM（Google Gemini 等）、埋め込みはローカル日本語特化モデル（`ruri-v3`）」** という、コスト・セキュリティ・精度をすべて両立した構成の構築・設定方法について解説します。
 
 ---
 
@@ -21,141 +21,231 @@ graph TD
     end
 
     subgraph 接続先ルーティング
-        LiteLLM -->|チャット推論 / RAG生成| Gemini[Google Gemini / Azure OpenAI (クラウド)]
-        LiteLLM -->|埋め込み| EmbeddingAPI[embedding_jp_api :8020/8000]
-        EmbeddingAPI -->|ローカル処理| Ruri[clari-lab/ruri-v3-base (ローカル)]
+        LiteLLM -->|チャット推論 / RAG生成| Cloud[クラウドLLM / ローカルOllama]
+        LiteLLM -->|埋め込み| EmbeddingAPI[embedding_jp_api :8020]
+        EmbeddingAPI -->|ローカル処理| Ruri[cl-nagoya/ruri-v3-30m]
     end
 ```
 
 ---
 
-## ✨ この構成が優れている理由
+## ⚠️ 重要：モデル名の命名ルール
 
-1. **セキュアかつ高速なローカル Embedding**:
-   社内文書や行政文書のベクトル化（Embedding）は、すべてローカルコンテナ側で `ruri-v3` を使って安全に行われます。これにより、クラウドへの情報漏洩リスクを抑えつつ、トークン課金の心配をせずに大量の文書をインデックス化できます。
-2. **長文コンテキストと高度な推論のクラウド丸投げ**:
-   検索されたコンテキストを考慮した高度な回答生成は、圧倒的なコンテキスト制限と推論能力を持つ Google Gemini や Azure OpenAI などのクラウドに任せることで、実用上最も優れた役割分担が成立します。
-3. **日本語に特化した RAG 精度**:
-   Ollama で特定の日本語 Embedding モデル（特に非対称検索用のプレフィックス指定が必要なモデル）を動作させるには Modelfile の定義などの手間が発生しますが、`embedding_jp_api` を使用することで、最初から日本語に最適化されたモデルを容易に導入できます。
+> **`model_name` は必ず HuggingFace モデルIDと完全一致させること**
+
+LiteLLM の `litellm_config.yaml` で設定する `model_name` と、アプリ側の `EMBED_MODEL` 環境変数は **完全に一致** させる必要があります。
+
+```yaml
+# litellm_config.yaml ✅ 正しい例
+- model_name: cl-nagoya/ruri-v3-30m    # ← HuggingFace モデルIDそのまま
+  litellm_params:
+    model: openai/cl-nagoya/ruri-v3-30m
+```
+
+```bash
+# .env ✅ 正しい例
+EMBED_MODEL=cl-nagoya/ruri-v3-30m      # ← litellm_config.yaml の model_name と一致
+```
+
+```yaml
+# ❌ 間違いやすい例（エイリアスを使った場合）
+- model_name: ruri-base                 # ← これでは EMBED_MODEL=ruri-base と設定が必要
+                                        #   モデル変更時に混乱しやすい
+```
+
+**エイリアス（`ruri-base` / `ruri-small` 等）を使うと、モデルを変えたときに `model_name` と `EMBED_MODEL` のどちらを変えるべきか混乱しやすくなります。モデルIDをそのまま使うのが最もシンプルです。**
 
 ---
 
-## 🛠️ 設定手順
+## 🔄 Embeddingモデル変更時のトラブルシューティング
+
+### 利用可能な ruri-v3 モデル一覧
+
+| HuggingFace モデルID | パラメータ数 | 出力次元 | 最大トークン | 特徴 |
+|---|---|---|---|---|
+| `cl-nagoya/ruri-v3-30m` | 30M | **256** | 8192 | 軽量・高速・ModernBERT-Ja |
+| `cl-nagoya/ruri-v3-70m` | 70M | **256** | 8192 | バランス型 |
+| `cl-nagoya/ruri-v3-310m` | 310M | **768** | 8192 | 最高精度 |
+
+> ⚠️ **モデルを変えると出力次元数が変わる場合があります。** 次元数が違うと Qdrant への upsert が 400 エラーになります。
+
+---
+
+### 📋 モデル変更の正しい手順
+
+**必ず以下の順序で変更してください：**
+
+#### ステップ1：設定ファイルを更新
+
+```yaml
+# litellm_config.yaml
+- model_name: cl-nagoya/ruri-v3-310m    # ← 新しいモデルIDに変更
+  litellm_params:
+    model: openai/cl-nagoya/ruri-v3-310m
+    api_base: "http://embedding-jp-api:8000/v1"
+    api_key: "not-needed"
+```
+
+```bash
+# .env
+EMBED_MODEL=cl-nagoya/ruri-v3-310m     # ← model_name と一致させる
+EMBED_DIM=768                           # ← 新モデルの次元数に変更
+EMBED_MODEL_NAME=cl-nagoya/ruri-v3-310m  # ← embedding-jp-api が読み込むモデル
+```
+
+#### ステップ2：Qdrant のコレクションを削除
+
+```bash
+# 既存コレクションを削除（次元数が変わるため必須）
+curl -X DELETE http://localhost:6333/collections/open_genai_rag
+```
+
+> ⚠️ **この操作でコレクション内のすべてのベクトルが削除されます。** 次のステップで再登録が必要です。
+
+#### ステップ3：コンテナを再起動
+
+```bash
+# embedding-jp-api を新モデルで再ビルド（初回はモデルダウンロードが発生）
+docker compose up -d --build embedding-jp-api
+
+# LiteLLM を再起動して新しい設定を読み込む
+docker compose restart litellm
+
+# rag-app を再起動して新しい環境変数を反映
+docker compose up -d --force-recreate rag-app
+```
+
+#### ステップ4：ドキュメントを再 ingest
+
+コレクションが削除されたため、すべてのドキュメントを再登録します。
+
+```bash
+curl -X POST http://localhost:8001/ingest \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: local-rag-key" \
+  -d '{
+    "documents": [
+      {"source": "テスト", "text": "テスト文書です。"}
+    ]
+  }'
+# → {"added_chunks":1,"total_chunks":1} が返れば成功
+```
+
+#### ステップ5：次元数を確認
+
+```bash
+curl -s http://localhost:6333/collections/open_genai_rag | \
+  python3 -c "import sys,json; r=json.load(sys.stdin)['result']; \
+  print('次元数:', r['config']['params']['vectors']['size'])"
+# → 次元数: 768  (ruri-v3-310m の場合)
+```
+
+---
+
+### 🐛 よくあるエラーと対処法
+
+| エラー | 原因 | 対処 |
+|---|---|---|
+| `400 Bad Request` (Qdrant upsert) | コレクションの次元数とモデルの次元数が不一致 | コレクションを削除してモデルに合わせた次元数で再作成 |
+| `400 Bad Request` (LiteLLM embeddings) | `EMBED_MODEL` が `model_name` と一致していない | `.env` の `EMBED_MODEL` を `litellm_config.yaml` の `model_name` と一致させる |
+| `404 Not Found` (Qdrant) | コレクションが存在しない | `/ingest` を実行すると `ensure_collection()` が自動作成する |
+| `500 Internal Server Error` | embedding-jp-api のモデルダウンロード中 | `docker compose logs embedding-jp-api` でダウンロード完了を待つ |
+| 環境変数が古い値のまま | `.env` ではなく `docker-compose.yml` のデフォルト値が使われている | `.env` に明示的に値を設定し `--force-recreate` で再起動 |
+
+---
+
+## 🌐 OpenAI 互換サーバーの接続設定
+
+`OPENAI_BASE_URL` を変えるだけで、さまざまな LLM プロバイダーに接続できます。
+
+### ローカル
+
+| サービス | `OPENAI_BASE_URL` | `OPENAI_API_KEY` |
+|---|---|---|
+| Ollama | `http://host.docker.internal:11434/v1` | `ollama` |
+| LM Studio | `http://host.docker.internal:1234/v1` | `lm-studio` |
+| vLLM | `http://<host>:8000/v1` | 任意トークン |
+
+### クラウド
+
+| サービス | `OPENAI_BASE_URL` | 備考 |
+|---|---|---|
+| **さくらインターネット AI クラウド** | `https://api.sakura.ai/v1` | 国産・低コスト・高速 |
+| Groq | `https://api.groq.com/openai/v1` | 超高速推論 |
+| OpenAI | `https://api.openai.com/v1` | GPT-4o 等 |
+| Azure OpenAI | `https://<resource>.openai.azure.com/` | 行政・エンタープライズ向け |
+
+> 💡 **LiteLLM 経由の場合** は `OPENAI_BASE_URL=http://litellm:4000/v1` に固定し、`litellm_config.yaml` に各プロバイダーを定義します。`.env` を変更せずにモデルを切り替えられます。
+
+---
+
+## 🛠️ 設定手順（全体）
 
 ### 1. `litellm_config.yaml` の定義
-プロジェクトルートに `litellm_config.yaml` を配置し、モデルごとに接続先をルーティングします。
 
 ```yaml
 model_list:
-  # --- チャット・推論モデル（クラウド） ---
+  # チャット推論：Google Gemini（クラウド）
   - model_name: gemini-1.5-pro
     litellm_params:
       model: gemini/gemini-1.5-pro
       api_key: "os.environ/GEMINI_API_KEY"
 
-  - model_name: gemini-1.5-flash
+  # チャット推論：さくらインターネット AI クラウド
+  - model_name: sakura-ai-chat
     litellm_params:
-      model: gemini/gemini-1.5-flash
-      api_key: "os.environ/GEMINI_API_KEY"
+      model: openai/Llama-3.3-70B-Instruct
+      api_base: "https://api.sakura.ai/v1"
+      api_key: "os.environ/SAKURA_AI_API_KEY"
 
-  # --- 日本語Embeddingモデル（embedding_jp_api へのルーティング） ---
-  - model_name: ruri-base
+  # チャット推論：ローカルOllama（フォールバック）
+  - model_name: local-ollama-chat
     litellm_params:
-      model: openai/clari-lab/ruri-v3-base
-      api_base: "http://embedding-jp-api:8000/v1" # コンテナ間通信URL
+      model: ollama/qwen2.5:7b
+      api_base: "http://host.docker.internal:11434"
+
+  # 日本語Embedding：model_name は HuggingFace ID と完全一致させること
+  - model_name: cl-nagoya/ruri-v3-30m
+    litellm_params:
+      model: openai/cl-nagoya/ruri-v3-30m
+      api_base: "http://embedding-jp-api:8000/v1"
       api_key: "not-needed"
 ```
 
 ### 2. `.env` の設定
-プロジェクトルートの `.env` ファイルに、必要なキーとプレフィックスの設定を追加します。
 
 ```bash
-# --- クラウド API 設定 ---
-GEMINI_API_KEY=AIzaSy... # ご自身のAPIキーを設定してください
-
-# --- RAG 連携設定 ---
-EMBED_MODEL=ruri-base
-RAG_MODEL=gemini-1.5-pro
-
-# --- 日本語特化型 Embedding (ruri-v3) 用のプレフィックス設定 ---
-# ruri-v3 では、検索クエリと文書でそれぞれ異なるプレフィックスを付与することで精度を最大化します。
+GEMINI_API_KEY=AIzaSy...
+EMBED_MODEL_NAME=cl-nagoya/ruri-v3-30m   # embedding-jp-api が読み込むモデル
+EMBED_MODEL=cl-nagoya/ruri-v3-30m        # litellm_config.yaml の model_name と一致
+EMBED_DIM=256                             # モデルの出力次元数（30m/70m→256, 310m→768）
+RAG_MODEL=gemini-1.5-pro                 # 回答生成モデル
 EMBED_QUERY_PREFIX=検索クエリ: 
 EMBED_DOC_PREFIX=検索文書: 
 ```
 
-### 3. `docker-compose.yml` でのコンテナ連携
-`docker-compose.yml` に `litellm` および `embedding-jp-api` サービスを追加し、`backend` と `rag-app` からの接続先環境変数を LiteLLM Proxy へ向けます。
+### 3. 起動
 
-```yaml
-services:
-  # 既存のバックエンド等を LiteLLM に向ける
-  backend:
-    environment:
-      - OPENAI_BASE_URL=http://litellm:4000/v1
-      - OPENAI_API_KEY=not-needed
-      - DEFAULT_MODEL=gemini-1.5-pro
-    depends_on:
-      - litellm
-      # ...
-
-  rag-app:
-    environment:
-      - OPENAI_BASE_URL=http://litellm:4000/v1
-      - OPENAI_API_KEY=not-needed
-      - EMBED_MODEL=ruri-base
-      - RAG_MODEL=gemini-1.5-pro
-      - EMBED_QUERY_PREFIX=${EMBED_QUERY_PREFIX:-検索クエリ: }
-      - EMBED_DOC_PREFIX=${EMBED_DOC_PREFIX:-検索文書: }
-    depends_on:
-      - litellm
-      # ...
-
-  # --- 【追加】LiteLLM Proxy ---
-  litellm:
-    image: ghcr.io/berriai/litellm:main-v1.40.0-stable
-    container_name: open-genai-litellm
-    ports:
-      - "4000:4000"
-    volumes:
-      - ./litellm_config.yaml:/app/config.yaml
-    command: [ "--config", "/app/config.yaml", "--port", "4000" ]
-    environment:
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
-    restart: unless-stopped
-
-  # --- 【追加】日本語特化Embedding API ---
-  embedding-jp-api:
-    image: ghcr.io/chottokun/embedding_jp_api:latest
-    container_name: open-genai-embedding-jp-api
-    ports:
-      - "8020:8000"
-    environment:
-      - MODEL_NAME=${EMBED_MODEL_NAME:-clari-lab/ruri-v3-base}
-    volumes:
-      - huggingface_cache:/root/.cache/huggingface
-    restart: unless-stopped
-
-volumes:
-  huggingface_cache:
+```bash
+docker compose up -d --build
 ```
 
----
+初回起動時、`embedding-jp-api` が HuggingFace からモデルをダウンロードします（ダウンロード済みは `huggingface_cache` ボリュームにキャッシュ）。
 
-## 🏃‍♂️ 起動と動作確認
+### 4. 動作確認
 
-1. **コンテナの起動**:
-   ```bash
-   docker compose up -d --build
-   ```
-   初回起動時、`embedding-jp-api` が指定された Embedding モデル（`clari-lab/ruri-v3-base`）を Hugging Face から自動ダウンロードします。これには数分かかる場合があります（ダウンロードされたモデルは `huggingface_cache` ボリュームにキャッシュされ、次回以降は瞬時に起動します）。
+```bash
+# LiteLLM モデル一覧
+curl http://localhost:4000/v1/models | python3 -m json.tool
 
-2. **LiteLLM のヘルスチェック**:
-   ブラウザや `curl` で LiteLLM Proxy のモデル一覧エンドポイントを叩き、定義したモデルが見えるか確認します。
-   ```bash
-   curl http://localhost:4000/v1/models
-   ```
+# Embedding テスト
+curl -X POST http://localhost:4000/v1/embeddings \
+  -H "Content-Type: application/json" \
+  -d '{"model": "cl-nagoya/ruri-v3-30m", "input": "テスト文章"}'
 
-3. **RAG アプリのテスト**:
-   - 源内 Web (`http://localhost:5173`) にログインします。
-   - 「AIアプリ」→「ローカル RAG（ナレッジ検索）」から、ドキュメントのインジェストおよび検索を行います。
-   - `rag-app` および `embedding-jp-api` のコンテナログを確認し、リクエストが適切にルーティングされていること、プレフィックスが正常に処理されているかを確認してください。
+# RAG ingest テスト
+curl -X POST http://localhost:8001/ingest \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: local-rag-key" \
+  -d '{"documents": [{"source": "テスト", "text": "テスト文書です。"}]}'
+```

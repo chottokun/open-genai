@@ -194,6 +194,7 @@ async def ingest(request: Request, x_api_key: str | None = Header(default=None))
     body = await request.json()
     docs = body.get("documents", [])
     scope = (body.get("scope") or DEFAULT_SCOPE).strip()
+    await vectorstore.ensure_collection()
     added = await ingest_documents(docs, scope)
     return {"added_chunks": added, "total_chunks": await vectorstore.count()}
 
