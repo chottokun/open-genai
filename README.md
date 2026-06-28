@@ -272,6 +272,15 @@ docker compose exec rag-app sh -lc 'curl -s -X POST http://localhost:8001/ingest
 - ベクトル DB: Qdrant（`qdrant_data` ボリュームに永続化）
 - 回答生成モデル: `.env` の `RAG_MODEL`（既定 `gpt-oss:20b`）
 
+### 💡 アドバンスド構成: クラウド推論 × ローカル日本語 Embedding のハイブリッド構成
+
+「チャット推論は Google Gemini などの強力なクラウド LLM を利用し、ドキュメントのベクトル化（Embedding）はローカルコンテナ（`embedding_jp_api`による `ruri-v3` 等）でセキュアかつ高速に行う」というハイブリッド構成に対応しています。
+
+この構成を導入することで、機密性の高い文書のベクトル化コストやセキュリティ制限をクリアしつつ、高度な推論を利用可能です。
+
+詳細な構成・設定方法については、以下を参照してください：
+👉 [ハイブリッド RAG 構成・導入ガイド](file:///home/nobuhiko/Project/open-genai/docs/hybrid-rag-guide.md)
+
 ## 文字起こし / 画像生成（AI アプリ）
 
 文字起こしと画像生成も、RAG と同じく **外部マイクロサービスの「AI アプリ」** として実装しています（共通チームに登録済み）。

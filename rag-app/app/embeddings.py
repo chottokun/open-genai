@@ -20,8 +20,9 @@ OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY") or "ollama"
 EMBED_MODEL = os.environ.get("EMBED_MODEL", "mxbai-embed-large")
 RAG_MODEL = os.environ.get("RAG_MODEL", "gpt-oss:20b")
 
-# mxbai-embed-large は検索クエリ側にこの prefix を付けると精度が上がる
-QUERY_PREFIX = "Represent this sentence for searching relevant passages: "
+# 検索クエリ用、およびドキュメントインデックス用のプレフィックスを環境変数から取得可能にする（後方互換性維持）
+QUERY_PREFIX = os.environ.get("EMBED_QUERY_PREFIX", "Represent this sentence for searching relevant passages: ")
+DOC_PREFIX = os.environ.get("EMBED_DOC_PREFIX", "")
 
 
 def _headers() -> dict[str, str]:
@@ -32,7 +33,8 @@ def _headers() -> dict[str, str]:
 
 
 async def embed(text: str, *, is_query: bool = False) -> list[float]:
-    prompt = (QUERY_PREFIX + text) if is_query else text
+    prefix = QUERY_PREFIX if is_query else DOC_PREFIX
+    prompt = (prefix + text) if prefix else text
     async with httpx.AsyncClient(timeout=120) as client:
         res = await client.post(
             f"{OPENAI_BASE_URL}/embeddings",

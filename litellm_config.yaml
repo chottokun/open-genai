@@ -1,0 +1,30 @@
+model_list:
+  # --- チャット・推論モデル（クラウド） ---
+  # Gemini 1.5 Pro
+  - model_name: gemini-1.5-pro
+    litellm_params:
+      model: gemini/gemini-1.5-pro
+      api_key: "os.environ/GEMINI_API_KEY"
+
+  # Gemini 1.5 Flash (より高速な動作が必要な場合)
+  - model_name: gemini-1.5-flash
+    litellm_params:
+      model: gemini/gemini-1.5-flash
+      api_key: "os.environ/GEMINI_API_KEY"
+
+  # --- チャット・推論モデル（ローカル Ollama フォールバック用） ---
+  - model_name: local-ollama-chat
+    litellm_params:
+      model: ollama/qwen3.5:latest
+      api_base: "http://host.docker.internal:11434"
+
+  # --- 日本語特化型 Embedding モデル（ローカル） ---
+  # embedding_jp_api へのルーティング設定
+  - model_name: ruri-base
+    litellm_params:
+      # embedding_jp_api 側で起動時に指定されたモデル名、または openai 互換モデル名として指定
+      model: openai/cl-nagoya/ruri-v3-310m
+      # docker-compose 内でのコンテナ間通信 URL
+      api_base: "http://embedding-jp-api:8000/v1"
+      # ローカル API なので認証キーは任意（不要）
+      api_key: "not-needed"

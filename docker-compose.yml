@@ -15,10 +15,10 @@ services:
       - "8000:8000"
     environment:
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
-      # OpenAI 互換エンドポイント（未指定なら OLLAMA_BASE_URL/v1 を使用）
-      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-}
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-ollama}
-      - DEFAULT_MODEL=${DEFAULT_MODEL:-qwen2.5:7b}
+      # OpenAI 互換エンドポイント (LiteLLM をハブとして使用)
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-http://litellm:4000/v1}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-not-needed}
+      - DEFAULT_MODEL=${DEFAULT_MODEL:-gemini-1.5-pro}
       - DB_PATH=/data/open-genai.db
       # RAG「AI アプリ」連携先（Team API がここへプロキシする）
       - RAG_APP_URL=${RAG_APP_URL:-http://rag-app:8001/invoke}
@@ -42,6 +42,7 @@ services:
       - sd-app
       - dify-app
       - keycloak
+      - litellm
     restart: unless-stopped
 
   # SAML IdP（ユーザー管理 UI 付き）
@@ -70,18 +71,26 @@ services:
       context: .
       dockerfile: rag-app/Dockerfile
     container_name: open-genai-rag-app
+    ports:
+      - "8001:8001"
     environment:
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
-      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-}
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-ollama}
+      # OpenAI 互換エンドポイント (LiteLLM をハブとして使用)
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-http://litellm:4000/v1}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-not-needed}
       - QDRANT_URL=http://qdrant:6333
-      - EMBED_MODEL=${EMBED_MODEL:-mxbai-embed-large}
-      - RAG_MODEL=${RAG_MODEL:-gpt-oss:20b}
+      - EMBED_MODEL=${EMBED_MODEL:-ruri-base}
+      - RAG_MODEL=${RAG_MODEL:-gemini-1.5-pro}
       - RAG_API_KEY=${RAG_API_KEY:-local-rag-key}
+      # 日本語特化型 Embedding (ruri-v3) 用のプレフィックス設定
+      - EMBED_QUERY_PREFIX=${EMBED_QUERY_PREFIX}
+      - EMBED_DOC_PREFIX=${EMBED_DOC_PREFIX}
+      - EMBED_DIM=${EMBED_DIM:-768}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
       - qdrant
+      - litellm
     restart: unless-stopped
 
   # ベクトルデータベース
@@ -167,6 +176,35 @@ services:
       - ollama_data:/root/.ollama
     restart: unless-stopped
 
+  # --- LiteLLM Proxy ---
+  litellm:
+    image: ghcr.io/berriai/litellm:latest
+    container_name: open-genai-litellm
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./litellm_config.yaml:/app/config.yaml
+    command: [ "--config", "/app/config.yaml", "--port", "4000" ]
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  # --- 日本語特化型 Embedding API ---
+  embedding-jp-api:
+    build:
+      context: https://github.com/chottokun/embedding_jp_api.git#main
+      dockerfile: Dockerfile.cpu
+    container_name: open-genai-embedding-jp-api
+    ports:
+      - "8020:8000"
+    environment:
+      - MODEL_NAME=${EMBED_MODEL_NAME:-cl-nagoya/ruri-v3-310m}
+    volumes:
+      - huggingface_cache:/root/.cache/huggingface
+    restart: unless-stopped
+
 volumes:
   backend_data:
   web_node_modules:
@@ -179,3 +217,4 @@ volumes:
   whisper_cache:
   dify_app_data:
   ollama_data:
+  huggingface_cache:
