@@ -41,6 +41,13 @@ model_list:
       custom_llm_provider: openai
       api_base: "https://api.sakura.ad.jp/v1"
       api_key: "os.environ/SAKURA_AI_API_KEY"
+  # --- 汎用 OpenAI 互換 (OpenAI Compatible) エンドポイント ---
+  - model_name: openai-compatible-chat
+    litellm_params:
+      model: "os.environ/OPENAI_COMPATIBLE_MODEL"
+      custom_llm_provider: openai
+      api_base: "os.environ/OPENAI_COMPATIBLE_API_BASE"
+      api_key: "os.environ/OPENAI_COMPATIBLE_API_KEY"
 
   # --- ローカル Ollama (Gemma 4 8B 最新) ---
   - model_name: gemma4
