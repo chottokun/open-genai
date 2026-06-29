@@ -181,3 +181,38 @@ docker compose up -d --build
 # LiteLLM モデル一覧確認
 curl http://localhost:4000/v1/models | python3 -m json.tool
 ```
+
+---
+
+## ⚙️ .env の設定変更を反映する手順
+
+ルートの `.env` や `genai-web/packages/web/.env` を書き換えた際は、コンテナに変更を読み込ませるために以下の再起動手順を行ってください。
+
+### 1. API キーや LiteLLM 接続エンドポイントを変更した場合
+さくら AI の API キー/ベースURLや、汎用 OpenAI 互換 (OpenAI Compatible) API の設定を変更した場合は、LiteLLM コンテナを再起動します。
+
+```bash
+# 新しい環境変数を読み込んで LiteLLM コンテナを再起動（強制再作成）
+docker compose up -d --force-recreate litellm
+```
+
+### 2. UI 表示モデル（`VITE_APP_MODEL_IDS`）を変更した場合
+チャット画面のモデル一覧（ドロップダウン）の選択肢を変更した場合は、フロントエンド（web）コンテナの再起動とキャッシュクリアを行います。
+
+```bash
+# Vite のキャッシュをクリア（キャッシュが残ると表示が変わらない場合があります）
+rm -rf genai-web/packages/web/node_modules/.vite
+
+# web コンテナを再起動（強制再作成）
+docker compose up -d --force-recreate web
+```
+> [!NOTE]
+> 反映後、ブラウザ側でスーパーリロード（`Cmd+Shift+R` または `Ctrl+F5`）を行ってください。
+
+### 3. ホスト名や外部公開ドメイン（`FRONTEND_URL` / `KEYCLOAK_HOSTNAME`）を変更した場合
+アクセス元のURLや SAML 認証（Keycloak）のホスト名を変更した場合は、認証・フロント・バックエンドの一連のコンテナを再起動します。
+
+```bash
+# 影響するコンテナを一斉に再起動
+docker compose up -d --force-recreate web backend keycloak
+```
