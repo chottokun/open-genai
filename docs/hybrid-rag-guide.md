@@ -76,6 +76,42 @@ VITE_APP_MODEL_IDS=["gemini-2.5-pro","gemini-2.5-flash","gemma4"]
 
 UI上で選択したモデルがそのまま LiteLLM を通じてルーティングされます。
 
+### ➕ 任意の新規チャット推論モデルを追加する手順
+
+新たなモデル（例: `my-new-model`）を使いたい場合は、以下の手順で追加できます。
+
+#### ステップ1：`litellm_config.yaml` への追加
+[litellm_config.yaml](file:///home/nobuhiko/Project/open-genai/litellm_config.yaml) の `model_list` にモデル定義を追加します。
+
+```yaml
+- model_name: my-new-model
+  litellm_params:
+    model: openai/your-target-model-id  # 接続先APIが求めるモデルID
+    custom_llm_provider: openai          # プロバイダの種類
+    api_base: "https://your-api-endpoint/v1"
+    api_key: "os.environ/YOUR_API_KEY"
+```
+
+#### ステップ2：ルートの `.env` への追加
+ルートの [`.env`](file:///home/nobuhiko/Project/open-genai/.env) の `VITE_APP_MODEL_IDS` の配列に、LiteLLM で設定した `model_name`（`my-new-model`）を追記します。
+
+```bash
+VITE_APP_MODEL_IDS=["my-new-model","gemma4"]
+```
+
+#### ステップ3：設定の反映
+コンテナを再起動して設定を反映させます。
+
+```bash
+# Viteキャッシュの削除（UI選択肢の変更を即座に反映させるため）
+rm -rf genai-web/packages/web/node_modules/.vite
+
+# コンテナの再起動
+docker compose up -d --force-recreate litellm web
+```
+> [!NOTE]
+> 反映後、ブラウザ側でスーパーリロード（`Cmd+Shift+R` または `Ctrl+F5`）を行ってください。
+
 ---
 
 ## 🔄 Embeddingモデル変更時のトラブルシューティング
