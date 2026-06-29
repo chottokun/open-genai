@@ -32,14 +32,14 @@ model_list:
     litellm_params:
       model: gpt-oss-120b
       custom_llm_provider: openai
-      api_base: "https://api.sakura.ad.jp/v1"
+      api_base: "os.environ/SAKURA_AI_API_BASE"
       api_key: "os.environ/SAKURA_AI_API_KEY"
 
   - model_name: sakura-qwen3-coder
     litellm_params:
       model: Qwen3-Coder-480B-A35B-Instruct-FP8
       custom_llm_provider: openai
-      api_base: "https://api.sakura.ad.jp/v1"
+      api_base: "os.environ/SAKURA_AI_API_BASE"
       api_key: "os.environ/SAKURA_AI_API_KEY"
   # --- 汎用 OpenAI 互換 (OpenAI Compatible) エンドポイント ---
   - model_name: openai-compatible-chat
