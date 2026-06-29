@@ -53,9 +53,8 @@ services:
     environment:
       - KC_BOOTSTRAP_ADMIN_USERNAME=${KEYCLOAK_ADMIN:-admin}
       - KC_BOOTSTRAP_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:-admin}
-      # ブラウザ・メタデータに出る URL を localhost:8088 に固定する
-      # （ホスト 8080 は他用途のため 8088 を使用）
-      - KC_HOSTNAME=http://localhost:8088
+      # ブラウザ・メタデータに出る URL を固定する（環境変数で柔軟に上書き可能に）
+      - KC_HOSTNAME=${KEYCLOAK_HOSTNAME:-http://localhost:8088}
       - KC_HOSTNAME_STRICT=false
       - KC_HTTP_ENABLED=true
     ports:
@@ -108,10 +107,16 @@ services:
   whisper-app:
     build: ./whisper-app
     container_name: open-genai-whisper-app
+    ports:
+      - "8002:8002"
     environment:
       - RAG_API_KEY=${RAG_API_KEY:-local-rag-key}
       - WHISPER_MODEL=${WHISPER_MODEL:-medium}
       - WHISPER_COMPUTE=${WHISPER_COMPUTE:-int8}
+      - WHISPER_PROVIDER=${WHISPER_PROVIDER:-local}
+      - LITELLM_AUDIO_MODEL=${LITELLM_AUDIO_MODEL:-whisper-cloud}
+      - LITELLM_AUDIO_URL=${LITELLM_AUDIO_URL:-http://litellm:4000/v1}
+      - LITELLM_API_KEY=${LITELLM_API_KEY:-not-needed}
     volumes:
       - whisper_cache:/cache
     restart: unless-stopped
@@ -120,10 +125,16 @@ services:
   sd-app:
     build: ./sd-app
     container_name: open-genai-sd-app
+    # ports:
+    #   - "8003:8003" # (開発/検証用。通常は不要)
     environment:
       - RAG_API_KEY=${RAG_API_KEY:-local-rag-key}
       # ホストで動く AUTOMATIC1111 互換 SD サーバ
       - SD_API_URL=${SD_API_URL:-http://host.docker.internal:7860}
+      - IMAGE_PROVIDER=${IMAGE_PROVIDER:-local}
+      - LITELLM_IMAGE_MODEL=${LITELLM_IMAGE_MODEL:-imagen-4}
+      - LITELLM_IMAGE_URL=${LITELLM_IMAGE_URL:-http://litellm:4000/v1}
+      - LITELLM_IMAGE_API_KEY=${LITELLM_IMAGE_API_KEY:-not-needed}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
@@ -153,6 +164,8 @@ services:
       - "5173:5173"
     environment:
       - VITE_USE_POLLING=true
+      - VITE_APP_API_ENDPOINT=${VITE_APP_API_ENDPOINT:-http://localhost:8000}
+      - VITE_APP_TEAM_ACCESS_CONTROL_API_ENDPOINT=${VITE_APP_TEAM_ACCESS_CONTROL_API_ENDPOINT:-http://localhost:8000}
     volumes:
       - ./genai-web:/app
       # ルート / 各ワークスペースの node_modules はバインドマウントで隠れないよう
@@ -188,6 +201,12 @@ services:
     command: [ "--config", "/app/config.yaml", "--port", "4000" ]
     environment:
       - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - AZURE_AI_API_KEY=${AZURE_AI_API_KEY}
+      - AZURE_AI_API_BASE=${AZURE_AI_API_BASE}
+      - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
+      - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
+      - SAKURA_AI_API_KEY=${SAKURA_AI_API_KEY}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped

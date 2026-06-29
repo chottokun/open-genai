@@ -1,3 +1,20 @@
+// 非セキュアコンテキスト(http://*.local 等)における crypto.randomUUID のポリフィル
+if (typeof window !== 'undefined' && window.crypto && !window.crypto.randomUUID) {
+  // @ts-ignore
+  window.crypto.randomUUID = function () {
+    const r = (c: any) => {
+      const cryptoObj = window.crypto || (window as any).msCrypto;
+      if (cryptoObj && cryptoObj.getRandomValues) {
+        const arr = new Uint8Array(1);
+        cryptoObj.getRandomValues(arr);
+        return (c ^ (arr[0] & (15 >> (c / 4)))).toString(16);
+      }
+      return (c ^ ((Math.random() * 16) & (15 >> (c / 4)))).toString(16);
+    };
+    return '10000000-1000-4000-8000-100000000000'.replace(/[018]/g, r);
+  };
+}
+
 import { App } from './App.tsx';
 import './index.css';
 import React, { ReactNode } from 'react';

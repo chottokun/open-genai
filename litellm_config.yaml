@@ -1,32 +1,102 @@
 model_list:
-  # --- チャット・推論モデル（クラウド） ---
-  # Gemini 1.5 Pro
-  - model_name: gemini-1.5-pro
+  # =========================================================================
+  #  チャット推論モデル (2026年最新)
+  # =========================================================================
+
+  # --- Google Gemini ---
+  - model_name: gemini-2.5-pro
     litellm_params:
-      model: gemini/gemini-1.5-pro
+      model: gemini/gemini-2.5-pro
       api_key: "os.environ/GEMINI_API_KEY"
 
-  # Gemini 1.5 Flash (より高速な動作が必要な場合)
-  - model_name: gemini-1.5-flash
+  - model_name: gemini-2.5-flash
     litellm_params:
-      model: gemini/gemini-1.5-flash
+      model: gemini/gemini-2.5-flash
       api_key: "os.environ/GEMINI_API_KEY"
 
-  # --- チャット・推論モデル（ローカル Ollama フォールバック用） ---
-  - model_name: local-ollama-chat
+  # --- OpenAI ---
+  # - model_name: gpt-4.5
+  #   litellm_params:
+  #     model: openai/gpt-4.5
+  #     api_key: "os.environ/OPENAI_API_KEY"
+
+  # --- Azure AI Foundry (Claude) ---
+  # - model_name: claude-sonnet
+  #   litellm_params:
+  #     model: azure_ai/claude-sonnet-4-5
+  #     api_base: "os.environ/AZURE_AI_API_BASE"
+  #     api_key: "os.environ/AZURE_AI_API_KEY"
+
+  # --- さくら AI Engine（国内完結） ---
+  # - model_name: sakura-gpt-oss-120b
+  #   litellm_params:
+  #     model: openai/gpt-oss-120b
+  #     api_base: "https://api.sakura.ad.jp/v1"
+  #     api_key: "os.environ/SAKURA_AI_API_KEY"
+
+  # --- ローカル Ollama (Gemma 4 8B 最新) ---
+  - model_name: gemma4
     litellm_params:
-      model: ollama/qwen3.5:latest
+      model: ollama/gemma4:latest
       api_base: "http://host.docker.internal:11434"
 
-  # --- 日本語特化型 Embedding モデル（ローカル） ---
-  # embedding_jp_api へのルーティング設定
-  # ルール: model_name は HuggingFace モデルID をそのまま使用する
-  #   → EMBED_MODEL 環境変数の値と一致させることで混乱を防ぐ
-  # ruri-v3-30m: ModernBERT-Jaベース・30Mパラメータ・最大8192トークン対応・出力次元256
+  # =========================================================================
+  #  日本語特化型 Embedding モデル（ローカル）
+  # =========================================================================
   - model_name: cl-nagoya/ruri-v3-30m
     litellm_params:
       model: openai/cl-nagoya/ruri-v3-30m
-      # docker-compose 内でのコンテナ間通信 URL
       api_base: "http://embedding-jp-api:8000/v1"
-      # ローカル API なので認証キーは任意（不要）
       api_key: "not-needed"
+
+  # =========================================================================
+  #  音声認識（Whisper / Transcription）
+  # =========================================================================
+  # # OpenAI gpt-4o-transcribe
+  # - model_name: whisper-cloud
+  #   litellm_params:
+  #     model: openai/gpt-4o-transcribe
+  #     api_key: "os.environ/OPENAI_API_KEY"
+  #     model_info:
+  #       mode: audio_transcription
+
+  # =========================================================================
+  #  画像生成
+  # =========================================================================
+  # # Google Imagen 4
+  # - model_name: imagen-4
+  #   litellm_params:
+  #     model: gemini/imagen-4.0-generate-001
+  #     api_key: "os.environ/GEMINI_API_KEY"
+  #   model_info:
+  #     mode: image_generation
+
+# =========================================================================
+#  フォールバック / ルーティング設定
+# =========================================================================
+litellm_settings:
+  num_retries: 2
+  request_timeout: 120
+  fallbacks:
+    - {"gemini-2.5-pro": ["gemma4"]}
+    - {"gemini-2.5-flash": ["gemma4"]}
+  drop_params: true  # プロバイダ間で非互換なパラメータを自動除去
+
+  # --- ガードレール / コンテンツモデレーション設定 ---
+  # OpenAI Moderation を使用する場合（OPENAI_API_KEYが必要なためコメントアウト）
+  # guardrails:
+  #   - guardrail_name: "openai-content-mod"
+  #     litellm_params:
+  #       guardrail: "openai_moderation"
+  #       mode: "pre_call"
+  #       api_key: "os.environ/OPENAI_API_KEY"
+
+router_settings:
+  routing_strategy: "simple-shuffle"
+  model_group_alias:
+    # 画面側が古いモデル名でリクエストしてきた場合の最新モデルへのエイリアス
+    "gemini-1.5-pro": "gemini-2.5-pro"
+    "gemini-1.5-flash": "gemini-2.5-flash"
+    "local-ollama-chat": "gemma4"
+    "gpt-oss:20b": "gemma4"
+    "gemma3:27b": "gemma4"
