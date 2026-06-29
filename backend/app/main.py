@@ -43,7 +43,6 @@ FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173").rstrip("/
 PUBLIC_PATH_PREFIXES = (
     "/health",
     "/auth/",
-    "/files/",  # 添付ファイルの PUT/GET（img タグ等が Authorization を付けられないため）
     "/docs",
     "/openapi.json",
     "/redoc",
@@ -226,6 +225,11 @@ async def auth_middleware(request: Request, call_next):
     if request.method == "OPTIONS" or any(
         path.startswith(p) for p in PUBLIC_PATH_PREFIXES
     ):
+        return await call_next(request)
+
+    # /files/ への GET は、img タグ等で Authorization ヘッダを付与できないケースがあるため
+    # 認証なしで許可する。PUT や DELETE は fetch 等で行われるため、通常通り JWT を要求する。
+    if path.startswith("/files/") and request.method == "GET":
         return await call_next(request)
 
     authz = request.headers.get("authorization", "")
@@ -527,10 +531,13 @@ async def predict_stream(request: Request) -> StreamingResponse:
 # ---------------------------------------------------------------------------
 def _safe_path(key: str) -> str:
     """FILES_DIR 配下に収まる安全な絶対パスへ解決する（パストラバーサル防止）。"""
-    full = os.path.normpath(os.path.join(FILES_DIR, key))
-    if not full.startswith(os.path.abspath(FILES_DIR) + os.sep) and full != os.path.abspath(
-        FILES_DIR
-    ):
+    # パストラバーサル対策: 親ディレクトリへの参照や絶対パスを無効化する
+    if ".." in key or key.startswith("/"):
+        raise ValueError("invalid path")
+
+    base = os.path.abspath(FILES_DIR)
+    full = os.path.normpath(os.path.join(base, key))
+    if not full.startswith(base + os.sep) and full != base:
         raise ValueError("invalid path")
     return full
 
@@ -634,6 +641,17 @@ async def invoke_exapp(request: Request) -> JSONResponse:
     ):
         return _forbidden("このアプリを実行する権限がありません")
 
+    # config のバリデーション
+    config_raw = app_def.get("config", "") or ""
+    if config_raw:
+        try:
+            json.loads(config_raw)
+        except json.JSONDecodeError:
+            return JSONResponse(
+                status_code=500,
+                content={"error": f"AI アプリの設定(config)が不正な JSON 形式です: {ex_app_id}"},
+            )
+
     started = _now_iso()
     try:
         async with httpx.AsyncClient(timeout=600) as client:
@@ -722,6 +740,17 @@ async def get_exapp_schema(request: Request) -> JSONResponse:
         and not teams_store.is_team_member(team_id, user_id)
     ):
         return _forbidden("このアプリを参照する権限がありません")
+
+    # config のバリデーション
+    config_raw = app_def.get("config", "") or ""
+    if config_raw:
+        try:
+            json.loads(config_raw)
+        except json.JSONDecodeError:
+            return JSONResponse(
+                status_code=500,
+                content={"error": f"AI アプリの設定(config)が不正な JSON 形式です: {ex_app_id}"},
+            )
 
     endpoint = app_def.get("endpoint", "")
     if endpoint.endswith("/invoke"):

@@ -32,9 +32,15 @@ def _headers() -> dict[str, str]:
     }
 
 
-async def embed(text: str, *, is_query: bool = False) -> list[float]:
+async def embed(input_data: str | list[str], *, is_query: bool = False) -> list[float] | list[list[float]]:
+    """単一の文字列または文字列のリストを埋め込む。"""
     prefix = QUERY_PREFIX if is_query else DOC_PREFIX
-    prompt = (prefix + text) if prefix else text
+
+    if isinstance(input_data, str):
+        prompt = (prefix + input_data) if prefix else input_data
+    else:
+        prompt = [(prefix + t) if prefix else t for t in input_data]
+
     async with httpx.AsyncClient(timeout=120) as client:
         res = await client.post(
             f"{OPENAI_BASE_URL}/embeddings",
@@ -43,7 +49,10 @@ async def embed(text: str, *, is_query: bool = False) -> list[float]:
         )
         res.raise_for_status()
         data = res.json()
-    return data["data"][0]["embedding"]
+
+    if isinstance(input_data, str):
+        return data["data"][0]["embedding"]
+    return [d["embedding"] for d in data["data"]]
 
 
 async def generate(messages: list[dict[str, Any]]) -> str:

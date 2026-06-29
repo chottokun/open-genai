@@ -18,7 +18,7 @@ services:
       # OpenAI 互換エンドポイント (LiteLLM をハブとして使用)
       - OPENAI_BASE_URL=${OPENAI_BASE_URL:-http://litellm:4000/v1}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-not-needed}
-      - DEFAULT_MODEL=${DEFAULT_MODEL:-gemini-1.5-pro}
+      - DEFAULT_MODEL=${DEFAULT_MODEL:-gemma4}
       - DB_PATH=/data/open-genai.db
       # RAG「AI アプリ」連携先（Team API がここへプロキシする）
       - RAG_APP_URL=${RAG_APP_URL:-http://rag-app:8001/invoke}
@@ -79,7 +79,7 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-not-needed}
       - QDRANT_URL=http://qdrant:6333
       - EMBED_MODEL=${EMBED_MODEL:-cl-nagoya/ruri-v3-30m}
-      - RAG_MODEL=${RAG_MODEL:-gemini-1.5-pro}
+      - RAG_MODEL=${RAG_MODEL:-gemma4}
       - RAG_API_KEY=${RAG_API_KEY:-local-rag-key}
       # 日本語特化型 Embedding (ruri-v3-30m) 用のプレフィックス設定
       - EMBED_QUERY_PREFIX=${EMBED_QUERY_PREFIX}

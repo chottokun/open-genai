@@ -525,6 +525,31 @@ export const modelMetadata: Record<string, ModelMetadata> = {
     flags: MODEL_FEATURE.TEXT_DOC,
     displayName: 'gpt-oss 20B (ローカル)',
   },
+  // ==== Open GENAI: LiteLLM 経由のモデル ====
+  'gemini-2.5-pro': {
+    flags: MODEL_FEATURE.TEXT_DOC_IMAGE,
+    displayName: 'Gemini 2.5 Pro',
+  },
+  'gemini-2.5-flash': {
+    flags: { ...MODEL_FEATURE.TEXT_DOC_IMAGE, ...MODEL_FEATURE.LIGHT },
+    displayName: 'Gemini 2.5 Flash',
+  },
+  'sakura-gpt-oss-120b': {
+    flags: MODEL_FEATURE.TEXT_DOC,
+    displayName: 'Sakura GPT-OSS 120B',
+  },
+  'sakura-qwen3-coder': {
+    flags: MODEL_FEATURE.TEXT_DOC,
+    displayName: 'Sakura Qwen3 Coder',
+  },
+  'openai-compatible-chat': {
+    flags: MODEL_FEATURE.TEXT_DOC,
+    displayName: 'OpenAI 互換モデル',
+  },
+  'gemma4': {
+    flags: MODEL_FEATURE.TEXT_DOC_IMAGE,
+    displayName: 'Gemma 4 (ローカル)',
+  },
 };
 
 export const BEDROCK_TEXT_MODELS = Object.keys(modelMetadata).filter(
