@@ -27,12 +27,20 @@ model_list:
   #     api_base: "os.environ/AZURE_AI_API_BASE"
   #     api_key: "os.environ/AZURE_AI_API_KEY"
 
-  # --- さくら AI Engine（国内完結） ---
-  # - model_name: sakura-gpt-oss-120b
-  #   litellm_params:
-  #     model: openai/gpt-oss-120b
-  #     api_base: "https://api.sakura.ad.jp/v1"
-  #     api_key: "os.environ/SAKURA_AI_API_KEY"
+  # --- さくら AI Engine（国内完結・OpenAI互換） ---
+  - model_name: sakura-gpt-oss-120b
+    litellm_params:
+      model: gpt-oss-120b
+      custom_llm_provider: openai
+      api_base: "https://api.sakura.ad.jp/v1"
+      api_key: "os.environ/SAKURA_AI_API_KEY"
+
+  - model_name: sakura-qwen3-coder
+    litellm_params:
+      model: Qwen3-Coder-480B-A35B-Instruct-FP8
+      custom_llm_provider: openai
+      api_base: "https://api.sakura.ad.jp/v1"
+      api_key: "os.environ/SAKURA_AI_API_KEY"
 
   # --- ローカル Ollama (Gemma 4 8B 最新) ---
   - model_name: gemma4
