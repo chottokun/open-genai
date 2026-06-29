@@ -166,6 +166,7 @@ services:
       - VITE_USE_POLLING=true
       - VITE_APP_API_ENDPOINT=${VITE_APP_API_ENDPOINT:-http://localhost:8000}
       - VITE_APP_TEAM_ACCESS_CONTROL_API_ENDPOINT=${VITE_APP_TEAM_ACCESS_CONTROL_API_ENDPOINT:-http://localhost:8000}
+      - VITE_APP_MODEL_IDS=${VITE_APP_MODEL_IDS:-["gemini-2.5-pro","gemini-2.5-flash","sakura-gpt-oss-120b","sakura-qwen3-coder","openai-compatible-chat","gemma4"]}
     volumes:
       - ./genai-web:/app
       # ルート / 各ワークスペースの node_modules はバインドマウントで隠れないよう
