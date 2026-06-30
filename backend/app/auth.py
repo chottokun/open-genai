@@ -120,5 +120,17 @@ def mint_token(
     return jwt.encode(payload, APP_JWT_SECRET, algorithm=JWT_ALG)
 
 
+def mint_file_token(path: str, *, sub: str, ttl_seconds: int = 900) -> str:
+    """ファイル操作（PUT/GET）に用いる有効期限付きのワンタイム署名トークンを発行する。"""
+    now = int(time.time())
+    payload = {
+        "sub": sub,      # "file_upload" または "file_access"
+        "path": path,     # 対象のファイルキー (uuid/filename)
+        "iat": now,
+        "exp": now + ttl_seconds,
+    }
+    return jwt.encode(payload, APP_JWT_SECRET, algorithm=JWT_ALG)
+
+
 def verify_token(token: str) -> dict[str, Any]:
     return jwt.decode(token, APP_JWT_SECRET, algorithms=[JWT_ALG])

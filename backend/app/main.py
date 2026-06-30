@@ -227,9 +227,9 @@ async def auth_middleware(request: Request, call_next):
     ):
         return await call_next(request)
 
-    # /files/ への GET は、img タグ等で Authorization ヘッダを付与できないケースがあるため
-    # 認証なしで許可する。PUT や DELETE は fetch 等で行われるため、通常通り JWT を要求する。
-    if path.startswith("/files/") and request.method == "GET":
+    # /files/ へのリクエスト（GET/PUT）はクエリパラメータの token による署名検証を行うため、
+    # 共通の Bearer ヘッダ認証からは除外する。
+    if path.startswith("/files/"):
         return await call_next(request)
 
     authz = request.headers.get("authorization", "")
@@ -545,16 +545,50 @@ def _safe_path(key: str) -> str:
 @app.post("/file/url")
 async def get_upload_url(request: Request) -> str:
     """アップロード先 URL を発行する（源内 Web の署名付き URL 取得を代替）。"""
+    claims = _claims_from_request(request)
+    if not _user_id(claims):
+        return _forbidden("認証が必要です")
+
     body = await request.json()
     filename = body.get("filename") or f"file.{body.get('mediaFormat', 'bin')}"
     # ファイル名はそのまま使うとパス衝突するため UUID ディレクトリに格納する
     safe_name = os.path.basename(filename)
     key = f"{uuid.uuid4()}/{safe_name}"
-    return f"{PUBLIC_BASE_URL}/files/{key}"
+    
+    # 有効期限 1時間 (3600秒) のアップロード専用ワンタイムトークンを生成
+    token = auth.mint_file_token(key, sub="file_upload", ttl_seconds=3600)
+    return f"{PUBLIC_BASE_URL}/files/{key}?token={token}"
+
+
+@app.get("/file/url")
+async def get_download_url(
+    request: Request,
+    bucketName: str = Query(...),
+    filePrefix: str = Query(...),
+    region: str = Query(...)
+) -> str:
+    """ダウンロード用のワンタイム署名付き URL を発行する。"""
+    claims = _claims_from_request(request)
+    if not _user_id(claims):
+        return _forbidden("認証が必要です")
+
+    # ダウンロード用トークン (有効期限15分 = 900秒)
+    token = auth.mint_file_token(filePrefix, sub="file_access", ttl_seconds=900)
+    return f"{PUBLIC_BASE_URL}/files/{filePrefix}?token={token}"
 
 
 @app.put("/files/{key:path}")
-async def put_file(key: str, request: Request) -> dict[str, Any]:
+async def put_file(key: str, request: Request, token: str = Query(None)) -> dict[str, Any]:
+    if not token:
+        return JSONResponse(status_code=401, content={"error": "missing token"})
+
+    try:
+        payload = auth.verify_token(token)
+        if payload.get("sub") != "file_upload" or payload.get("path") != key:
+            return JSONResponse(status_code=403, content={"error": "invalid token"})
+    except Exception:
+        return JSONResponse(status_code=401, content={"error": "expired or invalid token"})
+
     full = _safe_path(key)
     os.makedirs(os.path.dirname(full), exist_ok=True)
     data = await request.body()
@@ -564,7 +598,17 @@ async def put_file(key: str, request: Request) -> dict[str, Any]:
 
 
 @app.get("/files/{key:path}")
-async def get_file(key: str) -> FileResponse:
+async def get_file(key: str, token: str = Query(None)) -> FileResponse:
+    if not token:
+        return JSONResponse(status_code=401, content={"error": "missing token"})
+
+    try:
+        payload = auth.verify_token(token)
+        if payload.get("sub") != "file_access" or payload.get("path") != key:
+            return JSONResponse(status_code=403, content={"error": "invalid token"})
+    except Exception:
+        return JSONResponse(status_code=401, content={"error": "expired or invalid token"})
+
     full = _safe_path(key)
     if not os.path.isfile(full):
         return JSONResponse(status_code=404, content={"message": "file not found"})
