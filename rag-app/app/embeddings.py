@@ -6,6 +6,7 @@ Ollama の OpenAI 互換エンドポイント(/v1)を既定とするが、OPENAI
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 from typing import Any, AsyncIterator
@@ -24,6 +25,9 @@ RAG_MODEL = os.environ.get("RAG_MODEL", "gpt-oss:20b")
 QUERY_PREFIX = os.environ.get("EMBED_QUERY_PREFIX", "Represent this sentence for searching relevant passages: ")
 DOC_PREFIX = os.environ.get("EMBED_DOC_PREFIX", "")
 
+EMBED_BATCH_SIZE = int(os.environ.get("EMBED_BATCH_SIZE", "100"))
+EMBED_MAX_CONCURRENCY = int(os.environ.get("EMBED_MAX_CONCURRENCY", "5"))
+
 
 def _headers() -> dict[str, str]:
     return {
@@ -32,29 +36,65 @@ def _headers() -> dict[str, str]:
     }
 
 
+async def _embed_single_batch(
+    client: httpx.AsyncClient,
+    batch_prompt: list[str],
+    semaphore: asyncio.Semaphore
+) -> list[list[float]]:
+    """単一バッチの埋め込み処理（セマフォによる並行制限付き）"""
+    async with semaphore:
+        res = await client.post(
+            f"{OPENAI_BASE_URL}/embeddings",
+            json={"model": EMBED_MODEL, "input": batch_prompt},
+            headers=_headers(),
+        )
+        res.raise_for_status()
+        data = res.json()
+        
+        # index でソートして、返却する埋め込みベクトルの順序が入力と一致するように保証する
+        sorted_data = sorted(data["data"], key=lambda x: x.get("index", 0))
+        return [d["embedding"] for d in sorted_data]
+
+
 async def embed(input_data: str | list[str], *, is_query: bool = False) -> list[float] | list[list[float]]:
     """単一の文字列または文字列のリストを埋め込む。"""
     prefix = QUERY_PREFIX if is_query else DOC_PREFIX
 
     if isinstance(input_data, str):
         prompt = (prefix + input_data) if prefix else input_data
-    else:
-        prompt = [(prefix + t) if prefix else t for t in input_data]
-
-    async with httpx.AsyncClient(timeout=120) as client:
-        res = await client.post(
-            f"{OPENAI_BASE_URL}/embeddings",
-            json={"model": EMBED_MODEL, "input": prompt},
-            headers=_headers(),
-        )
-        res.raise_for_status()
-        data = res.json()
-
-    if isinstance(input_data, str):
+        async with httpx.AsyncClient(timeout=120) as client:
+            res = await client.post(
+                f"{OPENAI_BASE_URL}/embeddings",
+                json={"model": EMBED_MODEL, "input": prompt},
+                headers=_headers(),
+            )
+            res.raise_for_status()
+            data = res.json()
         return data["data"][0]["embedding"]
-    # index でソートして、返却する埋め込みベクトルの順序が入力と一致するように保証する
-    sorted_data = sorted(data["data"], key=lambda x: x.get("index", 0))
-    return [d["embedding"] for d in sorted_data]
+    
+    # 複数ドキュメント（リスト）の場合のバッチ分割＆並行制御
+    prompts = [(prefix + t) if prefix else t for t in input_data]
+    
+    # EMBED_BATCH_SIZE 単位で分割
+    batches = [prompts[i : i + EMBED_BATCH_SIZE] for i in range(0, len(prompts), EMBED_BATCH_SIZE)]
+    
+    semaphore = asyncio.Semaphore(EMBED_MAX_CONCURRENCY)
+    
+    async with httpx.AsyncClient(timeout=120) as client:
+        # すべてのバッチについて非同期タスクを作成
+        tasks = [
+            _embed_single_batch(client, batch, semaphore)
+            for batch in batches
+        ]
+        # gather で並行実行し、元の入力順序を維持した結果リストを取得
+        results = await asyncio.gather(*tasks)
+    
+    # 2次元のバッチ結果リストを1次元に平坦化
+    flat_results = []
+    for batch_res in results:
+        flat_results.extend(batch_res)
+        
+    return flat_results
 
 
 async def generate(messages: list[dict[str, Any]]) -> str:

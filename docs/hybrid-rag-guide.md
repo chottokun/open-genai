@@ -207,6 +207,10 @@ EMBED_MODEL=cl-nagoya/ruri-v3-30m
 EMBED_DIM=256
 DEFAULT_MODEL=gemma4                     # デフォルト使用モデル
 RAG_MODEL=gemma4                         # RAG回答生成用モデル
+
+# ドキュメント取り込み時のバッチ分割および並行アクセス制限設定
+EMBED_BATCH_SIZE=100                     # 1回のリクエストに含める最大テキストチャンク数
+EMBED_MAX_CONCURRENCY=5                  # 埋め込みリクエストの最大並行数
 ```
 
 ### 3. 起動と動作確認

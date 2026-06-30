@@ -84,6 +84,8 @@ services:
       # 日本語特化型 Embedding (ruri-v3-30m) 用のプレフィックス設定
       - EMBED_QUERY_PREFIX=${EMBED_QUERY_PREFIX}
       - EMBED_DOC_PREFIX=${EMBED_DOC_PREFIX}
+      - EMBED_BATCH_SIZE=${EMBED_BATCH_SIZE:-100}
+      - EMBED_MAX_CONCURRENCY=${EMBED_MAX_CONCURRENCY:-5}
       # ruri-v3-30m の出力次元数は 256
       - EMBED_DIM=${EMBED_DIM:-256}
     extra_hosts:
