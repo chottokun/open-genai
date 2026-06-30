@@ -52,7 +52,9 @@ async def embed(input_data: str | list[str], *, is_query: bool = False) -> list[
 
     if isinstance(input_data, str):
         return data["data"][0]["embedding"]
-    return [d["embedding"] for d in data["data"]]
+    # index でソートして、返却する埋め込みベクトルの順序が入力と一致するように保証する
+    sorted_data = sorted(data["data"], key=lambda x: x.get("index", 0))
+    return [d["embedding"] for d in sorted_data]
 
 
 async def generate(messages: list[dict[str, Any]]) -> str:

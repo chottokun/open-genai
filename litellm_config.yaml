@@ -14,6 +14,11 @@ model_list:
       model: gemini/gemini-2.5-flash
       api_key: "os.environ/GEMINI_API_KEY"
 
+  - model_name: gemini-3.5-flash
+    litellm_params:
+      model: gemini/gemini-3.5-flash
+      api_key: "os.environ/GEMINI_API_KEY"
+
   # --- OpenAI ---
   # - model_name: gpt-4.5
   #   litellm_params:
@@ -95,6 +100,7 @@ litellm_settings:
   fallbacks:
     - {"gemini-2.5-pro": ["gemma4"]}
     - {"gemini-2.5-flash": ["gemma4"]}
+    - {"gemini-3.5-flash": ["gemma4"]}
   drop_params: true  # プロバイダ間で非互換なパラメータを自動除去
 
   # --- ガードレール / コンテンツモデレーション設定 ---
@@ -111,7 +117,7 @@ router_settings:
   model_group_alias:
     # 画面側が古いモデル名でリクエストしてきた場合の最新モデルへのエイリアス
     "gemini-1.5-pro": "gemini-2.5-pro"
-    "gemini-1.5-flash": "gemini-2.5-flash"
+    "gemini-1.5-flash": "gemini-3.5-flash"
     "local-ollama-chat": "gemma4"
     "gpt-oss:20b": "gemma4"
     "gemma3:27b": "gemma4"

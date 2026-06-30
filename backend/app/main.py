@@ -648,7 +648,7 @@ async def invoke_exapp(request: Request) -> JSONResponse:
             json.loads(config_raw)
         except json.JSONDecodeError:
             return JSONResponse(
-                status_code=500,
+                status_code=400,
                 content={"error": f"AI アプリの設定(config)が不正な JSON 形式です: {ex_app_id}"},
             )
 
@@ -748,7 +748,7 @@ async def get_exapp_schema(request: Request) -> JSONResponse:
             json.loads(config_raw)
         except json.JSONDecodeError:
             return JSONResponse(
-                status_code=500,
+                status_code=400,
                 content={"error": f"AI アプリの設定(config)が不正な JSON 形式です: {ex_app_id}"},
             )
 
