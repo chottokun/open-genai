@@ -33,6 +33,14 @@ def test_safe_path():
     with pytest.raises(ValueError, match="invalid path"):
         _safe_path("uuid1/../../test.txt")
 
+    # Windowsパス区切り文字を使用したトラバーサル
+    with pytest.raises(ValueError, match="invalid path"):
+        _safe_path("uuid1\\..\\..\\test.txt")
+
+    # NULLバイトを含むパス
+    with pytest.raises(ValueError, match="invalid path"):
+        _safe_path("uuid1/test.txt\x00")
+
 def test_file_token_mint_and_verify():
     # トークン生成
     token = auth.mint_file_token("uuid1/test.txt", sub="file_upload", ttl_seconds=60)

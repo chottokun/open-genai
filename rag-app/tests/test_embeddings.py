@@ -75,3 +75,27 @@ async def test_embed_order_preservation():
         
         # ソートされて [1.0] が先頭、 [2.0] が次になるべき
         assert result == [[1.0], [2.0]]
+
+@pytest.mark.asyncio
+async def test_embed_empty_list():
+    # 空リストを渡した場合、空リストが返ることを確認
+    result = await embeddings.embed([])
+    assert result == []
+
+@pytest.mark.asyncio
+async def test_embed_error_propagation():
+    from httpx import HTTPStatusError, Request, Response
+    
+    # 500エラーをシミュレート
+    mock_resp = MagicMock(spec=Response)
+    mock_resp.status_code = 500
+    mock_resp.raise_for_status.side_effect = HTTPStatusError(
+        "Internal Server Error",
+        request=MagicMock(spec=Request),
+        response=mock_resp
+    )
+    
+    with patch("httpx.AsyncClient.post", new_callable=AsyncMock, return_value=mock_resp):
+        with pytest.raises(HTTPStatusError):
+            await embeddings.embed("test text")
+

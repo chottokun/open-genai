@@ -532,7 +532,7 @@ async def predict_stream(request: Request) -> StreamingResponse:
 def _safe_path(key: str) -> str:
     """FILES_DIR 配下に収まる安全な絶対パスへ解決する（パストラバーサル防止）。"""
     # パストラバーサル対策: 親ディレクトリへの参照や絶対パスを無効化する
-    if ".." in key or key.startswith("/"):
+    if ".." in key or key.startswith("/") or "\x00" in key:
         raise ValueError("invalid path")
 
     base = os.path.abspath(FILES_DIR)
