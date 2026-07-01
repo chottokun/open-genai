@@ -237,7 +237,7 @@ async def auth_middleware(request: Request, call_next):
         try:
             auth.verify_token(authz[7:])
             return await call_next(request)
-        except Exception:  # noqa: BLE001 - トークン不正は 401 に集約
+        except Exception:  # noqa: BLE001 # nosec B110 - トークン不正は 401 に集約
             pass
 
     return JSONResponse(

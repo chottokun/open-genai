@@ -73,7 +73,7 @@ def _extract_audio(inputs: dict[str, Any]) -> tuple[str, bytes] | None:
                 continue
             try:
                 raw = base64.b64decode(content)
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001 # nosec B112
                 continue
             return f.get("filename", "audio"), raw
     return None
@@ -142,7 +142,7 @@ async def invoke(request: Request, x_api_key: str | None = Header(default=None))
                     if lang_arg:
                         data["language"] = lang_arg
 
-                    response = requests.post(url, headers=headers, files=files, data=data)
+                    response = requests.post(url, headers=headers, files=files, data=data, timeout=600)
                 
                 if response.status_code != 200:
                     return {"outputs": f"[LiteLLM 文字起こしAPIエラー: {response.status_code}] {response.text}"}

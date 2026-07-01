@@ -40,10 +40,10 @@ async def run_benchmark(batch_size: int, concurrency: int):
         elapsed = time.time() - start_time
         
         # 1. 取得数の正確性確認
-        assert len(results) == len(DUMMY_TEXTS), f"戻り値の数が不一致です: {len(results)} != {len(DUMMY_TEXTS)}"
+        assert len(results) == len(DUMMY_TEXTS), f"戻り値の数が不一致です: {len(results)} != {len(DUMMY_TEXTS)}"  # nosec B101
         
         # 2. ベクトルの正常性確認 (次元数が256であること)
-        assert len(results[0]) == 256, f"ベクトルの次元数が不一致です: {len(results[0])} != 256"
+        assert len(results[0]) == 256, f"ベクトルの次元数が不一致です: {len(results[0])} != 256"  # nosec B101
         
         print(f"✅ 成功! 処理時間: {elapsed:.2f}秒 (1チャンクあたり平均: {(elapsed/len(DUMMY_TEXTS))*1000:.1f}ms)")
         return elapsed
@@ -77,7 +77,7 @@ async def test_order_preservation():
         batch_vec = batch_results[i]
         # ベクトルの各値が完全に等しいことを確認（浮動小数点の誤差を考慮して近似比較）
         for val1, val2 in zip(baseline_vec, batch_vec):
-            assert abs(val1 - val2) < 1e-5, f"インデックス {i} でベクトルの不一致が発生しました！順序がズレています。"
+            assert abs(val1 - val2) < 1e-5, f"インデックス {i} でベクトルの不一致が発生しました！順序がズレています。"  # nosec B101
             
     print("✅ 順序保証テスト成功! 一括バッチ処理の出力順序は元の入力順と100%一致しています。")
 
