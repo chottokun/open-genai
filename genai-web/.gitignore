@@ -5,6 +5,10 @@ cdk.out/
 ToDo.md
 !.gitkeep
 .env
+.env.local
+.env.*.local
+!.env.example
+!.env.*.example
 security-report/
 
 

@@ -1,4 +1,4 @@
-fastapi==0.138.2
+fastapi==0.139.0
 uvicorn[standard]==0.34.0
 httpx==0.28.1
 python3-saml==1.16.0

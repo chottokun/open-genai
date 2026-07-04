@@ -322,7 +322,8 @@ services:
       - ./seaweedfs/s3.config.json:/etc/seaweedfs/s3.config.json:ro
     healthcheck:
       # S3 API は起動直後 listen しない。403 も「応答あり」として healthy 扱う。
-      test: ["CMD-SHELL", "nc -z 127.0.0.1 8333"]
+      # BusyBox wget は 403 で終了コード 8 ではなく 1 を返すため、HTTP ステータスで判定する。
+      test: ["CMD-SHELL", "wget -S --spider http://127.0.0.1:8333/ 2>&1 | grep -qE 'HTTP/.* (403|200)'"]
       interval: 5s
       timeout: 5s
       retries: 12

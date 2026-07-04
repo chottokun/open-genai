@@ -1,10 +1,23 @@
-# --- 秘密情報・ローカル設定（ルート .env は公開しない） ---
+# --- 秘密情報・ローカル設定 ---
 /.env
+/.env.prod
+/.env.*.local
+**/.env
+!**/.env.example
+!**/.env.*.example
 
 # --- データベース / キャッシュ ---
 *.db
 **/__pycache__/
 *.pyc
+.pytest_cache/
+.coverage
+htmlcov/
+
+# --- Python 仮想環境 ---
+.venv/
+.venv-*/
+venv/
 
 # --- Node ---
 **/node_modules/
@@ -15,6 +28,8 @@ genai-web/packages/web/dist/
 
 # --- TLS 証明書・秘密鍵（本番/自己署名とも公開しない） ---
 proxy/certs/*.pem
+proxy/certs/*.key
+proxy/certs/*.crt
 
 # --- 契約終了時のデータ削除報告書（生成物） ---
 deletion-report-*.txt

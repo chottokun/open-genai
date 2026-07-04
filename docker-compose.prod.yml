@@ -94,18 +94,28 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
-      - rag-app
-      - whisper-app
-      - sd-app
-      - dify-app
-      - audit-app
-      - usermgmt-app
-      - modelpolicy-app
-      - ngword-app
-      - prompt-app
+      rag-app:
+        condition: service_started
+      whisper-app:
+        condition: service_started
+      sd-app:
+        condition: service_started
+      dify-app:
+        condition: service_started
+      audit-app:
+        condition: service_started
+      usermgmt-app:
+        condition: service_started
+      modelpolicy-app:
+        condition: service_started
+      ngword-app:
+        condition: service_started
+      prompt-app:
+        condition: service_started
       seaweedfs:
         condition: service_healthy
-      - keycloak
+      keycloak:
+        condition: service_started
     restart: unless-stopped
 
   keycloak:
@@ -299,7 +309,9 @@ services:
       - seaweedfs_data:/data
       - ./seaweedfs/s3.config.json:/etc/seaweedfs/s3.config.json:ro
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:8333/ 2>/dev/null || test $$? -eq 8"]
+      # S3 API は起動直後 listen しない。403 も「応答あり」として healthy 扱う。
+      # BusyBox wget は 403 で終了コード 8 ではなく 1 を返すため、HTTP ステータスで判定する。
+      test: ["CMD-SHELL", "wget -S --spider http://127.0.0.1:8333/ 2>&1 | grep -qE 'HTTP/.* (403|200)'"]
       interval: 5s
       timeout: 5s
       retries: 12
