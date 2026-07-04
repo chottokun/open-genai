@@ -1142,20 +1142,40 @@ async def create_messages(chat_id: str, request: Request) -> JSONResponse:
     return JSONResponse(content={"messages": recorded})
 
 
+ALLOW_CLOUD_API = os.environ.get("ALLOW_CLOUD_API", "false").lower() == "true"
+
+
+def _cloud_model_denied(model_name: str | None) -> str | None:
+    if ALLOW_CLOUD_API:
+        return None
+    if not model_name:
+        return None
+    # ローカル専用キーワード以外は外部クラウドAPIコールと判定してブロック
+    local_keywords = ["gemma4", "local-ollama", "ruri-v3", "localhost", "qwen2.5"]
+    is_local = any(kw in model_name for kw in local_keywords)
+    if not is_local:
+        return f"外部クラウドAPIの利用が制限されています（対象モデル: {model_name}）。ローカルモデルを使用してください。"
+    return None
+
+
 # ---------------------------------------------------------------------------
 # 推論 (genU API / Lambda ストリーム代替)
 # ---------------------------------------------------------------------------
 @app.post("/predict")
 async def predict(request: Request) -> Response:
     body = await request.json()
+    model = body.get("model")
+    cloud_denied = _cloud_model_denied(model)
+    if cloud_denied:
+        return JSONResponse(status_code=403, content={"error": cloud_denied})
     messages = body.get("messages", [])
-    denied = _model_denied(_claims_from_request(request), body.get("model"))
+    denied = _model_denied(_claims_from_request(request), model)
     if denied:
         return JSONResponse(status_code=403, content={"error": denied})
     ng = _ngword_denied(request, _last_user_text(messages))
     if ng:
         return JSONResponse(status_code=403, content={"error": ng})
-    text = await llm.chat_once(messages, body.get("model"))
+    text = await llm.chat_once(messages, model)
     return JSONResponse(content=text)
 
 
@@ -1175,12 +1195,13 @@ async def predict_title(request: Request) -> str:
     claims = _claims_from_request(request)
     user_id = _user_id(claims)
     body = await request.json()
-    # 許可外モデルではタイトル生成もしない（空タイトルを返す）
-    if _model_denied(claims, body.get("model")):
+    model = body.get("model")
+    # 許可外モデルやクラウド制限モデルではタイトル生成もしない（空タイトルを返す）
+    if _model_denied(claims, model) or _cloud_model_denied(model):
         return ""
     prompt = body.get("prompt", "")
     messages = [{"role": "user", "content": prompt}]
-    raw = await llm.chat_once(messages, body.get("model"))
+    raw = await llm.chat_once(messages, model)
     title = _clean_title(raw)
 
     # クラウド版同様、生成したタイトルをサーバ側でチャットに保存する
@@ -1293,6 +1314,8 @@ async def predict_stream(request: Request) -> StreamingResponse:
 
     # 利用ポリシーで許可されていないモデルはブロック（エラー行を1件流して終了）
     denied = _model_denied(_claims_from_request(request), model)
+    if not denied:
+        denied = _cloud_model_denied(model)
     if not denied:
         denied = _ngword_denied(request, _last_user_text(messages))
     if denied:

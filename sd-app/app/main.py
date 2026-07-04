@@ -25,7 +25,13 @@ SD_API_URL = os.environ.get("SD_API_URL", "http://host.docker.internal:7860").rs
 SD_TIMEOUT = float(os.environ.get("SD_TIMEOUT", "600"))
 
 # --- ローカル/クラウド（LiteLLM）画像生成切り替え設定 ---
+ALLOW_CLOUD_API = os.environ.get("ALLOW_CLOUD_API", "false").lower() == "true"
 IMAGE_PROVIDER = os.environ.get("IMAGE_PROVIDER", "local")   # local | litellm
+
+if IMAGE_PROVIDER == "litellm" and not ALLOW_CLOUD_API:
+    # クラウドAPI利用が許可されていない場合は、意図しない課金・送信を防ぐため強制的にlocalにフォールバックする
+    IMAGE_PROVIDER = "local"
+
 LITELLM_IMAGE_MODEL = os.environ.get("LITELLM_IMAGE_MODEL", "imagen-4")
 LITELLM_IMAGE_URL = os.environ.get("LITELLM_IMAGE_URL", "http://litellm:4000/v1")
 LITELLM_IMAGE_API_KEY = os.environ.get("LITELLM_IMAGE_API_KEY", "not-needed")

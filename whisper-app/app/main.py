@@ -24,7 +24,13 @@ WHISPER_COMPUTE = os.environ.get("WHISPER_COMPUTE", "int8")
 WHISPER_DEVICE = os.environ.get("WHISPER_DEVICE", "cpu")
 
 # --- ローカル/クラウド切り替え設定 ---
+ALLOW_CLOUD_API = os.environ.get("ALLOW_CLOUD_API", "false").lower() == "true"
 WHISPER_PROVIDER = os.environ.get("WHISPER_PROVIDER", "local")  # local | litellm
+
+if WHISPER_PROVIDER == "litellm" and not ALLOW_CLOUD_API:
+    # クラウドAPI利用が許可されていない場合は、意図しない課金・送信を防ぐため強制的にlocalにフォールバックする
+    WHISPER_PROVIDER = "local"
+
 LITELLM_AUDIO_MODEL = os.environ.get("LITELLM_AUDIO_MODEL", "whisper-cloud")
 LITELLM_AUDIO_URL = os.environ.get("LITELLM_AUDIO_URL", "http://litellm:4000/v1")
 LITELLM_API_KEY = os.environ.get("LITELLM_API_KEY", "not-needed")

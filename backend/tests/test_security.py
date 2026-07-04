@@ -128,3 +128,42 @@ def test_exapp_config_validation():
         assert "AI アプリの設定(config)が不正な JSON 形式です" in response.json()["error"]
 
 
+def test_allow_cloud_api_guard(monkeypatch):
+    # 認証トークンを作成
+    token = auth.mint_token(
+        sub="test-user",
+        email="user@example.com",
+        name="Test User",
+        groups=["UserGroup"]
+    )
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # ALLOW_CLOUD_API=False の場合
+    monkeypatch.setattr("app.main.ALLOW_CLOUD_API", False)
+    
+    # 外部クラウドモデルを指定 -> 403 Forbidden (Blocked)
+    response = client.post("/predict", json={"model": "gemini-2.5-pro", "messages": []}, headers=headers)
+    assert response.status_code == 403
+    assert "外部クラウドAPIの利用が制限されています" in response.json()["error"]
+    
+    # predict/stream エンドポイントのテスト
+    response = client.post("/predict/stream", json={"model": "gemini-2.5-pro", "messages": []}, headers=headers)
+    assert response.status_code == 200  # NDJSON形式
+    content = response.content.decode("utf-8")
+    assert "外部クラウドAPIの利用が制限されています" in content
+
+    # タイトル生成のテスト -> ガードにより空文字が返る
+    response = client.post("/predict/title", json={"model": "gemini-2.5-pro", "prompt": "テスト"}, headers=headers)
+    assert response.status_code == 200
+    assert response.json() == ""
+
+    # ALLOW_CLOUD_API=True の場合
+    monkeypatch.setattr("app.main.ALLOW_CLOUD_API", True)
+    
+    # 外部クラウドモデルを指定してもガードは通過する
+    with patch("app.llm.chat_once", return_value="dummy_response"):
+        response = client.post("/predict", json={"model": "gemini-2.5-pro", "messages": []}, headers=headers)
+        assert "外部クラウドAPIの利用が制限されています" not in response.text
+
+
+
