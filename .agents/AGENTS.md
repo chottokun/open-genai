@@ -17,3 +17,10 @@
 
 4. **Keycloak 側のリダイレクトワイルドカード許可**
    * [realm-open-genai.json](file:///home/nobuhiko/Project/open-genai/keycloak/import/realm-open-genai.json) の SAML クライアント定義の `redirectUris` には、必ず `*` (ワイルドカード) を追加すること。また、固定値の `saml_assertion_consumer_url_post` などの属性は空にしておくこと。これにより、動的なホスト転送が Keycloak に拒否されるのを防ぐ。
+
+## 📝 ドキュメント記述におけるセキュリティ・プライバシー保護ルール
+
+1. **例示用ドメイン・ホスト名の一貫した使用**
+   * `docs/` 配下のガイドラインや README などの各種設計ドキュメントを記述・編集する際、開発マシンや特定の環境で一時的に使用している具体的なホスト名やドメイン名（例: `blue-two.local` や特定の社内IPアドレス等）をドキュメント内に書き残さないこと。
+   * 接続先ホストの設定例を示す場合は、必ず `your-domain.local` や `genai.example.com` などの一般的な例示用ドメイン、もしくは `<YOUR_DOMAIN_OR_IP>` などのプレースホルダー表記に統一・マスクすること。
+
