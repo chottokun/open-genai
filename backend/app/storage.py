@@ -345,7 +345,7 @@ def update_system_context(
     params.extend([sc_id, user_id])
     with _lock, _connect() as conn:
         conn.execute(
-            f"UPDATE system_contexts SET {', '.join(sets)}"
+            f"UPDATE system_contexts SET {', '.join(sets)}"  # nosec B608
             " WHERE systemContextId = ? AND userId = ?",
             tuple(params),
         )

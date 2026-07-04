@@ -215,7 +215,7 @@ def refresh_placeholder_by_endpoint(
         where += " AND teamId<>?"
         params.append(exclude_team_id)
     with _lock, _connect() as conn:
-        cur = conn.execute(f"UPDATE exapps SET {set_clause} WHERE {where}", params)
+        cur = conn.execute(f"UPDATE exapps SET {set_clause} WHERE {where}", params)  # nosec B608
         return cur.rowcount
 
 

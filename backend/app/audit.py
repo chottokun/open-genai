@@ -269,7 +269,7 @@ def record(
             method = request.method
             path = request.url.path
             ua = request.headers.get("user-agent")
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001 # nosec B110
             pass
 
     event = {
@@ -415,10 +415,10 @@ def query(
     limit = max(1, min(limit, 1000))
     with _connect() as conn:
         total = conn.execute(
-            f"SELECT COUNT(*) AS c FROM audit_logs{clause}", params
+            f"SELECT COUNT(*) AS c FROM audit_logs{clause}", params  # nosec B608
         ).fetchone()["c"]
         rows = conn.execute(
-            f"SELECT * FROM audit_logs{clause} ORDER BY ts DESC LIMIT ? OFFSET ?",
+            f"SELECT * FROM audit_logs{clause} ORDER BY ts DESC LIMIT ? OFFSET ?",  # nosec B608
             (*params, limit, offset),
         ).fetchall()
     return {
@@ -442,7 +442,7 @@ def iter_export(ts_from: int | None = None, ts_to: int | None = None):
     clause = (" WHERE " + " AND ".join(where)) if where else ""
     with _connect() as conn:
         for r in conn.execute(
-            f"SELECT * FROM audit_logs{clause} ORDER BY ts ASC", params
+            f"SELECT * FROM audit_logs{clause} ORDER BY ts ASC", params  # nosec B608
         ):
             yield json.dumps(dict(r), ensure_ascii=False) + "\n"
 

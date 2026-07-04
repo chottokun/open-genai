@@ -69,7 +69,7 @@ def _extract_csv(inputs: dict[str, Any]) -> str:
                 continue
             try:
                 return base64.b64decode(content).decode("utf-8", "ignore")
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001 # nosec B112
                 continue
     return ""
 

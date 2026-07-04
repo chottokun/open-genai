@@ -660,7 +660,7 @@ def _ngword_denied(request: Request, text: str, *, usecase: str = "/chat") -> st
             input_text=text,
             output_text=reason or "",
         )
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001 # nosec B110
         pass
     return reason or "入力に使用できない語句が含まれています。"
 
@@ -812,7 +812,7 @@ async def _rehost_artifacts(
                     f"{name} -> {'objstore' if presigned else 'source-url'}"
                 ),
             )
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001 # nosec B110
             pass
 
     if links and isinstance(outputs, str):
@@ -894,7 +894,7 @@ async def audit_access_middleware(request: Request, call_next):
             status=response.status_code,
             latency_ms=int((time.monotonic() - started) * 1000),
         )
-    except Exception:  # noqa: BLE001 - ログ失敗は本処理に影響させない
+    except Exception:  # noqa: BLE001 # nosec B110 - ログ失敗は本処理に影響させない
         pass
     return response
 

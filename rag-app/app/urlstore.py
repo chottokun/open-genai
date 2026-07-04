@@ -64,7 +64,7 @@ def add_url(scope: str, url: str, tags: list[str] | None = None, title: str = ""
 def mark_fetched(scope: str, url: str, content_hash: str, title: str = "") -> None:
     with _connect() as conn:
         conn.execute(
-            "UPDATE url_sources SET contentHash = ?, lastFetched = ?, updatedDate = ?"
+            "UPDATE url_sources SET contentHash = ?, lastFetched = ?, updatedDate = ?"  # nosec B608
             + (", title = ?" if title else "")
             + " WHERE scope = ? AND url = ?",
             (

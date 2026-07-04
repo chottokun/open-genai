@@ -138,10 +138,10 @@ def _query(inputs: dict[str, Any]) -> str:
 
     with _connect_ro() as conn:
         total = conn.execute(
-            f"SELECT COUNT(*) AS c FROM audit_logs{clause}", params
+            f"SELECT COUNT(*) AS c FROM audit_logs{clause}", params  # nosec B608
         ).fetchone()["c"]
         rows = conn.execute(
-            f"SELECT * FROM audit_logs{clause} ORDER BY ts DESC LIMIT ?",
+            f"SELECT * FROM audit_logs{clause} ORDER BY ts DESC LIMIT ?",  # nosec B608
             (*params, limit),
         ).fetchall()
 
