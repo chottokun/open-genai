@@ -193,16 +193,8 @@ services:
     container_name: open-genai-whisper-app
     ports:
       - "8002:8002"
-    environment:
-      - RAG_API_KEY=${RAG_API_KEY:-local-rag-key}
-      - WHISPER_MODEL=${WHISPER_MODEL:-medium}
-      - WHISPER_COMPUTE=${WHISPER_COMPUTE:-int8}
-      - WHISPER_PROVIDER=${WHISPER_PROVIDER:-local}
-      - WHISPER_API_URL=${WHISPER_API_URL:-http://local-whisper-api:8000/v1/audio/transcriptions}
-      - ALLOW_CLOUD_API=${ALLOW_CLOUD_API:-false}
-      - LITELLM_AUDIO_MODEL=${LITELLM_AUDIO_MODEL:-whisper-cloud}
-      - LITELLM_AUDIO_URL=${LITELLM_AUDIO_URL:-http://litellm:4000/v1}
-      - LITELLM_API_KEY=${LITELLM_API_KEY:-not-needed}
+    env_file:
+      - .env
     volumes:
       - whisper_cache:/cache
     depends_on:
@@ -213,10 +205,8 @@ services:
   local-whisper-api:
     build: ./local-whisper-api
     container_name: local-whisper-api
-    environment:
-      - AUDIO_INFERENCE_DEVICE=${AUDIO_INFERENCE_DEVICE:-cpu}
-      - AUDIO_COMPUTE_TYPE=${AUDIO_COMPUTE_TYPE:-int8}
-      - AUDIO_MODEL_NAME=${AUDIO_MODEL_NAME:-kotoba-tech/kotoba-whisper-v1.0-faster}
+    env_file:
+      - .env
     volumes:
       - whisper_cache:/root/.cache/huggingface
     ports:
