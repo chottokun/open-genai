@@ -29,6 +29,10 @@ try:
     )
     pipe = pipe.to(DEVICE)
 except Exception as e:
+    import sys
+    print(f"ERROR: Failed to load pipeline: {e}", file=sys.stderr)
+    import traceback
+    traceback.print_exc()
     # テスト時のモック化を考慮し、例外発生時はMagicMockを割り当て
     from unittest.mock import MagicMock
     pipe = MagicMock() if "MagicMock" in type(DiffusionPipeline).__name__ else None
