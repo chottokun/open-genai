@@ -35,17 +35,17 @@ graph TD
 新しい構成では、すべてのリクエストがフロントの Nginx プロキシを経由する **単一入口（Nginx リバースプロキシ）構成** に統合されました。そのため、外部PCやローカルネットワーク上のホスト名からアクセスする場合でも、ポート個別の設定は不要になり、 **ルートの `.env` ファイル内の `PUBLIC_URL` を指定するだけで対応可能です。**
 
 ### ルートの `.env` 設定例
-外部ブラウザから別名（例: `http://blue-two.local`）でアクセスする場合、`.env` を以下のように設定します：
+外部ブラウザから別名（例: `http://your-domain.local`）でアクセスする場合、`.env` を以下のように設定します：
 
 ```bash
 # ブラウザからのアクセスURL（Nginxプロキシ経由のためポート指定なし。末尾スラッシュなし）
-PUBLIC_URL=http://blue-two.local
+PUBLIC_URL=http://your-domain.local
 # プロキシがホストに公開するHTTPポート（既定 80）
 PROXY_HTTP_PORT=80
 
 # --- フロントエンドの外部ホスト制限解除 ---
 # 外部ホスト経由のHMR等を動作させるために許可ホストを指定（または true で全許可）
-VITE_ALLOWED_HOSTS=blue-two.local
+VITE_ALLOWED_HOSTS=your-domain.local
 ```
 
 > [!NOTE]

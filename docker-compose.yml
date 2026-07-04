@@ -79,7 +79,7 @@ services:
       # proxy 経由の公開 URL（末尾スラッシュ無し。PROXY_HTTP_PORT 変更時は合わせる）
       - PUBLIC_BASE_URL=${PUBLIC_URL:-http://localhost}/api
       - FRONTEND_URL=${PUBLIC_URL:-http://localhost}
-      - SAML_SP_ENTITY_ID=${PUBLIC_URL:-http://localhost}/api/auth/saml/metadata
+      - SAML_SP_ENTITY_ID=http://localhost/api/auth/saml/metadata
       - SAML_SP_ACS_URL=${PUBLIC_URL:-http://localhost}/api/auth/saml/acs
       - SAML_SP_SLS_URL=${PUBLIC_URL:-http://localhost}/api/auth/saml/sls
       # backend(コンテナ内)から IdP メタデータを取得する URL（Keycloak relative /kc）
