@@ -72,13 +72,13 @@ model_list:
   # =========================================================================
   #  音声認識（Whisper / Transcription）
   # =========================================================================
-  # # OpenAI gpt-4o-transcribe
-  # - model_name: whisper-cloud
-  #   litellm_params:
-  #     model: openai/gpt-4o-transcribe
-  #     api_key: "os.environ/OPENAI_API_KEY"
-  #     model_info:
-  #       mode: audio_transcription
+  # OpenAI gpt-4o-transcribe
+  - model_name: whisper-cloud
+    litellm_params:
+      model: openai/gpt-4o-transcribe
+      api_key: "os.environ/OPENAI_API_KEY"
+    model_info:
+      mode: audio_transcription
 
   # =========================================================================
   #  画像生成
