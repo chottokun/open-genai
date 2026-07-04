@@ -37,5 +37,4 @@ deletion-report-*.txt
 # --- その他 ---
 **/.DS_Store
 
-# --- 検討ドキュメント ---
-/docs/
+
