@@ -1,6 +1,6 @@
-# 音声認識アプリ (whisper-app) 構成・導入ガイド
+# 音声認識アプリ (whisper-app / local-whisper-api) 構成・導入ガイド
 
-本ドキュメントでは、OpenGENAI における音声認識（文字起こし）マイクロサービス `whisper-app` のアーキテクチャ、呼び出し構成、ローカルとクラウドの切り替え方法、およびセキュリティ設定について解説します。
+本ドキュメントでは、OpenGENAI における音声認識（文字起こし）マイクロサービス `whisper-app` および `local-whisper-api` のアーキテクチャ、呼び出し構成、ローカルモデルとクラウドモデルの切り替え、およびセキュリティ設定について解説します。
 
 ---
 
@@ -8,106 +8,95 @@
 
 デジタル庁オリジナル版の「源内（GENAI）」は、音声の文字起こし機能において **Amazon Transcribe** および **Amazon S3** を前提としたクラウドマネージドな構成で実装されていました。
 
-OpenGENAI ではこれらをオープンかつローカル完結な仕組みに置き換えるため、独立したマイクロサービス **`whisper-app`** を導入しています。
-`whisper-app` は、環境変数（`.env`）の切り替えにより、コンテナ内部での **「ローカル実行」** と、LiteLLM Proxy を中継した **「クラウド連携実行」** の2種類を選択可能です。
+OpenGENAI ではこれらをオープンかつローカル完結な仕組みに置き換え、さらに推論ワークロードを柔軟にコントロールするために、以下の2つのサービスに分割（マイクロサービス化）して提供しています。
+1. **`whisper-app` (プロキシ・ルーティング層)**:
+   * バックエンドからの呼び出しの認証（HMAC署名検証）や、指定プロバイダへのルーティングを行う軽量なゲートウェイ。
+2. **`local-whisper-api` (推論エンジン層)**:
+   * `faster-whisper` (CTranslate2) を搭載し、OpenAI 互換の REST API (`/v1/audio/transcriptions`) に準拠した音声認識の心臓部。
+   * ホストサーバーにGPUがある場合はGPU推論、ない場合はCPU推論と、コンテナ単位でリソースや量子化を自在に切り替え可能。
+   * 日本語特化の **Kotoba-Whisper** と、多言語・高精度な **オリジナル Whisper** の双方を環境変数だけで切り替え可能。
 
 ---
 
 ## 2. 呼び出し構成とアーキテクチャ
 
-`whisper-app` は、フロントエンドからの要求を `backend` が中継し、HMAC署名による内部認証（`intauth`）を経て呼び出されます。
+音声認識処理の実行プロバイダは、 `.env` の `WHISPER_PROVIDER` で制御します。
 
-### ① 完全ローカル完結構成 (`WHISPER_PROVIDER=local`)
-外部ネットワークやクラウドAPIへ一切データを送信せず、コンテナローカルで文字起こしを実行する安全な構成です。閉域網（LGWAN等）での運用に適しています。
-
-```mermaid
-flowchart TD
-    Browser[ブラウザ / Webフロント] -->|1. 音声添付リクエスト| Proxy[Nginx Proxy :80]
-    Proxy -->|2. リクエスト転送| Backend[backendコンテナ :8000]
-    Backend -->|3. HMAC署名付き呼出 /invoke| WhisperApp[whisper-appコンテナ :8002]
-    WhisperApp -->|4. CPU推論実行| WhisperModel[faster-whisper / CTranslate2]
-    WhisperModel -->|5. 文字起こしテキスト返却| WhisperApp
-    WhisperApp -->|6. 結果返却| Backend
-    Backend -->|7. Markdown出力| Browser
-```
-
-* **特徴**:
-  * 推論エンジンには高速な `faster-whisper` (CTranslate2) を採用し、CPU上でも実用的な速度で動作します。
-  * 初回実行時に、指定した Whisper モデル（既定: `medium`）が自動的にダウンロードされ、 `whisper_cache` ボリュームにキャッシュされます。以降はオフラインで動作します。
-
----
-
-### ② クラウド/外部API連携構成 (`WHISPER_PROVIDER=litellm`)
-高精度なクラウド音声認識API（OpenAI `gpt-4o-transcribe` や、国内完結のさくらAIなど）を、 **LiteLLM Proxy** を経由して中継呼び出しするハイブリッド構成です。
+### ① ローカル外出しAPI構成 (`WHISPER_PROVIDER=local_api` - 推奨)
+実際の重い音声認識処理を別コンテナ `local-whisper-api` に委譲し、環境に合わせて CPU/GPU や利用モデルを自在に切り替える構成です。外部ネットワークやクラウドAPIへ一切データを送信しません。
 
 ```mermaid
 flowchart TD
     Browser[ブラウザ / Webフロント] -->|1. 音声添付リクエスト| Proxy[Nginx Proxy :80]
     Proxy -->|2. リクエスト転送| Backend[backendコンテナ :8000]
     Backend -->|3. HMAC署名付き呼出 /invoke| WhisperApp[whisper-appコンテナ :8002]
-    WhisperApp -->|4. 音声認識API要求| LiteLLM[LiteLLM Proxy :4000]
-    LiteLLM -->|5. https 経由での転送| CloudAPI[外部クラウドAPI / OpenAI等]
-    CloudAPI -->|6. テキスト返却| LiteLLM
-    LiteLLM -->|7. テキスト返却| WhisperApp
-    WhisperApp -->|8. 結果整形・返却| Backend
+    WhisperApp -->|4. 中継 /v1/audio/transcriptions| LocalAPI[local-whisper-apiコンテナ :8003]
+    LocalAPI -->|5. 指定モデルでの推論実行| WhisperModel[faster-whisper / CTranslate2]
+    WhisperModel -->|6. テキスト返却| LocalAPI
+    LocalAPI -->|7. 結果返却| WhisperApp
+    WhisperApp -->|8. 整形・結果返却| Backend
     Backend -->|9. Markdown出力| Browser
 ```
 
 * **特徴**:
-  * `whisper-app` が受け取った音声ファイルを、LiteLLMの `/v1/audio/transcriptions` 規格に合わせて転送します。
-  * 外部APIキーやルーティング設定はすべて `LiteLLM Proxy` で一元管理されるため、個別のコンテナに直接APIキーを設定する必要がなくセキュアです。
+  * 推論エンジンコンテナを分離したことで、フロントやバックエンドの構成に影響を与えることなく、音声認識エンジン側だけに GPU (CUDA) を割り当てることが可能です。
+  * `AUDIO_MODEL_NAME` に任意の Hugging Face 互換モデル名（`systran/faster-whisper-*` や `kotoba-tech/kotoba-whisper-*`）を指定するだけで、自動ダウンロードされてロードされます。
+
+---
+
+### ② 既存のコンテナ内実行構成 (`WHISPER_PROVIDER=local`)
+プロキシコンテナ（`whisper-app`）の内部で直接 `faster-whisper` による推論を行う、シンプルな1コンテナ構成です（CPU推論のみ）。
+
+### ③ クラウド/外部API連携構成 (`WHISPER_PROVIDER=litellm`)
+高精度なクラウド音声認識API（OpenAI `gpt-4o-transcribe` や、国内完結のさくらAIなど）を、 **LiteLLM Proxy** を経由して中継呼び出しするハイブリッド構成です。
 
 ---
 
 ## 3. セキュリティガードレールと課金防止 (`ALLOW_CLOUD_API`)
 
-クラウドAPIの利用を制限したい環境（完全閉域網、あるいは予期しないクラウドAPI利用による想定外の課金を防止したい場合）のため、強力なガードレールスイッチ **`ALLOW_CLOUD_API`** を導入しています。
+閉域網（LGWAN等）での運用や、意図しない外部クラウドAPI利用による想定外の課金を防止するため、強力なガードレールスイッチ **`ALLOW_CLOUD_API`** を導入しています。
 
 ### 🛡️ ガードレールの挙動
 
 * **`ALLOW_CLOUD_API=false` (既定値)**:
-  * 意図しない外部課金やデータ流出を防ぐため、すべての外部API通信要求をブロックまたは安全に強制フォールバックさせます。
-  * `.env` で `WHISPER_PROVIDER=litellm` (クラウド設定) が指定されていたとしても、 `whisper-app` が起動時およびリクエスト時に自動検知し、 **強制的に `local` プロバイダ (faster-whisper によるコンテナ内推論) にフォールバック** させます。これにより、誤設定によるクラウド課金や送信を100%防止します。
-  * 同時に、 `backend` に対するチャット推論等で外部クラウドモデル（`gemini-` 等）が要求された場合も、バックエンド側で `403 Forbidden` としてリクエストを即時遮断します。
+  * 外部のクラウドモデル（Geminiや外部OpenAI等）への通信を遮断し、保護します。
+  * `WHISPER_PROVIDER=litellm` (クラウド設定) が指定されていたとしても、 `whisper-app` が自動検知し、 **強制的に `local` プロバイダにフォールバック** させて外部送信を100%防止します。
+  * 一方、 `WHISPER_PROVIDER=local_api` への通信は **同一Dockerネットワーク内のコンテナ間ローカル通信であるため、ブロックせずに安全に通す** ロジックになっています。
 
 * **`ALLOW_CLOUD_API=true`**:
-  * 明示的にクラウドモデルの利用および `whisper-app` ➔ LiteLLM ➔ クラウドAPIへの中継連携を許可します。
+  * 明示的にクラウドモデルの利用および外部API連携を許可します。
 
 ---
 
 ## 4. 設定方法 (`.env` パラメータ)
 
-`whisper-app` の動作モードは、プロジェクトルートの `.env` で制御します。
+音声認識の動作モードは、プロジェクトルートの `.env` で制御します。
 
-### 設定例（完全ローカル完結モード - 推奨・安全）
+### 設定例（ローカル外出しAPI・Kotoba-Whisperを使用する場合）
 ```bash
-# クラウドAPIの使用を厳格に禁止する (課金・データ漏洩防止ガード)
+# クラウドAPIの使用を厳格に禁止する (課金・データ漏洩防止)
 ALLOW_CLOUD_API=false
 
-# 音声認識の実行プロバイダ (ALLOW_CLOUD_API=false時は強制的にlocalとして動きます)
-WHISPER_PROVIDER=local
+# 音声認識の実行プロバイダをローカル外出しAPIに指定
+WHISPER_PROVIDER=local_api
+WHISPER_API_URL=http://local-whisper-api:8000/v1/audio/transcriptions
 
-# ローカル実行時のモデル設定
-WHISPER_MODEL=medium        # small / medium / large-v3 から選択
-WHISPER_COMPUTE=int8
-WHISPER_DEVICE=cpu
+# --- local-whisper-api (新コンテナ) のリソース・モデル制御 ---
+AUDIO_INFERENCE_DEVICE=cpu                               # cpu または cuda (GPU)
+AUDIO_COMPUTE_TYPE=int8                                  # int8, float16 など
+AUDIO_MODEL_NAME=kotoba-tech/kotoba-whisper-v1.0-faster  # 日本語特化モデル
 ```
 
-### 設定例（外部クラウド連携モード）
+### 設定例（ローカル外出しAPI・オリジナル Whisper Large v3を使用する場合）
 ```bash
-# クラウドAPIの利用を明示的に許可する
-ALLOW_CLOUD_API=true
+ALLOW_CLOUD_API=false
+WHISPER_PROVIDER=local_api
+WHISPER_API_URL=http://local-whisper-api:8000/v1/audio/transcriptions
 
-# 音声認識の実行プロバイダを LiteLLM 中継に変更
-WHISPER_PROVIDER=litellm
-
-# 中継先モデルおよびエンドポイントの設定
-LITELLM_AUDIO_MODEL=whisper-cloud
-LITELLM_AUDIO_URL=http://litellm:4000/v1
-LITELLM_API_KEY=not-needed
-
-# (必須) LiteLLM Proxy が使用する外部APIキーを設定
-OPENAI_API_KEY=sk-...
+# オリジナル Whisper Large v3 を指定
+AUDIO_INFERENCE_DEVICE=cpu
+AUDIO_COMPUTE_TYPE=int8
+AUDIO_MODEL_NAME=systran/faster-whisper-large-v3
 ```
 
 ---
@@ -115,31 +104,48 @@ OPENAI_API_KEY=sk-...
 ## 5. 接続テストと動作確認
 
 ### ① ヘルスチェックAPIの確認
-コンテナが正常起動しているか、および現在適用されているプロバイダを確認します。
+コンテナが正常起動しているか、および現在ロードされている音声認識モデルを確認します。
 ```bash
-curl -s http://localhost/api/health
-# または直接 whisper-app のポートを叩く
+# local-whisper-api の状態を確認
+curl -s http://localhost:8003/health
+```
+**期待される応答**:
+```json
+{
+  "status": "ok",
+  "model": "kotoba-tech/kotoba-whisper-v1.0-faster",
+  "device": "cpu",
+  "compute_type": "int8"
+}
+```
+
+### ② プロキシ層の状態確認
+```bash
+# whisper-app の状態を確認
 curl -s http://localhost:8002/health
 ```
-**期待される応答 (ALLOW_CLOUD_API=false 時)**:
+**期待される応答**:
 ```json
 {
   "status": "ok",
   "model": "medium",
-  "loaded": true,
-  "provider": "local"
+  "loaded": false,
+  "provider": "local_api"
 }
 ```
-※ `.env` で `WHISPER_PROVIDER=litellm` を指定していても、ガードにより `"provider": "local"` になっていることが確認できます。
 
-### ② 文字起こし機能の疎通確認
+### ③ 文字起こし機能の疎通・結合テスト
 `curl` を用いて、音声ファイルを添付したダミーリクエストを `/invoke` エンドポイントにポストして検証します。
 ```bash
 # RAG_API_KEY (既定: local-rag-key) で認証してテスト
 curl -i -X POST \
   -H "Content-Type: application/json" \
   -H "x-api-key: local-rag-key" \
-  -d '{"inputs": {"language": "ja", "files": []}}' \
+  -d '{"inputs": {"language": "ja", "files": [{"files": [{"filename": "test.wav", "content": "UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAAAAAA=="}]}]}}' \
   http://localhost:8002/invoke
 ```
-※ 音声が添付されていない場合は `{"outputs": "音声ファイルが添付されていません。音声を添付してください。"}` という正常なフォールバック応答が返ります。
+**期待される応答**:
+```json
+{"outputs":"**文字起こし結果 (ローカルAPI)**:\n\n"}
+```
+※ 正常に中継され、レスポンスに `(ローカルAPI)` が含まれていれば、結合疎通テストは成功です。
