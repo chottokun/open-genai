@@ -15,7 +15,7 @@ app = FastAPI(title="Local SD API", version="1.0.0")
 
 # 環境変数から設定を読み込む
 DEVICE = os.environ.get("IMAGE_INFERENCE_DEVICE", "cpu")
-MODEL_NAME = os.environ.get("IMAGE_MODEL_NAME", "latent-consistency/lcm-sd15-as-latent")
+MODEL_NAME = os.environ.get("IMAGE_MODEL_NAME", "SimianLuo/LCM_Dreamshaper_v7")
 
 # モデルのロード
 # CPUでの動作時はメモリと計算精度の節約のため float32、GPU(cuda)時は float16 にするのが一般的
