@@ -322,7 +322,7 @@ services:
       - ./seaweedfs/s3.config.json:/etc/seaweedfs/s3.config.json:ro
     healthcheck:
       # S3 API は起動直後 listen しない。403 も「応答あり」として healthy 扱う。
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8333/ || test $$? -eq 8"]
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 8333"]
       interval: 5s
       timeout: 5s
       retries: 12
