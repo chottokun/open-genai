@@ -7,29 +7,31 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 # diffusersのインポート。テスト時はsys.modulesモックによりMagicMockが返ります
-from diffusers import StableDiffusionPipeline
+# diffusersのインポート。テスト時はsys.modulesモックによりMagicMockが返ります
+from diffusers import DiffusionPipeline
 import torch
 
 app = FastAPI(title="Local SD API", version="1.0.0")
 
 # 環境変数から設定を読み込む
 DEVICE = os.environ.get("IMAGE_INFERENCE_DEVICE", "cpu")
-MODEL_NAME = os.environ.get("IMAGE_MODEL_NAME", "runwayml/stable-diffusion-v1-5")
+MODEL_NAME = os.environ.get("IMAGE_MODEL_NAME", "latent-consistency/lcm-sd15-as-latent")
 
 # モデルのロード
 # CPUでの動作時はメモリと計算精度の節約のため float32、GPU(cuda)時は float16 にするのが一般的
 torch_dtype = torch.float16 if DEVICE == "cuda" else torch.float32
 
-# Stable Diffusionのパイプライン初期化
+# パイプライン初期化
 try:
-    pipe = StableDiffusionPipeline.from_pretrained(
+    pipe = DiffusionPipeline.from_pretrained(
         MODEL_NAME,
         torch_dtype=torch_dtype
     )
     pipe = pipe.to(DEVICE)
 except Exception as e:
     # テスト時のモック化を考慮し、例外発生時はMagicMockを割り当て
-    pipe = MagicMock() if "MagicMock" in type(StableDiffusionPipeline).__name__ else None
+    from unittest.mock import MagicMock
+    pipe = MagicMock() if "MagicMock" in type(DiffusionPipeline).__name__ else None
 
 
 class ImageGenerationRequest(BaseModel):
@@ -56,13 +58,19 @@ async def generate_images(request: ImageGenerationRequest) -> Any:
     except Exception:
         width, height = 512, 512
 
+    # LCMやSDXL-Lightningなどの高速蒸留モデルの場合はステップ数を 4 に削減して高速化
+    steps = 20
+    model_lower = MODEL_NAME.lower()
+    if "lcm" in model_lower or "lightning" in model_lower:
+        steps = 4
+
     try:
         # 画像生成の実行
         result = pipe(
             prompt=request.prompt,
             width=width,
             height=height,
-            num_inference_steps=20
+            num_inference_steps=steps
         )
         
         images = result.images
