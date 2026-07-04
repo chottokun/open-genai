@@ -26,11 +26,17 @@ SD_TIMEOUT = float(os.environ.get("SD_TIMEOUT", "600"))
 
 # --- ローカル/クラウド（LiteLLM）画像生成切り替え設定 ---
 ALLOW_CLOUD_API = os.environ.get("ALLOW_CLOUD_API", "false").lower() == "true"
-IMAGE_PROVIDER = os.environ.get("IMAGE_PROVIDER", "local")   # local | litellm
+IMAGE_PROVIDER = os.environ.get("IMAGE_PROVIDER", "local")   # local | litellm | local_api
+IMAGE_API_URL = os.environ.get("IMAGE_API_URL", "http://local-sd-api:8000/v1/images/generations")
 
-if IMAGE_PROVIDER == "litellm" and not ALLOW_CLOUD_API:
-    # クラウドAPI利用が許可されていない場合は、意図しない課金・送信を防ぐため強制的にlocalにフォールバックする
-    IMAGE_PROVIDER = "local"
+def get_effective_provider() -> str:
+    allow_cloud = ALLOW_CLOUD_API or os.environ.get("ALLOW_CLOUD_API", "false").lower() == "true"
+    prov = IMAGE_PROVIDER or os.environ.get("IMAGE_PROVIDER", "local")
+    
+    if prov == "litellm" and not allow_cloud:
+        # クラウドAPI利用が許可されていない場合は、意図しない課金・送信を防ぐため強制的にlocalにフォールバックする
+        return "local"
+    return prov
 
 LITELLM_IMAGE_MODEL = os.environ.get("LITELLM_IMAGE_MODEL", "imagen-4")
 LITELLM_IMAGE_URL = os.environ.get("LITELLM_IMAGE_URL", "http://litellm:4000/v1")
@@ -51,8 +57,25 @@ async def health() -> JSONResponse:
 
     未起動なら 503 を返し、源内 Web の一覧から自動的に隠れるようにする。
     """
-    if IMAGE_PROVIDER == "litellm":
+    prov = get_effective_provider()
+    if prov == "litellm":
         return JSONResponse(content={"status": "ok", "provider": "litellm", "model": LITELLM_IMAGE_MODEL})
+
+    if prov == "local_api":
+        try:
+            from urllib.parse import urlparse
+            parsed = urlparse(IMAGE_API_URL)
+            health_url = f"{parsed.scheme}://{parsed.netloc}/health"
+            async with httpx.AsyncClient(timeout=3) as client:
+                res = await client.get(health_url)
+            if res.status_code == 200:
+                return JSONResponse(content={"status": "ok", "provider": "local_api", "upstream": IMAGE_API_URL})
+        except Exception:
+            pass
+        return JSONResponse(
+            status_code=503,
+            content={"status": "upstream-unavailable", "upstream": IMAGE_API_URL},
+        )
 
     try:
         async with httpx.AsyncClient(timeout=3) as client:
@@ -88,7 +111,8 @@ async def invoke(request: Request, x_api_key: str | None = Header(default=None))
     except (TypeError, ValueError):
         steps = 20
 
-    if IMAGE_PROVIDER == "local":
+    prov = get_effective_provider()
+    if prov == "local":
         payload = {
             "prompt": prompt,
             "negative_prompt": inputs.get("negative_prompt") or "",
@@ -122,6 +146,41 @@ async def invoke(request: Request, x_api_key: str | None = Header(default=None))
         ]
         return {
             "outputs": f"プロンプト「{prompt}」で画像を生成しました。",
+            "artifacts": artifacts,
+        }
+    elif prov == "local_api":
+        payload = {
+            "prompt": prompt,
+            "size": f"{size}x{size}",
+            "n": 1,
+            "response_format": "b64_json"
+        }
+
+        try:
+            async with httpx.AsyncClient(timeout=SD_TIMEOUT) as client:
+                res = await client.post(IMAGE_API_URL, json=payload)
+        except httpx.HTTPError as e:
+            return {"outputs": f"ローカル画像生成API（local-sd-api）への接続に失敗しました: {e}"}
+
+        if res.status_code != 200:
+            return {"outputs": f"画像生成に失敗しました (status: {res.status_code}, detail: {res.text})"}
+
+        data = res.json()
+        img_data_list = data.get("data") or []
+        if not img_data_list:
+            return {"outputs": "画像が生成されませんでした。"}
+
+        artifacts = []
+        for i, img_obj in enumerate(img_data_list):
+            b64_content = img_obj.get("b64_json")
+            if b64_content:
+                artifacts.append({"content": b64_content, "display_name": f"generated_{i + 1}.png"})
+
+        if not artifacts:
+            return {"outputs": "画像のデータ処理に失敗しました。"}
+
+        return {
+            "outputs": f"プロンプト「{prompt}」で画像を生成しました（画像生成(ローカルAPI)）。",
             "artifacts": artifacts,
         }
     else:

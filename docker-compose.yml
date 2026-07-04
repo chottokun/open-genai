@@ -219,16 +219,24 @@ services:
     container_name: open-genai-sd-app
     # ports:
     #   - "8003:8003" # (開発/検証用。通常は不要)
-    environment:
-      - RAG_API_KEY=${RAG_API_KEY:-local-rag-key}
-      # ホストで動く AUTOMATIC1111 互換 SD サーバ
-      - SD_API_URL=${SD_API_URL:-http://host.docker.internal:7860}
-      - IMAGE_PROVIDER=${IMAGE_PROVIDER:-local}
-      - LITELLM_IMAGE_MODEL=${LITELLM_IMAGE_MODEL:-imagen-4}
-      - LITELLM_IMAGE_URL=${LITELLM_IMAGE_URL:-http://litellm:4000/v1}
-      - LITELLM_IMAGE_API_KEY=${LITELLM_IMAGE_API_KEY:-not-needed}
+    env_file:
+      - .env
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    depends_on:
+      - local-sd-api
+    restart: unless-stopped
+
+  # 画像生成エンジンの心臓部（外出しマイクロサービス / CPU・GPU動的切替）
+  local-sd-api:
+    build: ./local-sd-api
+    container_name: local-sd-api
+    env_file:
+      - .env
+    volumes:
+      - sd_cache:/root/.cache/huggingface
+    ports:
+      - "8004:8000"
     restart: unless-stopped
 
   # Dify(ワークフロー/チャットフロー)連携を「AI アプリ」として提供する汎用プロキシ
@@ -431,3 +439,4 @@ volumes:
   seaweedfs_data:
   ollama_data:
   huggingface_cache:
+  sd_cache:

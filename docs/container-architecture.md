@@ -51,11 +51,12 @@ Nginx（`proxy`）を単一の入口とし、フロントエンド（`web`）、
 | `open-genai-dify-app` | `dify-app` | `8004:-` | Difyなどの外部ローコードツール等と連携するためのアダプタアプリ。 |
 
 ### ④ 推論・ベクトル化エンジン系統 (推論層)
-実際のディープラーニングモデル（LLM/Embedding/Speech-to-Text）を動作させる心臓部です。
+実際のディープラーニングモデル（LLM/Embedding/Speech-to-Text/Stable Diffusion）を動作させる心臓部です。
 
 | コンテナ名 | サービス名 | ポート (内部/外部) | 主な役割 |
 | :--- | :--- | :--- | :--- |
 | `local-whisper-api` | `local-whisper-api`| `8003:8000` | **[新規]** 音声認識推論層。Kotoba-Whisper やオリジナル Whisper の実行環境（GPU/CPU対応）。 |
+| `local-sd-api` | `local-sd-api` | `8004:8000` | **[新規]** 画像生成推論層。Stable Diffusionの実行環境。 |
 | `open-genai-embedding-jp-api`| `embedding-jp-api`| `8020:8000` | 日本語特化 Embedding (`ruri-v3-30m`) のベクトル化エンジン。 |
 
 ---
@@ -92,6 +93,7 @@ flowchart TD
 
     subgraph inference ["ローカル推論層"]
         WhisperAPI["local-whisper-api : 音声推論"]
+        SdAPI["local-sd-api : 画像推論"]
         EmbedAPI["embedding-jp-api : ベクトル化"]
     end
 
@@ -114,7 +116,8 @@ flowchart TD
     RagApp -->|ローカル中継 /v1/embeddings| EmbedAPI
     RagApp -->|ベクトル検索 / 格納| Qdrant
     RagApp -->|ファイル保管| SeaweedFS
-    SdApp -->|A1111 互換API| HostSD["ホスト上のStable Diffusion"]
+    SdApp -->|ローカル中継 /v1/images/generations| SdAPI
+    SdApp -.->|A1111 互換API (ホスト)| HostSD["ホスト上のStable Diffusion"]
 
     %% 外部クラウドAPI
     LiteLLM -->|API キー認証| CloudAPI["外部クラウドAPI / OpenAI等"]
