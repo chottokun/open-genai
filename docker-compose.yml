@@ -89,19 +89,30 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
-      - rag-app
-      - whisper-app
-      - sd-app
-      - dify-app
-      - audit-app
-      - usermgmt-app
-      - modelpolicy-app
-      - ngword-app
-      - prompt-app
+      rag-app:
+        condition: service_started
+      whisper-app:
+        condition: service_started
+      sd-app:
+        condition: service_started
+      dify-app:
+        condition: service_started
+      audit-app:
+        condition: service_started
+      usermgmt-app:
+        condition: service_started
+      modelpolicy-app:
+        condition: service_started
+      ngword-app:
+        condition: service_started
+      prompt-app:
+        condition: service_started
       seaweedfs:
         condition: service_healthy
-      - keycloak
-      - litellm
+      keycloak:
+        condition: service_started
+      litellm:
+        condition: service_started
     restart: unless-stopped
 
   # SAML IdP（ユーザー管理 UI 付き）
@@ -311,7 +322,7 @@ services:
       - ./seaweedfs/s3.config.json:/etc/seaweedfs/s3.config.json:ro
     healthcheck:
       # S3 API は起動直後 listen しない。403 も「応答あり」として healthy 扱う。
-      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:8333/ 2>/dev/null || test $$? -eq 8"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8333/ || test $$? -eq 8"]
       interval: 5s
       timeout: 5s
       retries: 12
