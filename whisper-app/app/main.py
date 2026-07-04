@@ -25,11 +25,18 @@ WHISPER_DEVICE = os.environ.get("WHISPER_DEVICE", "cpu")
 
 # --- ローカル/クラウド切り替え設定 ---
 ALLOW_CLOUD_API = os.environ.get("ALLOW_CLOUD_API", "false").lower() == "true"
-WHISPER_PROVIDER = os.environ.get("WHISPER_PROVIDER", "local")  # local | litellm
+WHISPER_PROVIDER = os.environ.get("WHISPER_PROVIDER", "local")  # local | litellm | local_api
+WHISPER_API_URL = os.environ.get("WHISPER_API_URL", "http://local-whisper-api:8000/v1/audio/transcriptions")
 
-if WHISPER_PROVIDER == "litellm" and not ALLOW_CLOUD_API:
-    # クラウドAPI利用が許可されていない場合は、意図しない課金・送信を防ぐため強制的にlocalにフォールバックする
-    WHISPER_PROVIDER = "local"
+def get_effective_provider() -> str:
+    # テスト用モックによるグローバル書き換え、または動的な環境変数を考慮
+    allow_cloud = ALLOW_CLOUD_API or os.environ.get("ALLOW_CLOUD_API", "false").lower() == "true"
+    prov = WHISPER_PROVIDER or os.environ.get("WHISPER_PROVIDER", "local")
+    
+    if prov == "litellm" and not allow_cloud:
+        # クラウドAPI利用が許可されていない場合は、意図しない課金・送信を防ぐため強制的にlocalにフォールバックする
+        return "local"
+    return prov
 
 LITELLM_AUDIO_MODEL = os.environ.get("LITELLM_AUDIO_MODEL", "whisper-cloud")
 LITELLM_AUDIO_URL = os.environ.get("LITELLM_AUDIO_URL", "http://litellm:4000/v1")
@@ -67,7 +74,7 @@ def _check_key(x_api_key: str | None) -> JSONResponse | None:
 
 @app.get("/health")
 async def health() -> dict[str, Any]:
-    return {"status": "ok", "model": WHISPER_MODEL, "loaded": _model is not None, "provider": WHISPER_PROVIDER}
+    return {"status": "ok", "model": WHISPER_MODEL, "loaded": _model is not None, "provider": get_effective_provider()}
 
 
 def _extract_audio(inputs: dict[str, Any]) -> tuple[str, bytes] | None:
@@ -108,7 +115,8 @@ async def invoke(request: Request, x_api_key: str | None = Header(default=None))
         tmp_path = tmp.name
 
     try:
-        if WHISPER_PROVIDER == "local":
+        prov = get_effective_provider()
+        if prov == "local":
             try:
                 model = _get_model()
             except Exception as e:  # noqa: BLE001
@@ -127,6 +135,30 @@ async def invoke(request: Request, x_api_key: str | None = Header(default=None))
                 return {"outputs": outputs}
             except Exception as e:  # noqa: BLE001
                 return {"outputs": f"[文字起こし中にエラーが発生しました] {e}"}
+        elif prov == "local_api":
+            # ローカル外出しAPIへ中継
+            try:
+                import requests
+                url = WHISPER_API_URL
+                headers = {}
+                with open(tmp_path, "rb") as f_in:
+                    files = {
+                        "file": (filename, f_in, "audio/mpeg")
+                    }
+                    data = {}
+                    if lang_arg:
+                        data["language"] = lang_arg
+                    response = requests.post(url, headers=headers, files=files, data=data, timeout=600)
+                
+                if response.status_code != 200:
+                    return {"outputs": f"[ローカル音声認識APIエラー: {response.status_code}] {response.text}"}
+
+                res_json = response.json()
+                transcript = res_json.get("text", "（音声から文字を検出できませんでした）")
+                outputs = f"**文字起こし結果 (ローカルAPI)**:\n\n{transcript}"
+                return {"outputs": outputs}
+            except Exception as e:  # noqa: BLE001
+                return {"outputs": f"[ローカル音声認識API接続エラー] {e}"}
         else:
             # LiteLLM/クラウドAPI経由での呼び出し
             try:
