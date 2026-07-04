@@ -1,0 +1,99 @@
+# Changelog
+
+[Semantic Versioning](https://semver.org/) に従います。実験段階のため **0.x** 系とし、
+`1.0.0` は本番運用・experimental 解除時を想定しています。
+
+| タグ | コミット | 位置づけ |
+| --- | --- | --- |
+| [v0.1.0](https://github.com/hirokawaguchi/open-genai/releases/tag/v0.1.0) | `fc57e53` | 源内のローカル完結化（第一段階） |
+| [v0.2.0](https://github.com/hirokawaguchi/open-genai/releases/tag/v0.2.0) | `6d594d5` 以降 | 自治体・閉域（LGWAN 等）向け拡張 |
+
+## 設計思想の転換（0.1 → 0.2）
+
+| 観点 | v0.1.0（ローカル源内化） | v0.2.0（自治体・閉域向け） |
+| --- | --- | --- |
+| 目的 | 源内を OSS／ローカルスタックで再現する | 自治体の実務・ガバナンス要件を満たしつつ、源内 UX を活かす |
+| 改修の置き場 | `backend/` と最小限の `genai-web/` パッチ | **OpenGENAI レイヤ**（`backend/` + 各 exApp + `shared/`） |
+| 利用者モデル | 源内準拠のチーム管理 | **チーム主体・非階層・複数所属** |
+| 管理機能 | Keycloak コンソール等 | 管理者向け **exApp**（監査・利用者一括・モデル制御等） |
+| ファイル出力 | backend ローカル保存 / Dify 直リンク | **SeaweedFS（S3 互換）** へ再ホスト |
+| 公開面 | 各サービスを個別ポート公開 | **nginx 単一入口**（本番 TLS / 閉域 HTTP 検証） |
+
+---
+
+## [Unreleased]
+
+---
+
+## [0.2.0] - 2026-07-04
+
+### 自治体・閉域運用を想定した機能追加
+
+- **監査ログ**（`backend/app/audit.py`, `audit-app/`）— 3 年以上保持、利用者削除と非連動
+- **チャット履歴の利用者分離**（`chats.userId`）
+- **利用者一括管理**（`usermgmt-app/`）— CSV + Keycloak Admin API
+- **モデル利用制御**（`modelpolicy-app/`）
+- **入力制限**（`ngword-app/`）— 禁止語・PII 正規表現
+- **プロンプトテンプレート**（`prompt-app/`）
+- **契約終了時のデータ完全削除**（`scripts/purge-and-report.sh`）
+
+### チーム主体・複数所属への拡張
+
+- 1 人複数チーム所属、保存プロンプトのチーム共有（`sharedTags`）
+- RAG を「ナレッジ検索」「ナレッジ管理」に分割、**タグ + URL** モデル
+
+### 源内 UI 制約の opt-in 拡張
+
+- OpenGENAI exApp Form Spec v1（`visibleWhen` / `reactive` / `preview`）
+- 各画面の折りたたみヘルプ、ダイアグラム Mermaid 抽出の堅牢化
+
+### 生成ファイルのオブジェクトストレージ
+
+- SeaweedFS + `backend/app/objstore.py`、Dify 成果物の再ホスト
+
+### インフラ・セキュリティ
+
+- nginx リバースプロキシ単一入口（`docker-compose.prod.yml`, `docker-compose.verify.yml`）
+- 内部 HMAC 署名（`intauth.py`）、SSRF 対策（`shared/ssrfguard.py`）
+
+### Fixed
+
+- SeaweedFS healthcheck、backend の `depends_on: service_healthy`
+- `/exapps/history` の IDOR 修正、履歴削除を本人のみに限定
+- 管理者ツールチームのアプリを非システム管理者の一覧から除外
+
+### 移行上の注意（0.1 → 0.2）
+
+- アクセス URL が `http://localhost:5173` / `:8000` から **`http://localhost/`（proxy 経由）** に変更
+- **`INTERNAL_SIGNING_SECRET`** を backend と全 exApp で同一値に設定（本番必須）
+- RAG のフォルダ階層モデル（中間版）は **タグ + URL モデル** に置き換え
+
+---
+
+## [0.1.0] - 2026-06-27
+
+源内（genai-web）を **クラウド依存から切り離し、ローカル LLM で完結**させる第一段階のリリース。
+
+### Added
+
+- **`backend/`** — FastAPI 代替 API（チャット履歴・推論ストリーム・Team API）、SAML SP + JWT
+- **`genai-web/`** — デジタル庁源内 Web のローカル化パッチ（Cognito/Amplify 撤去、ローカル JWT）
+- **`rag-app/`** — Qdrant + Ollama 埋め込みによる RAG AI アプリ
+- **`whisper-app/`**, **`sd-app/`** — 文字起こし・画像生成 AI アプリ
+- **`dify-app/`** — 外部 Dify ワークフロー／チャットフロー連携（`21f9436`）
+- **`shared/docextract.py`** — PDF/Word/Excel テキスト抽出
+- **Keycloak** — SAML IdP、realm `open-genai` 初期 import
+- **`docker-compose.yml`** — web / backend / 各 AI アプリ / qdrant / keycloak を一括起動
+- チーム・AI アプリ管理（SQLite）、共通チーム RAG、チーム単位ナレッジ分離
+
+### 構成（v0.1.0 時点）
+
+- 各サービスを **個別ポート公開**（web `:5173`, backend `:8000`, Keycloak `:8088` 等）
+- ファイル添付は backend ローカル保存
+- Dify ファイル出力は第三者 URL をそのまま提示
+
+---
+
+[Unreleased]: https://github.com/hirokawaguchi/open-genai/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/hirokawaguchi/open-genai/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/hirokawaguchi/open-genai/releases/tag/v0.1.0

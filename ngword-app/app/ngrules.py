@@ -1,0 +1,81 @@
+"""禁止ワード/機密情報ルールの検証・整形（純ロジック・テスト対象）。
+
+ルール JSON:
+    {
+      "enabled": true,
+      "case_sensitive": false,
+      "words": ["禁止語1"],
+      "patterns": ["\\d{12}"]
+    }
+"""
+
+from __future__ import annotations
+
+import json
+import re
+from typing import Any
+
+
+def parse_and_validate(text: str) -> tuple[dict[str, Any] | None, str | None]:
+    text = (text or "").strip()
+    if not text:
+        return None, "ルール JSON が空です。"
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError as e:
+        return None, f"JSON として解釈できません: {e}"
+    if not isinstance(data, dict):
+        return None, "ルールはオブジェクト(JSON) である必要があります。"
+
+    enabled = bool(data.get("enabled", False))
+    case_sensitive = bool(data.get("case_sensitive", False))
+
+    words = data.get("words", [])
+    if not isinstance(words, list) or not all(isinstance(x, str) for x in words):
+        return None, "`words` は文字列の配列である必要があります。"
+
+    patterns = data.get("patterns", [])
+    if not isinstance(patterns, list) or not all(isinstance(x, str) for x in patterns):
+        return None, "`patterns` は文字列(正規表現)の配列である必要があります。"
+    for p in patterns:
+        try:
+            re.compile(p)
+        except re.error as e:
+            return None, f"正規表現が不正です: {p!r} ({e})"
+
+    return (
+        {
+            "enabled": enabled,
+            "case_sensitive": case_sensitive,
+            "words": [str(w) for w in words if w],
+            "patterns": [str(p) for p in patterns if p],
+        },
+        None,
+    )
+
+
+def render_rules(rules: dict[str, Any]) -> str:
+    words = rules.get("words") or []
+    patterns = rules.get("patterns") or []
+    lines = [
+        "## 現在の入力制限ルール",
+        "",
+        f"- 制御: **{'有効' if rules.get('enabled') else '無効（制限なし）'}**",
+        f"- 大文字小文字の区別: {'する' if rules.get('case_sensitive') else 'しない'}",
+        f"- 禁止ワード数: {len(words)}",
+        f"- 機密パターン数: {len(patterns)}",
+    ]
+    if words:
+        lines.append("")
+        lines.append("### 禁止ワード")
+        lines.extend(f"- `{w}`" for w in words)
+    if patterns:
+        lines.append("")
+        lines.append("### 機密情報パターン（正規表現）")
+        lines.extend(f"- `{p}`" for p in patterns)
+    lines.append("")
+    lines.append(
+        "> システム管理者による管理系アプリの実行は本制限の対象外です。"
+        "無効の間は制限しません。"
+    )
+    return "\n".join(lines)

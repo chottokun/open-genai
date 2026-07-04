@@ -60,15 +60,27 @@ async def upsert(items: list[dict[str, Any]]) -> int:
     return len(points)
 
 
-def _scope_filter(scope: str, extra: list[dict[str, Any]] | None = None) -> dict[str, Any]:
-    """scope(teamId 等)でナレッジを分離するための Qdrant フィルタを作る。"""
+def _scope_filter(
+    scope: str,
+    extra: list[dict[str, Any]] | None = None,
+    tags: list[str] | None = None,
+) -> dict[str, Any]:
+    """scope(teamId 等)でナレッジを分離するための Qdrant フィルタを作る。
+
+    tags 指定時は、その**いずれか**のタグを持つドキュメントに限定する（OR）。
+    payload.tags は配列（keyword）で、match.any で「いずれか一致」を表現する。
+    """
     must: list[dict[str, Any]] = [{"key": "scope", "match": {"value": scope}}]
+    if tags:
+        must.append({"key": "tags", "match": {"any": list(tags)}})
     if extra:
         must.extend(extra)
     return {"must": must}
 
 
-async def search(vector: list[float], limit: int, scope: str) -> list[dict[str, Any]]:
+async def search(
+    vector: list[float], limit: int, scope: str, tags: list[str] | None = None
+) -> list[dict[str, Any]]:
     async with httpx.AsyncClient(timeout=30) as client:
         res = await client.post(
             f"{QDRANT_URL}/collections/{COLLECTION}/points/search",
@@ -76,7 +88,7 @@ async def search(vector: list[float], limit: int, scope: str) -> list[dict[str, 
                 "vector": vector,
                 "limit": limit,
                 "with_payload": True,
-                "filter": _scope_filter(scope),
+                "filter": _scope_filter(scope, tags=tags),
             },
         )
         res.raise_for_status()
@@ -84,7 +96,7 @@ async def search(vector: list[float], limit: int, scope: str) -> list[dict[str, 
 
 
 async def delete_by_source(source: str, scope: str) -> None:
-    """指定スコープ内の出典(source=ファイル名)のチャンクを全削除する。"""
+    """指定スコープ内の出典(source=ファイル名/URL)のチャンクを全削除する。"""
     async with httpx.AsyncClient(timeout=30) as client:
         res = await client.post(
             f"{QDRANT_URL}/collections/{COLLECTION}/points/delete?wait=true",
@@ -107,17 +119,16 @@ async def clear(scope: str) -> None:
         res.raise_for_status()
 
 
-async def list_sources(scope: str) -> list[dict[str, Any]]:
-    """指定スコープに登録済みの出典(ファイル名)と各チャンク数を返す。"""
-    counts: dict[str, int] = {}
+async def _scroll(scope: str, with_payload: list[str], tags: list[str] | None = None):
+    """指定スコープの点を payload 付きで走査するジェネレータ。"""
     offset: Any = None
     async with httpx.AsyncClient(timeout=30) as client:
         while True:
             body: dict[str, Any] = {
                 "limit": 256,
-                "with_payload": ["source"],
+                "with_payload": with_payload,
                 "with_vector": False,
-                "filter": _scope_filter(scope),
+                "filter": _scope_filter(scope, tags=tags),
             }
             if offset is not None:
                 body["offset"] = offset
@@ -125,15 +136,35 @@ async def list_sources(scope: str) -> list[dict[str, Any]]:
                 f"{QDRANT_URL}/collections/{COLLECTION}/points/scroll", json=body
             )
             if res.status_code != 200:
-                break
+                return
             result = res.json().get("result", {})
             for p in result.get("points", []):
-                src = (p.get("payload") or {}).get("source", "unknown")
-                counts[src] = counts.get(src, 0) + 1
+                yield p.get("payload") or {}
             offset = result.get("next_page_offset")
             if offset is None:
-                break
+                return
+
+
+async def list_sources(scope: str, tags: list[str] | None = None) -> list[dict[str, Any]]:
+    """指定スコープ(＋任意でタグ絞り込み)のドキュメント(source)と各チャンク数を返す。"""
+    counts: dict[str, int] = {}
+    async for payload in _scroll(scope, ["source"], tags=tags):
+        src = payload.get("source", "unknown")
+        counts[src] = counts.get(src, 0) + 1
     return [
         {"source": s, "chunks": c}
         for s, c in sorted(counts.items(), key=lambda x: x[0])
+    ]
+
+
+async def list_tags(scope: str) -> list[dict[str, Any]]:
+    """指定スコープで使用中のタグと、各タグの付いたチャンク数を返す。"""
+    counts: dict[str, int] = {}
+    async for payload in _scroll(scope, ["tags"]):
+        for t in payload.get("tags") or []:
+            if t:
+                counts[t] = counts.get(t, 0) + 1
+    return [
+        {"tag": t, "chunks": c}
+        for t, c in sorted(counts.items(), key=lambda x: x[0])
     ]

@@ -1,0 +1,14 @@
+{
+  "identities": [
+    {
+      "name": "opengenai",
+      "credentials": [
+        {
+          "accessKey": "opengenai",
+          "secretKey": "opengenai-secret"
+        }
+      ],
+      "actions": ["Read", "Write", "List", "Tagging", "Admin"]
+    }
+  ]
+}

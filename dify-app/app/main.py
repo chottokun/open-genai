@@ -177,26 +177,160 @@ def _strip_meta(inputs: dict[str, Any], *extra: str) -> dict[str, Any]:
     return {k: v for k, v in inputs.items() if k not in drop}
 
 
+# ---------------------------------------------------------------------------
+# Dify のファイル出力（__dify__file__）の抽出・整形
+# ---------------------------------------------------------------------------
+# mime_type からの拡張子補正（Dify は tool_file 取得で .bin を付けることがある）
+_MIME_EXT = {
+    "application/pdf": ".pdf",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation": ".pptx",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
+    "application/msword": ".doc",
+    "application/vnd.ms-powerpoint": ".ppt",
+    "application/vnd.ms-excel": ".xls",
+    "text/plain": ".txt",
+    "text/csv": ".csv",
+    "text/markdown": ".md",
+    "application/json": ".json",
+    "application/zip": ".zip",
+    "image/png": ".png",
+    "image/jpeg": ".jpg",
+    "image/gif": ".gif",
+    "image/webp": ".webp",
+}
+
+
+def _is_dify_file(o: Any) -> bool:
+    if not isinstance(o, dict):
+        return False
+    if o.get("dify_model_identity") == "__dify__file__":
+        return True
+    return bool(o.get("url")) and o.get("type") in (
+        "document", "image", "audio", "video", "custom",
+    )
+
+
+def _extract_dify_files(obj: Any) -> list[dict[str, Any]]:
+    """outputs（dict/list ネスト可）から Dify のファイルオブジェクトを収集する。"""
+    found: list[dict[str, Any]] = []
+
+    def walk(o: Any) -> None:
+        if _is_dify_file(o):
+            found.append(o)
+            return
+        if isinstance(o, dict):
+            for v in o.values():
+                walk(v)
+        elif isinstance(o, list):
+            for v in o:
+                walk(v)
+
+    walk(obj)
+    return found
+
+
+def _contains_file(v: Any) -> bool:
+    return bool(_extract_dify_files(v))
+
+
+def _clean_mime(mime: Any) -> str:
+    return str(mime or "").split(";")[0].strip()
+
+
+def _looks_opaque(stem: str) -> bool:
+    """uuid/ハッシュ様（人間に無意味）な名前か。"""
+    s = stem.replace("-", "")
+    return len(s) >= 16 and all(c in "0123456789abcdefABCDEF" for c in s)
+
+
+def _human_size(size: Any) -> str:
+    try:
+        n = float(size)
+    except (TypeError, ValueError):
+        return ""
+    for unit in ("B", "KB", "MB", "GB"):
+        if n < 1024 or unit == "GB":
+            return f"{n:.0f} {unit}" if unit == "B" else f"{n:.1f} {unit}"
+        n /= 1024
+    return ""
+
+
+def _friendly_name(f: dict[str, Any], idx: int) -> str:
+    name = str(f.get("filename") or "").strip()
+    mime = _clean_mime(f.get("mime_type"))
+    ext = _MIME_EXT.get(mime)
+    stem, _, cur = name.rpartition(".")
+    stem = stem or name
+    if ext and (not cur or cur.lower() == "bin" or f".{cur.lower()}" != ext):
+        base = stem if (stem and not _looks_opaque(stem)) else f"output_{idx + 1}"
+        return base + ext
+    return name or f"output_{idx + 1}{ext or ''}"
+
+
+def _resolve_url(base: str, url: str) -> str:
+    """相対 URL（/files/...）を Dify ホストの絶対 URL に解決する。"""
+    if not url:
+        return ""
+    if url.startswith("http://") or url.startswith("https://"):
+        return url
+    from urllib.parse import urlsplit
+
+    parts = urlsplit(base)
+    origin = f"{parts.scheme}://{parts.netloc}"
+    if not url.startswith("/"):
+        url = "/" + url
+    return origin + url
+
+
+def _files_to_artifacts(base: str, files: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Dify のファイルオブジェクトを、backend へ渡す artifact 参照へ変換する。
+
+    実体取得・再ホストは backend 側で行うため、ここでは参照(file_url)＋メタのみ返す。
+    """
+    arts: list[dict[str, Any]] = []
+    for i, f in enumerate(files):
+        url = _resolve_url(base, f.get("url") or f.get("remote_url") or "")
+        if not url:
+            continue
+        arts.append(
+            {
+                "file_url": url,
+                "display_name": _friendly_name(f, i),
+                "mime_type": _clean_mime(f.get("mime_type")),
+                "size": f.get("size"),
+                "type": f.get("type"),
+            }
+        )
+    return arts
+
+
 def _outputs_to_text(outputs: Any, response_field: str | None) -> str:
-    """ワークフローの outputs(dict) を表示用テキストに整形する。"""
+    """ワークフローの outputs(dict) を表示用テキストに整形する。
+
+    Dify のファイル出力（`__dify__file__`）は、配列 JSON をそのまま出さず、
+    ダウンロードリンク（[ファイル名](url)）として整形する。
+    """
     if outputs is None:
         return ""
     if isinstance(outputs, str):
         return outputs
-    if isinstance(outputs, dict):
-        if response_field and response_field in outputs:
-            val = outputs[response_field]
-            return val if isinstance(val, str) else json.dumps(val, ensure_ascii=False, indent=2)
-        # 単一キーならその値を、複数キーなら全体を見やすく整形
-        if len(outputs) == 1:
-            val = next(iter(outputs.values()))
-            return val if isinstance(val, str) else json.dumps(val, ensure_ascii=False, indent=2)
-        parts = []
-        for k, v in outputs.items():
-            v_text = v if isinstance(v, str) else json.dumps(v, ensure_ascii=False, indent=2)
-            parts.append(f"**{k}**\n\n{v_text}")
-        return "\n\n".join(parts)
-    return json.dumps(outputs, ensure_ascii=False, indent=2)
+
+    def _val_text(v: Any) -> str:
+        return v if isinstance(v, str) else json.dumps(v, ensure_ascii=False, indent=2)
+
+    if not isinstance(outputs, dict):
+        return json.dumps(outputs, ensure_ascii=False, indent=2)
+    if response_field and response_field in outputs:
+        val = outputs[response_field]
+        return "" if _contains_file(val) else _val_text(val)
+    # ファイル項目は artifacts 側で扱うため、テキストからは除外
+    non_file = [(k, v) for k, v in outputs.items() if not _contains_file(v)]
+    if not non_file:
+        return ""
+    if len(non_file) == 1:
+        return _val_text(non_file[0][1])  # 単一キーは値をそのまま
+    return "\n\n".join(f"**{k}**\n\n{_val_text(v)}" for k, v in non_file)
 
 
 async def _detect_file_input(base: str, api_key: str) -> tuple[str | None, bool]:
@@ -234,7 +368,7 @@ async def _run_workflow(
     inputs: dict[str, Any],
     user: str,
     response_field: str | None,
-) -> str:
+) -> tuple[str, list[dict[str, Any]]]:
     payload = {"inputs": inputs, "response_mode": "streaming", "user": user}
     text_parts: list[str] = []
     final_outputs: Any = None
@@ -252,7 +386,10 @@ async def _run_workflow(
         ) as res:
             if res.status_code != 200:
                 body = (await res.aread()).decode("utf-8", "replace")
-                return f"Dify ワークフローの呼び出しに失敗しました (status: {res.status_code}).\n\n```\n{body[:1000]}\n```"
+                return (
+                    f"Dify ワークフローの呼び出しに失敗しました (status: {res.status_code}).\n\n```\n{body[:1000]}\n```",
+                    [],
+                )
             async for line in res.aiter_lines():
                 line = line.strip()
                 if not line.startswith("data:"):
@@ -276,11 +413,13 @@ async def _run_workflow(
                     error = obj.get("message") or data.get("message") or "unknown error"
 
     if error:
-        return f"Dify ワークフローでエラーが発生しました: {error}"
+        return (f"Dify ワークフローでエラーが発生しました: {error}", [])
     if final_outputs is not None:
-        return _outputs_to_text(final_outputs, response_field)
+        text = _outputs_to_text(final_outputs, response_field)
+        files = _extract_dify_files(final_outputs)
+        return (text, files)
     # workflow_finished が無い場合はストリームされたテキストを返す
-    return "".join(text_parts)
+    return ("".join(text_parts), [])
 
 
 async def _run_chat(
@@ -291,7 +430,7 @@ async def _run_chat(
     user: str,
     conversation_id: str,
     files: list[dict[str, Any]],
-) -> tuple[str, str]:
+) -> tuple[str, str, list[dict[str, Any]]]:
     payload: dict[str, Any] = {
         "query": query,
         "inputs": inputs,
@@ -304,6 +443,7 @@ async def _run_chat(
         payload["files"] = files
 
     answer_parts: list[str] = []
+    file_objs: list[dict[str, Any]] = []
     new_conv_id = conversation_id
     error: str | None = None
 
@@ -322,6 +462,7 @@ async def _run_chat(
                 return (
                     f"Dify チャットフローの呼び出しに失敗しました (status: {res.status_code}).\n\n```\n{body[:1000]}\n```",
                     new_conv_id,
+                    [],
                 )
             async for line in res.aiter_lines():
                 line = line.strip()
@@ -339,12 +480,23 @@ async def _run_chat(
                 event = obj.get("event")
                 if event in ("message", "agent_message"):
                     answer_parts.append(obj.get("answer", ""))
+                elif event == "message_file":
+                    # ツール等が生成したファイル（画像/文書）
+                    file_objs.append(obj)
+                elif event == "message_end":
+                    # message_end に files 配列が入る版がある
+                    for f in obj.get("files") or []:
+                        if isinstance(f, dict):
+                            file_objs.append(f)
                 elif event == "error":
                     error = obj.get("message") or "unknown error"
 
     if error:
-        return (f"Dify チャットフローでエラーが発生しました: {error}", new_conv_id)
-    return ("".join(answer_parts), new_conv_id)
+        return (f"Dify チャットフローでエラーが発生しました: {error}", new_conv_id, [])
+    answer = "".join(answer_parts)
+    # 生成ファイルは backend で再ホストするため、参照(file_obj)を返す
+    out_files = _extract_dify_files(file_objs)
+    return (answer, new_conv_id, out_files)
 
 
 # ---------------------------------------------------------------------------
@@ -508,10 +660,14 @@ async def invoke(
                     # フォールバック: 源内フォームのキー名を Dify 変数名として割り当て
                     for key, refs in file_refs_by_key.items():
                         dify_inputs[key] = refs if len(refs) > 1 else refs[0]
-            outputs = await _run_workflow(
+            outputs, out_files = await _run_workflow(
                 base, api_key, dify_inputs, user, response_field
             )
-            return {"outputs": outputs}
+            resp: dict[str, Any] = {"outputs": outputs}
+            arts = _files_to_artifacts(base, out_files)
+            if arts:
+                resp["artifacts"] = arts
+            return resp
 
         # ---- チャットフロー ----
         query = str(inputs.get(query_field) or inputs.get("question") or "").strip()
@@ -526,12 +682,16 @@ async def invoke(
             if file_var:
                 dify_inputs[file_var] = all_file_refs if is_list else all_file_refs[0]
                 chat_files = []
-        answer, new_conv_id = await _run_chat(
+        answer, new_conv_id, out_files = await _run_chat(
             base, api_key, query, dify_inputs, user, conversation_id, chat_files
         )
         if new_conv_id and x_session_id:
             _save_conversation_id(x_session_id, new_conv_id)
-        return {"outputs": answer}
+        resp = {"outputs": answer}
+        arts = _files_to_artifacts(base, out_files)
+        if arts:
+            resp["artifacts"] = arts
+        return resp
     except httpx.HTTPError as e:
         return {"outputs": f"Dify への接続でエラーが発生しました: {e}"}
     except Exception as e:  # noqa: BLE001

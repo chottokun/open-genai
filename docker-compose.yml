@@ -1,18 +1,36 @@
 # Open GENAI: デジタル庁 源内 (genai-web) をローカル LLM (Ollama) で動かす構成
 #
-#   [ブラウザ] -> web (Vite:5173) -> backend (FastAPI:8000) -> Ollama (11434)
+#   [ブラウザ] -> proxy (:80) -> web / backend / keycloak（同一オリジン）
+#                                    └-> Ollama (11434)
+#
+# ユーザ公開は proxy の HTTP(80) のみ。web/backend/keycloak は内部ネットワークのみ。
+# ポート変更: .env の PROXY_HTTP_PORT（例: 8080）。PUBLIC_URL も合わせて変更すること。
 #
 # Ollama は既定でホスト側 (host.docker.internal:11434) を利用する。
 # Ollama もコンテナで動かしたい場合は `--profile ollama` を付けて起動する。
 
 services:
+  # 唯一の公開点: HTTP で /、/api/、/kc/ を内部サービスへ振り分ける
+  proxy:
+    image: nginx:1.27-alpine
+    container_name: open-genai-proxy
+    ports:
+      - "${PROXY_HTTP_PORT:-80}:80"
+    volumes:
+      - ./proxy/nginx.http.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - web
+      - backend
+      - keycloak
+    restart: unless-stopped
+
   backend:
     build:
       context: .
       dockerfile: backend/Dockerfile
     container_name: open-genai-backend
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     environment:
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
       # OpenAI 互換エンドポイント (LiteLLM をハブとして使用)
@@ -20,18 +38,52 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-not-needed}
       - DEFAULT_MODEL=${DEFAULT_MODEL:-gemma4}
       - DB_PATH=/data/open-genai.db
+      # --- 監査ログ（8-(1)）/ チャット履歴ユーザー別分離（6-(8)）---
+      - AUDIT_ENABLED=${AUDIT_ENABLED:-true}
+      - AUDIT_DB_PATH=/data/audit.db
+      - AUDIT_STORE_CONTENT=${AUDIT_STORE_CONTENT:-true}
+      - AUDIT_MAX_CONTENT_CHARS=${AUDIT_MAX_CONTENT_CHARS:-8000}
+      - AUDIT_RETENTION_DAYS=${AUDIT_RETENTION_DAYS:-1825}
+      - LEGACY_CHAT_OWNER=${LEGACY_CHAT_OWNER:-}
       # RAG「AI アプリ」連携先（Team API がここへプロキシする）
       - RAG_APP_URL=${RAG_APP_URL:-http://rag-app:8001/invoke}
       - RAG_API_KEY=${RAG_API_KEY:-local-rag-key}
+      # 監査ログ参照「AI アプリ」連携先（管理者限定）
+      - AUDIT_APP_URL=${AUDIT_APP_URL:-http://audit-app:8005/invoke}
+      # 利用者一括管理「AI アプリ」連携先（管理者限定）
+      - USERMGMT_APP_URL=${USERMGMT_APP_URL:-http://usermgmt-app:8006/invoke}
+      # モデル利用制御「AI アプリ」連携先（管理者限定）と参照するポリシーDB
+      - MODELPOLICY_APP_URL=${MODELPOLICY_APP_URL:-http://modelpolicy-app:8007/invoke}
+      - POLICY_DB_PATH=/data/policy.db
+      # 入力制限(禁止ワード/機密情報)「AI アプリ」連携先と参照するルールDB
+      - NGWORD_APP_URL=${NGWORD_APP_URL:-http://ngword-app:8008/invoke}
+      - NGWORD_DB_PATH=/data/ngwords.db
+      # プロンプトテンプレート「AI アプリ」連携先（全ユーザー利用可）
+      - PROMPT_APP_URL=${PROMPT_APP_URL:-http://prompt-app:8009/invoke}
+      # 内部サービス間署名の共有鍵（x-user-* 偽装対策）。全 exApp と同一値。本番は必ず変更。
+      - INTERNAL_SIGNING_SECRET=${INTERNAL_SIGNING_SECRET:-dev-internal-secret-change-me}
+      # 成果物取得(SSRF 対策): 許可ホスト(カンマ区切り, 空=内部宛先のみ拒否)とサイズ上限
+      - ARTIFACT_FETCH_ALLOWED_HOSTS=${ARTIFACT_FETCH_ALLOWED_HOSTS:-}
+      - ARTIFACT_MAX_BYTES=${ARTIFACT_MAX_BYTES:-52428800}
+      # 成果物ファイルの再ホスト先（自前 S3 互換: SeaweedFS）
+      - S3_ENDPOINT_URL=${S3_ENDPOINT_URL:-http://seaweedfs:8333}
+      - S3_PUBLIC_ENDPOINT=${S3_PUBLIC_ENDPOINT:-http://localhost:8333}
+      - S3_BUCKET=${S3_BUCKET:-open-genai}
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY:-opengenai}
+      - S3_SECRET_KEY=${S3_SECRET_KEY:-opengenai-secret}
+      - S3_PRESIGN_EXPIRY=${S3_PRESIGN_EXPIRY:-86400}
       # Dify 連携「AI アプリ」プロキシの endpoint（アプリ登録時の endpoint に使う）
       - DIFY_APP_URL=${DIFY_APP_URL:-http://dify-app:8004/invoke}
       # --- SAML 認証 (backend = SAML SP) ---
       - APP_JWT_SECRET=${APP_JWT_SECRET:-change-me-open-genai-secret}
-      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
-      - SAML_SP_ENTITY_ID=${SAML_SP_ENTITY_ID:-http://localhost:8000/auth/saml/metadata}
-      - SAML_SP_ACS_URL=${SAML_SP_ACS_URL:-http://localhost:8000/auth/saml/acs}
-      # backend(コンテナ内)から IdP メタデータを取得する URL
-      - SAML_IDP_METADATA_URL=${SAML_IDP_METADATA_URL:-http://keycloak:8080/realms/open-genai/protocol/saml/descriptor}
+      # proxy 経由の公開 URL（末尾スラッシュ無し。PROXY_HTTP_PORT 変更時は合わせる）
+      - PUBLIC_BASE_URL=${PUBLIC_URL:-http://localhost}/api
+      - FRONTEND_URL=${PUBLIC_URL:-http://localhost}
+      - SAML_SP_ENTITY_ID=${PUBLIC_URL:-http://localhost}/api/auth/saml/metadata
+      - SAML_SP_ACS_URL=${PUBLIC_URL:-http://localhost}/api/auth/saml/acs
+      - SAML_SP_SLS_URL=${PUBLIC_URL:-http://localhost}/api/auth/saml/sls
+      # backend(コンテナ内)から IdP メタデータを取得する URL（Keycloak relative /kc）
+      - SAML_IDP_METADATA_URL=${SAML_IDP_METADATA_URL:-http://keycloak:8080/kc/realms/open-genai/protocol/saml/descriptor}
     volumes:
       - backend_data:/data
     extra_hosts:
@@ -41,6 +93,13 @@ services:
       - whisper-app
       - sd-app
       - dify-app
+      - audit-app
+      - usermgmt-app
+      - modelpolicy-app
+      - ngword-app
+      - prompt-app
+      seaweedfs:
+        condition: service_healthy
       - keycloak
       - litellm
     restart: unless-stopped
@@ -49,16 +108,18 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:26.0
     container_name: open-genai-keycloak
-    command: ["start-dev", "--import-realm"]
+    command: ["start-dev", "--import-realm", "--spi-import-export-importStrategy=OVERWRITE_EXISTING"]
     environment:
       - KC_BOOTSTRAP_ADMIN_USERNAME=${KEYCLOAK_ADMIN:-admin}
       - KC_BOOTSTRAP_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:-admin}
-      # ブラウザ・メタデータに出る URL を固定する（環境変数で柔軟に上書き可能に）
-      - KC_HOSTNAME=${KEYCLOAK_HOSTNAME:-http://localhost:8088}
+      # 公開 URL は proxy の /kc。フル URL で指定しないと SAML メタデータに /kc が付かない
+      - KC_HOSTNAME=${PUBLIC_URL:-http://localhost}/kc
+      - KC_HTTP_RELATIVE_PATH=/kc
       - KC_HOSTNAME_STRICT=false
       - KC_HTTP_ENABLED=true
-    ports:
-      - "8088:8080"
+      - KC_PROXY_HEADERS=xforwarded
+    expose:
+      - "8080"
     volumes:
       - ./keycloak/import:/opt/keycloak/data/import:ro
       - keycloak_data:/opt/keycloak/data
@@ -88,6 +149,16 @@ services:
       - EMBED_MAX_CONCURRENCY=${EMBED_MAX_CONCURRENCY:-5}
       # ruri-v3-30m の出力次元数は 256
       - EMBED_DIM=${EMBED_DIM:-256}
+      # 内部サービス間署名の共有鍵（backend と同一値。x-user-*/x-scope 偽装対策）
+      - INTERNAL_SIGNING_SECRET=${INTERNAL_SIGNING_SECRET:-dev-internal-secret-change-me}
+      # URL メタ情報レジストリ(SQLite)
+      - RAG_META_DB_PATH=/data/rag_meta.db
+      # URL 取り込みの自動更新間隔（秒。既定1日）
+      - URL_REFRESH_INTERVAL=${URL_REFRESH_INTERVAL:-86400}
+      # URL 取り込みの SSRF 対策: 許可ホスト(カンマ区切り, 空=内部宛先のみ拒否)
+      - URL_FETCH_ALLOWED_HOSTS=${URL_FETCH_ALLOWED_HOSTS:-}
+    volumes:
+      - rag_app_data:/data
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -157,17 +228,109 @@ services:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
 
+  # 監査ログ参照を「AI アプリ」として提供（管理者限定）。
+  # backend と同じ backend_data ボリュームを共有し、audit.db を読み取り専用で参照する。
+  audit-app:
+    build: ./audit-app
+    container_name: open-genai-audit-app
+    environment:
+      - RAG_API_KEY=${RAG_API_KEY:-local-rag-key}
+      - AUDIT_DB_PATH=/data/audit.db
+      - INTERNAL_SIGNING_SECRET=${INTERNAL_SIGNING_SECRET:-dev-internal-secret-change-me}
+    volumes:
+      # backend の監査DBを共有（WAL の -shm 参照のため rw マウント。接続は mode=ro）
+      - backend_data:/data
+    restart: unless-stopped
+
+  # 利用者一括管理を「AI アプリ」として提供（管理者限定）。Keycloak Admin API と連携。
+  usermgmt-app:
+    build: ./usermgmt-app
+    container_name: open-genai-usermgmt-app
+    environment:
+      - RAG_API_KEY=${RAG_API_KEY:-local-rag-key}
+      - KEYCLOAK_URL=${KEYCLOAK_INTERNAL_URL:-http://keycloak:8080/kc}
+      - KEYCLOAK_REALM=${KEYCLOAK_REALM:-open-genai}
+      - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN:-admin}
+      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      - INTERNAL_SIGNING_SECRET=${INTERNAL_SIGNING_SECRET:-dev-internal-secret-change-me}
+    depends_on:
+      - keycloak
+    restart: unless-stopped
+
+  # モデル利用制御を「AI アプリ」として提供（管理者限定）。
+  # backend_data を共有し policy.db の唯一のライターとして動作（backend は読取専用）。
+  modelpolicy-app:
+    build: ./modelpolicy-app
+    container_name: open-genai-modelpolicy-app
+    environment:
+      - RAG_API_KEY=${RAG_API_KEY:-local-rag-key}
+      - POLICY_DB_PATH=/data/policy.db
+      - INTERNAL_SIGNING_SECRET=${INTERNAL_SIGNING_SECRET:-dev-internal-secret-change-me}
+    volumes:
+      - backend_data:/data
+    restart: unless-stopped
+
+  # 入力制限(禁止ワード/機密情報)を「AI アプリ」として提供（管理者限定）。
+  # backend_data を共有し ngwords.db の唯一のライターとして動作（backend は読取専用）。
+  ngword-app:
+    build: ./ngword-app
+    container_name: open-genai-ngword-app
+    environment:
+      - RAG_API_KEY=${RAG_API_KEY:-local-rag-key}
+      - NGWORD_DB_PATH=/data/ngwords.db
+      - INTERNAL_SIGNING_SECRET=${INTERNAL_SIGNING_SECRET:-dev-internal-secret-change-me}
+    volumes:
+      - backend_data:/data
+    restart: unless-stopped
+
+  # プロンプトテンプレートを「AI アプリ」として提供（全ユーザー利用可）。
+  prompt-app:
+    build: ./prompt-app
+    container_name: open-genai-prompt-app
+    environment:
+      - RAG_API_KEY=${RAG_API_KEY:-local-rag-key}
+      - PROMPT_DB_PATH=/data/prompts.db
+      - INTERNAL_SIGNING_SECRET=${INTERNAL_SIGNING_SECRET:-dev-internal-secret-change-me}
+    volumes:
+      - backend_data:/data
+    restart: unless-stopped
+
+  # 成果物ファイル配信用の自前オブジェクトストレージ（OSS・S3互換）。
+  # マネージドサービスを使わない方針に沿い、SeaweedFS を同梱する。
+  seaweedfs:
+    image: chrislusf/seaweedfs:latest
+    container_name: open-genai-seaweedfs
+    command: >-
+      server -dir=/data -s3 -s3.port=8333
+      -s3.config=/etc/seaweedfs/s3.config.json -ip.bind=0.0.0.0
+    ports:
+      # dev: 署名付き URL をホストのブラウザから検証できるよう公開（本番は非公開＋別途配信）
+      - "8333:8333"
+    volumes:
+      - seaweedfs_data:/data
+      - ./seaweedfs/s3.config.json:/etc/seaweedfs/s3.config.json:ro
+    healthcheck:
+      # S3 API は起動直後 listen しない。403 も「応答あり」として healthy 扱う。
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:8333/ 2>/dev/null || test $$? -eq 8"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 25s
+    restart: unless-stopped
+
   web:
     build:
       context: ./genai-web
       dockerfile: Dockerfile.local
     container_name: open-genai-web
-    ports:
-      - "5173:5173"
+    expose:
+      - "5173"
     environment:
       - VITE_USE_POLLING=true
-      - VITE_APP_API_ENDPOINT=${VITE_APP_API_ENDPOINT:-http://localhost:8000}
-      - VITE_APP_TEAM_ACCESS_CONTROL_API_ENDPOINT=${VITE_APP_TEAM_ACCESS_CONTROL_API_ENDPOINT:-http://localhost:8000}
+      # proxy 経由の相対 API パス（genai-web 無改修）
+      - VITE_APP_API_ENDPOINT=/api
+      - VITE_APP_TEAM_ACCESS_CONTROL_API_ENDPOINT=/api
+      - VITE_ALLOWED_HOSTS=${VITE_ALLOWED_HOSTS:-true}
       - VITE_APP_MODEL_IDS=${VITE_APP_MODEL_IDS:-["gemini-2.5-pro","gemini-2.5-flash","gemini-3.5-flash","sakura-gpt-oss-120b","sakura-qwen3-coder","openai-compatible-chat","gemma4"]}
     volumes:
       - ./genai-web:/app
@@ -244,5 +407,7 @@ volumes:
   keycloak_data:
   whisper_cache:
   dify_app_data:
+  rag_app_data:
+  seaweedfs_data:
   ollama_data:
   huggingface_cache:
