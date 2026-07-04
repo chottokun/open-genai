@@ -2,6 +2,8 @@ FROM python:3.11-slim
 
 WORKDIR /workspace
 
+ENV PYTHONUNBUFFERED=1
+
 # システムパッケージのインストール (curlはヘルスチェック用)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \

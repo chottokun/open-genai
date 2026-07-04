@@ -66,33 +66,33 @@ Nginx（`proxy`）を単一の入口とし、フロントエンド（`web`）、
 
 ```mermaid
 flowchart TD
-    subgraph 外部 / ユーザー環境
-        Browser[ブラウザ : SPA画面]
+    subgraph user ["外部 / ユーザー環境"]
+        Browser["ブラウザ : SPA画面"]
     end
 
-    subgraph ゲートウェイ・ルーティング層
-        Proxy[Proxy : Nginx ポート80]
-        LiteLLM[LiteLLM Proxy ポート4000]
+    subgraph gateway ["ゲートウェイ・ルーティング層"]
+        Proxy["Proxy : Nginx ポート80"]
+        LiteLLM["LiteLLM Proxy ポート4000"]
     end
 
-    subgraph 共通基盤層
-        Web[Web UI : Next.js]
-        Keycloak[Keycloak : SAML IdP]
-        Backend[Backend API : FastAPI]
-        Qdrant[(Qdrant : ベクトルDB)]
-        SeaweedFS[(SeaweedFS : S3互換ストレージ)]
+    subgraph platform ["共通基盤層"]
+        Web["Web UI : Next.js"]
+        Keycloak["Keycloak : SAML IdP"]
+        Backend["Backend API : FastAPI"]
+        Qdrant[("Qdrant : ベクトルDB")]
+        SeaweedFS[("SeaweedFS : S3互換ストレージ")]
     end
 
-    subgraph AIアプリ層 (exApps)
-        WhisperApp[whisper-app : 音声プロキシ]
-        RagApp[rag-app : RAGロジック]
-        SdApp[sd-app : 画像プロキシ]
-        OtherApps[その他アプリ : 監査/ポリシー等]
+    subgraph apps ["AIアプリ層 (exApps)"]
+        WhisperApp["whisper-app : 音声プロキシ"]
+        RagApp["rag-app : RAGロジック"]
+        SdApp["sd-app : 画像プロキシ"]
+        OtherApps["その他アプリ : 監査/ポリシー等"]
     end
 
-    subgraph ローカル推論層
-        WhisperAPI[local-whisper-api : 音声推論]
-        EmbedAPI[embedding-jp-api : ベクトル化]
+    subgraph inference ["ローカル推論層"]
+        WhisperAPI["local-whisper-api : 音声推論"]
+        EmbedAPI["embedding-jp-api : ベクトル化"]
     end
 
     %% ユーザーからのアクセス
@@ -114,10 +114,10 @@ flowchart TD
     RagApp -->|ローカル中継 /v1/embeddings| EmbedAPI
     RagApp -->|ベクトル検索 / 格納| Qdrant
     RagApp -->|ファイル保管| SeaweedFS
-    SdApp -->|A1111 互換API| HostSD[ホスト上のStable Diffusion]
+    SdApp -->|A1111 互換API| HostSD["ホスト上のStable Diffusion"]
 
     %% 外部クラウドAPI
-    LiteLLM -->|API キー認証| CloudAPI[外部クラウドAPI / OpenAI等]
+    LiteLLM -->|API キー認証| CloudAPI["外部クラウドAPI / OpenAI等"]
 ```
 
 ---
