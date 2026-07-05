@@ -188,10 +188,10 @@ export const ExAppInvokedHistoryItem = (props: Props) => {
                       <dt className='mb-2 text-std-17B-170'>ファイル一覧:</dt>
                       <dd>
                         <ul className='space-y-4'>
-                          {history.artifacts.map((artifact) => {
+                          {history.artifacts.map((artifact, index) => {
                             const isDownloading = loadingArtifacts.includes(artifact.file_url);
                             return (
-                              <li key={artifact.file_url}>
+                              <li key={`${artifact.file_url}-${index}`}>
                                 <LoadingButton
                                   type='button'
                                   loading={isDownloading}
