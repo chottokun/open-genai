@@ -128,7 +128,7 @@ services:
       - KC_HTTP_RELATIVE_PATH=/kc
       - KC_HOSTNAME_STRICT=false
       - KC_HTTP_ENABLED=true
-      - KC_PROXY_HEADERS=xforwarded
+      - KC_PROXY=edge
     expose:
       - "8080"
     volumes:
