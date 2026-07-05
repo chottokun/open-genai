@@ -209,9 +209,7 @@ ollama pull qwen2.5:7b
 cp .env.example .env    # 必要に応じて DEFAULT_MODEL などを編集
 ```
 
-利用したいモデルを増やす場合は `genai-web/packages/web/.env` の
-`VITE_APP_MODEL_IDS`（Ollama のモデル名と一致させる）を編集してください。
-モデルの表示名は `genai-web/packages/common/src/application/model.ts` に定義しています。
+利用したいモデルを増やす場合は、[新規モデルの追加・設定ガイド](file:///home/nobuhiko/Project/open-genai/docs/model-addition-guide.md) を参照し、`litellm_config.yaml` へのモデル登録や、外部クラウドAPI制限ポリシーの考慮、フロントエンド（`genai-web`）での定義追加などを行ってください。
 
 #### LLM バックエンドの差し替え（OpenAI 互換）
 

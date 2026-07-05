@@ -1145,17 +1145,74 @@ async def create_messages(chat_id: str, request: Request) -> JSONResponse:
 ALLOW_CLOUD_API = os.environ.get("ALLOW_CLOUD_API", "false").lower() == "true"
 
 
-def _cloud_model_denied(model_name: str | None) -> str | None:
+_litellm_models_cache: list[dict[str, Any]] | None = None
+_litellm_cache_time: float = 0.0
+LITELLM_CACHE_TTL = 60.0  # キャッシュ有効期限（秒）
+
+
+def _fetch_litellm_models_sync() -> list[dict[str, Any]]:
+    global _litellm_models_cache, _litellm_cache_time
+    now = time.time()
+    if _litellm_models_cache is not None and (now - _litellm_cache_time) < LITELLM_CACHE_TTL:
+        return _litellm_models_cache
+
+    from .llm import OPENAI_BASE_URL
+    base_url = OPENAI_BASE_URL.replace("/v1", "").rstrip("/")
+    try:
+        with httpx.Client(timeout=2.0) as client:
+            res = client.get(f"{base_url}/model/info")
+            if res.status_code == 200:
+                data = res.json()
+                _litellm_models_cache = data.get("data", [])
+                _litellm_cache_time = now
+                return _litellm_models_cache
+    except Exception as e:
+        print(f"[_fetch_litellm_models_sync] LiteLLMからのモデル情報取得に失敗: {e}")
+
+    return _litellm_models_cache or []
+
+
+def _cloud_model_denied(model: str | dict[str, Any] | None) -> str | None:
     if ALLOW_CLOUD_API:
         return None
+    if not model:
+        return None
+    model_name = ""
+    if isinstance(model, dict):
+        model_name = str(model.get("modelId") or "")
+    else:
+        model_name = str(model)
     if not model_name:
         return None
-    # ローカル専用キーワード以外は外部クラウドAPIコールと判定してブロック
-    local_keywords = ["gemma4", "local-ollama", "ruri-v3", "localhost", "qwen2.5"]
+
+    # 1. まずローカルのハードコードされたキーワードでのチェックを行う（LiteLLMが落ちている場合のフォールバック）
+    local_keywords = ["gemma4", "local-ollama", "ruri-v3", "localhost", "qwen2.5", "sakura"]
     is_local = any(kw in model_name for kw in local_keywords)
-    if not is_local:
-        return f"外部クラウドAPIの利用が制限されています（対象モデル: {model_name}）。ローカルモデルを使用してください。"
-    return None
+    if is_local:
+        return None
+
+    # 2. 次に LiteLLM のモデル情報と連動した判定を行う
+    litellm_models = _fetch_litellm_models_sync()
+    for m in litellm_models:
+        m_info = m.get("model_info", {})
+        # model_name（例: 'sakura-gpt-oss-120b'）がモデル設定のキー、または model_info.get("model_name") と一致するか
+        if m_info.get("model_name") == model_name or m.get("model_name") == model_name:
+            lt_params = m.get("litellm_params", {})
+            api_base = lt_params.get("api_base")
+            real_model = lt_params.get("model") or ""
+
+            # api_base が存在する場合、そのURLがローカルまたは安全なドメインかをチェックする
+            if api_base:
+                safe_domains = ["localhost", "127.0.0.1", "host.docker.internal", "embedding-jp-api", "local-sd-api", "sakura.ad.jp"]
+                if any(dom in str(api_base) for dom in safe_domains):
+                    return None
+            
+            # もし `ollama/` プレフィックスのモデルならローカルとみなす
+            if "ollama/" in str(real_model):
+                return None
+
+    # 判定で見つからない、またはクラウドAPIとみなされる場合はブロック
+    return f"外部クラウドAPIの利用が制限されています（対象モデル: {model}）。ローカルモデルを使用してください。"
 
 
 # ---------------------------------------------------------------------------
