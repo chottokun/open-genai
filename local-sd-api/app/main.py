@@ -1,41 +1,48 @@
 import os
 import tempfile
 import base64
+import httpx
 from typing import Any, List, Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
-
-# diffusersのインポート。テスト時はsys.modulesモックによりMagicMockが返ります
-# diffusersのインポート。テスト時はsys.modulesモックによりMagicMockが返ります
-from diffusers import DiffusionPipeline
-import torch
 
 app = FastAPI(title="Local SD API", version="1.0.0")
 
 # 環境変数から設定を読み込む
 DEVICE = os.environ.get("IMAGE_INFERENCE_DEVICE", "cpu")
 MODEL_NAME = os.environ.get("IMAGE_MODEL_NAME", "SimianLuo/LCM_Dreamshaper_v7")
+USE_PROXY = os.environ.get("SD_USE_PROXY", "false").lower() == "true"
+LITELLM_IMAGE_URL = os.environ.get("LITELLM_IMAGE_URL", "http://litellm:4000/v1").rstrip("/")
+LITELLM_IMAGE_MODEL = os.environ.get("LITELLM_IMAGE_MODEL", "imagen-4")
+LITELLM_IMAGE_API_KEY = os.environ.get("LITELLM_IMAGE_API_KEY", "not-needed")
 
-# モデルのロード
-# CPUでの動作時はメモリと計算精度の節約のため float32、GPU(cuda)時は float16 にするのが一般的
-torch_dtype = torch.float16 if DEVICE == "cuda" else torch.float32
+pipe = None
 
-# パイプライン初期化
-try:
-    pipe = DiffusionPipeline.from_pretrained(
-        MODEL_NAME,
-        torch_dtype=torch_dtype
-    )
-    pipe = pipe.to(DEVICE)
-except Exception as e:
-    import sys
-    print(f"ERROR: Failed to load pipeline: {e}", file=sys.stderr)
-    import traceback
-    traceback.print_exc()
-    # テスト時のモック化を考慮し、例外発生時はMagicMockを割り当て
-    from unittest.mock import MagicMock
-    pipe = MagicMock() if "MagicMock" in type(DiffusionPipeline).__name__ else None
+if not USE_PROXY:
+    # ローカルロードモード
+    try:
+        from diffusers import DiffusionPipeline
+        import torch
+        torch_dtype = torch.float16 if DEVICE == "cuda" else torch.float32
+        pipe = DiffusionPipeline.from_pretrained(
+            MODEL_NAME,
+            torch_dtype=torch_dtype
+        )
+        pipe = pipe.to(DEVICE)
+    except Exception as e:
+        import sys
+        print(f"ERROR: Failed to load pipeline: {e}", file=sys.stderr)
+        import traceback
+        traceback.print_exc()
+        # テスト時のモック化を考慮し、例外発生時はMagicMockを割り当て
+        from unittest.mock import MagicMock
+        try:
+            pipe = MagicMock() if "MagicMock" in type(DiffusionPipeline).__name__ else None
+        except Exception:
+            pipe = MagicMock()
+else:
+    print(f"INFO: Running in PROXY mode. Forwarding requests to LiteLLM upstream: {LITELLM_IMAGE_URL}")
 
 
 class ImageGenerationRequest(BaseModel):
@@ -47,8 +54,16 @@ class ImageGenerationRequest(BaseModel):
 
 @app.get("/health")
 async def health() -> dict[str, Any]:
+    if USE_PROXY:
+        return {
+            "status": "ok",
+            "mode": "proxy",
+            "model": LITELLM_IMAGE_MODEL,
+            "upstream": LITELLM_IMAGE_URL,
+        }
     return {
         "status": "ok",
+        "mode": "local",
         "model": MODEL_NAME,
         "device": DEVICE,
     }
@@ -56,6 +71,29 @@ async def health() -> dict[str, Any]:
 
 @app.post("/v1/images/generations")
 async def generate_images(request: ImageGenerationRequest) -> Any:
+    if USE_PROXY:
+        # LiteLLM Proxyへリクエストを転送する
+        payload = {
+            "prompt": request.prompt,
+            "model": LITELLM_IMAGE_MODEL,
+            "n": request.n or 1,
+            "size": request.size or "512x512",
+            "response_format": request.response_format or "b64_json"
+        }
+        headers = {}
+        if LITELLM_IMAGE_API_KEY and LITELLM_IMAGE_API_KEY != "not-needed":
+            headers["Authorization"] = f"Bearer {LITELLM_IMAGE_API_KEY}"
+        
+        url = f"{LITELLM_IMAGE_URL}/images/generations"
+        try:
+            async with httpx.AsyncClient(timeout=600) as client:
+                res = await client.post(url, json=payload, headers=headers)
+            if res.status_code != 200:
+                return JSONResponse(status_code=res.status_code, content={"error": f"Upstream LiteLLM error: {res.text}"})
+            return res.json()
+        except Exception as e:
+            return JSONResponse(status_code=500, content={"error": f"Failed to connect to upstream LiteLLM: {e}"})
+
     # サイズのパース (例: 512x512)
     try:
         width, height = map(int, request.size.split("x"))
@@ -70,6 +108,9 @@ async def generate_images(request: ImageGenerationRequest) -> Any:
 
     try:
         # 画像生成の実行
+        if pipe is None:
+            return JSONResponse(status_code=500, content={"error": "Pipeline not initialized"})
+            
         result = pipe(
             prompt=request.prompt,
             width=width,
