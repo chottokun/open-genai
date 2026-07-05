@@ -102,6 +102,15 @@ model_list:
     model_info:
       mode: image_generation
 
+  # ローカル画像生成 (sd-local)
+  - model_name: sd-local
+    litellm_params:
+      model: openai/sd-local
+      api_base: "http://local-sd-api:8000/v1"
+      api_key: "not-needed"
+    model_info:
+      mode: image_generation
+
 # =========================================================================
 #  フォールバック / ルーティング設定
 # =========================================================================
@@ -112,6 +121,7 @@ litellm_settings:
     - {"gemini-2.5-pro": ["gemma4"]}
     - {"gemini-2.5-flash": ["gemma4"]}
     - {"gemini-3.5-flash": ["gemma4"]}
+    - {"imagen-4": ["sd-local"]}
   drop_params: true  # プロバイダ間で非互換なパラメータを自動除去
 
   # --- ガードレール / コンテンツモデレーション設定 ---
