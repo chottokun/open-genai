@@ -1,69 +1,74 @@
 # 新規モデルの追加・設定ガイド
 
-本プロジェクトにおいて、新しく LLM モデルを追加・設定する際の手順および制限ポリシーとの連動仕様について解説します。
+本プロジェクトにおいて、新しく LLM モデルを追加・設定する際の手順、および環境変数（`.env`）と LiteLLM 設定ファイル（`litellm_config.yaml`）の役割分担について解説します。
 
 ---
 
-## 1. 全体手順
+## 1. 設定の全体構造と役割分担
 
-モデルを追加する際は、以下の 2 つの手順を行います。
+LLM のモデル追加と接続設定は、役割に応じて **`.env`** と **`litellm_config.yaml`** に分かれています。
 
-### 手順①: `litellm_config.yaml` へのモデル登録
-ルートディレクトリにある [litellm_config.yaml](file:///home/nobuhiko/Project/open-genai/litellm_config.yaml) に追加したいモデルを記述します。
+| 設定ファイル | 主な役割 | 設定する主な項目 |
+| :--- | :--- | :--- |
+| **`.env`**<br>(環境変数) | 認証情報やシステム全体の動作制御 | <ul><li>各種外部APIのアクセスキー（例: `SAKURA_AI_API_KEY`）</li><li>システムの動作設定（例: `ALLOW_CLOUD_API=false`）</li><li>デフォルトモデル指定（例: `DEFAULT_MODEL=gemma4`）</li></ul> |
+| **`litellm_config.yaml`**<br>(LiteLLMモデル定義) | 利用可能なモデル一覧と各接続先定義 | <ul><li>画面に表示するモデル名（`model_name`）</li><li>実際のプロバイダー名やモデルID（`model`）</li><li>エンドポイントURL（`api_base`）</li></ul> |
+
+---
+
+## 2. 新規モデルの追加手順
+
+モデルを追加する際は、以下のステップに沿って設定を行います。
+
+### ステップ①: `litellm_config.yaml` への記述
+ルートディレクトリにある [litellm_config.yaml](file:///home/nobuhiko/Project/open-genai/litellm_config.yaml) に追加したいモデルの定義を追加します。
 
 ```yaml
-- model_name: <モデル名（画面に表示させたいID）>
+- model_name: sakura-gpt-oss-120b # UI画面などで表示・選択されるモデルID
   litellm_params:
-    model: <実際のプロバイダー名/モデル名（例: ollama/gemma4）>
-    api_base: <APIの接続先ベースURL（例: http://host.docker.internal:11434）>
-    api_key: <必要に応じてAPIキー>
+    model: gpt-oss-120b           # 接続先プロバイダーでの実際のモデル名
+    custom_llm_provider: openai    # プロバイダーの種別
+    api_base: "os.environ/SAKURA_AI_API_BASE" # 環境変数からエンドポイントを読み込む
+    api_key: "os.environ/SAKURA_AI_API_KEY"   # 環境変数からAPIキーを読み込む
+```
+> **補足**: `api_base` や `api_key` に `"os.environ/環境変数名"` の形式で記述することで、セキュリティ情報のハードコーディングを防ぎ、`.env` で設定した環境変数を安全に LiteLLM に引き渡すことができます。
+
+### ステップ②: `.env` での認証情報（環境変数）の設定
+上記ステップ①で指定した環境変数を、ルートディレクトリの `.env` ファイルに記述します。
+```env
+SAKURA_AI_API_BASE=https://api.ai.sakura.ad.jp/v1/
+SAKURA_AI_API_KEY=your-api-key-here
 ```
 
-設定後、以下のコマンドで LiteLLM コンテナを再起動して設定を反映します。
-```bash
-docker compose restart litellm
-```
+### ステップ③: 外部クラウドAPI制限ポリシー（`ALLOW_CLOUD_API`）の確認
+閉域・ローカル運用を想定し、初期状態で外部のパブリッククラウドAPI（Google GeminiやOpenAI等）の利用をブロックする制限（`ALLOW_CLOUD_API=false`）が有効になっています。
 
-### 手順②: 外部クラウドAPI制限ポリシー（`ALLOW_CLOUD_API`）の考慮
-本システムは、セキュアな閉域運用を想定して、初期状態で外部のクラウドAPI（Google GeminiやOpenAIなどのグローバルクラウド）の利用をブロックする制限（`ALLOW_CLOUD_API=false`）が有効になっています。
+新しく追加したモデルをこのブロック制限から除外させたい場合、以下の**LiteLLM自動連動判定**によって自動的に利用が許可されます。
 
-新しく追加するモデルがブロック対象外（ローカル運用・国内完結など）の場合、以下の**LiteLLM自動連動判定**の仕組みによって自動的に利用が許可されます。
+#### 💡 LiteLLM 自動連動判定の仕様
+バックエンドは、モデルの要求を受けると LiteLLM 側の設定（`/model/info`）を動的に確認し、以下の条件のいずれかに合致するモデルを**安全なモデル**と判定し、制限から自動的に除外します。
 
----
-
-## 2. LiteLLM 自動連動判定（ローカル/国内完結モデルの自動識別）
-
-バックエンド（FastAPI）は、チャットや画像生成の要求を受け取ると、LiteLLM が保持しているモデル設定（`/model/info` エンドポイント）を動的にチェックします。
-
-以下の条件に当てはまるモデルは、**「安全なローカル/国内完結モデル」**と自動判定され、外部クラウドAPIのブロック対象から自動的に除外されます。
-
-### 自動許可の判定基準
-1. `litellm_config.yaml` で設定された `api_base`（APIのベースURL）に、以下の安全なドメイン/キーワードが含まれている場合:
-   - `localhost`
-   - `127.0.0.1`
-   - `host.docker.internal`
-   - `embedding-jp-api`
-   - `local-sd-api`
-   - `sakura.ad.jp`（さくら AI Engine 等の国内完結クラウド）
+1. `api_base`（APIのベースURL）に以下のいずれかの安全なドメインが含まれている場合:
+   - `localhost` / `127.0.0.1` / `host.docker.internal`
+   - `embedding-jp-api` / `local-sd-api` (ローカル連携用コンテナ)
+   - `sakura.ad.jp` (さくら AI Engine 等の国内完結クラウド)
 2. 接続先モデル名（`litellm_params.model`）が `ollama/` で始まっている場合。
 
-これにより、上記に合致するローカル環境や国内クラウド의モデルを追加する際は、**バックエンドのソースコードを変更することなく、`litellm_config.yaml` の編集のみで自動的に連動して利用可能**になります。
-
-### 例外: ハードコードによる明示的許可
-LiteLLMコンテナが一時的に停止している等の理由で自動判定が行えない場合のフォールバックとして、[backend/app/main.py](file:///home/nobuhiko/Project/open-genai/backend/app/main.py) の `local_keywords` リストにモデル名の一部をハードコーディングすることでも、明示的にブロックを回避できます。
-```python
-local_keywords = ["gemma4", "local-ollama", "ruri-v3", "localhost", "qwen2.5", "sakura"]
-```
+> **※例外対応**: もし上記ドメインに当てはまらないが明示的に許可したいローカル/国内モデルがある場合は、[backend/app/main.py](file:///home/nobuhiko/Project/open-genai/backend/app/main.py#L1158) 内の `local_keywords` リストにキーワード（例: `"my-safe-model"`）を追記することで明示的に回避できます。
 
 ---
 
-## 3. コンテナへの変更反映について
+## 3. 設定変更の反映手順
 
-`backend` コンテナは、ソースコードがボリュームマウントされておらず、コンテナ作成時のビルドイメージに埋め込まれたプログラムが稼働する構成になっています。
+設定を変更した後は、コンテナを再起動（または再ビルド）して反映させます。
 
-そのため、万が一 [backend/app/main.py](file:///home/nobuhiko/Project/open-genai/backend/app/main.py) などのバックエンドのソースコードに直接変更を加えた場合は、単なる `docker compose restart backend` では変更が反映されません。
-コード変更を反映させるには、以下のコマンドを実行してイメージを再ビルドした上でコンテナを再起動してください。
+### `litellm_config.yaml` や `.env` のみを変更した場合
+LiteLLMコンテナおよび関連コンテナを再起動すれば変更が反映されます。
+```bash
+docker compose restart litellm backend
+```
 
+### バックエンドのコード（`main.py` など）を変更した場合
+バックエンド（`backend`）コンテナは、ソースコードがマウントされておらずイメージに内包されているため、変更を反映させるには**イメージの再ビルド**が必要です。
 ```bash
 # 変更を取り込んでイメージを再ビルド
 docker compose build backend
