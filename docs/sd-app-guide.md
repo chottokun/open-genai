@@ -27,11 +27,11 @@ flowchart TD
     Browser[ブラウザ / Webフロント] -->|1. 画像生成要求| Proxy[Nginx Proxy :80]
     Proxy -->|2. リクエスト転送| Backend[backendコンテナ :8000]
     Backend -->|3. HMAC署名付き呼出 /invoke| SdApp[sd-appコンテナ :8001]
-    SdApp -->|4. 中継 /v1/images/generations (imagen-4)| LiteLLM[open-genai-litellm :4000]
+    SdApp -->|4. 中継 /v1/images/generations（imagen-4）| LiteLLM[open-genai-litellm :4000]
     
     %% LiteLLM内での判定分岐
     LiteLLM -->|5a. GEMINI_API_KEYがある場合| CloudAPI["Google Imagen 4 (高クオリティ生成)"]
-    LiteLLM -->|5b. GEMINI_API_KEYがない場合 (エラー発生)| Fallback["自動フォールバック (imagen-4 -> sd-local)"]
+    LiteLLM -->|5b. GEMINI_API_KEYがない場合（エラー発生）| Fallback["自動フォールバック (imagen-4 -> sd-local)"]
     
     Fallback -->|6. ローカル中継 /v1/images/generations| LocalSD[local-sd-apiコンテナ :8004]
     LocalSD -->|7. ローカル推論実行| SDModel[SimianLuo/LCM_Dreamshaper_v7]

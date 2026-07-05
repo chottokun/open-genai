@@ -116,11 +116,11 @@ flowchart TD
     RagApp -->|ローカル中継 /v1/embeddings| EmbedAPI
     RagApp -->|ベクトル検索 / 格納| Qdrant
     RagApp -->|ファイル保管| SeaweedFS
-    SdApp -->|画像生成API呼出 (imagen-4)| LiteLLM
+    SdApp -->|画像生成API呼出（imagen-4）| LiteLLM
     
     %% LiteLLMからのルーティング
     LiteLLM -->|API キー認証| CloudAPI["外部クラウドAPI / Imagen 4等"]
-    LiteLLM -->|フォールバック (sd-local)| SdAPI
+    LiteLLM -->|フォールバック（sd-local）| SdAPI
 ```
 
 ---
