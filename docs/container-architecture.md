@@ -29,7 +29,7 @@ Nginx（`proxy`）を単一の入口とし、フロントエンド（`web`）、
 
 | コンテナ名 | サービス名 | ポート (内部/外部) | 主な役割 |
 | :--- | :--- | :--- | :--- |
-| `open-genai-backend` | `backend` | `8000:8000` | FastAPIによるバックエンドAPI。チャット管理、AIアプリ連携、監査等のコア制御。 |
+| `open-genai-backend` | `backend` | `8000:- (expose)`| FastAPIによるバックエンドAPI。チャット管理、AIアプリ連携、監査等のコア制御。 |
 | `open-genai-web` | `web` | `5173:-` | ViteによるNext.js/ReactフロントエンドUI（SPA）。 |
 | `open-genai-keycloak` | `keycloak` | `8080:-` | SAML 2.0 認証プロバイダ（IdP）。組織内認証連携を担当。 |
 | `open-genai-qdrant` | `qdrant` | `6333:6333` | ベクトルデータベース。RAGドキュメントのベクトル検索。 |
@@ -41,7 +41,7 @@ Nginx（`proxy`）を単一の入口とし、フロントエンド（`web`）、
 | コンテナ名 | サービス名 | ポート (内部/外部) | 主な役割 |
 | :--- | :--- | :--- | :--- |
 | `open-genai-whisper-app` | `whisper-app` | `8002:8002` | 音声認識のプロキシ・ルーティング層。認証検証と推論中継。 |
-| `open-genai-sd-app` | `sd-app` | `8003:-` | 画像生成AIアプリ。ローカルSD(A1111)またはLiteLLMへのプロキシ。 |
+| `open-genai-sd-app` | `sd-app` | `8000:-` | 画像生成AIアプリ。ローカルSD(A1111)またはLiteLLMへのプロキシ。 |
 | `open-genai-rag-app` | `rag-app` | `8001:8001` | RAG（ドキュメント検索・埋め込み）AIアプリ。非同期バッチ処理を内包。 |
 | `open-genai-prompt-app` | `prompt-app` | `8009:-` | プロンプトエンジニアリング・テンプレート管理用AIアプリ。 |
 | `open-genai-usermgmt-app` | `usermgmt-app` | `8006:-` | Keycloakと連携した組織・ユーザー管理AIアプリ。 |
