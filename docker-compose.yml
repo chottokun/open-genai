@@ -362,6 +362,7 @@ services:
       - VITE_APP_MODEL_IDS=${VITE_APP_MODEL_IDS:-["gemini-2.5-pro","gemini-2.5-flash","gemini-3.5-flash","sakura-gpt-oss-120b","sakura-qwen3-coder","openai-compatible-chat","gemma4"]}
       - VITE_APP_ENDPOINT_NAMES=${VITE_APP_ENDPOINT_NAMES:-[]}
       - VITE_APP_IMAGE_MODEL_IDS=${VITE_APP_IMAGE_MODEL_IDS:-[]}
+      - VITE_APP_HIDDEN_USE_CASES=${VITE_APP_HIDDEN_USE_CASES:-{}}
     volumes:
       - ./genai-web:/app
       # ルート / 各ワークスペースの node_modules はバインドマウントで隠れないよう
