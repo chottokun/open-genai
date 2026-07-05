@@ -116,11 +116,11 @@ flowchart TD
     RagApp -->|ローカル中継 /v1/embeddings| EmbedAPI
     RagApp -->|ベクトル検索 / 格納| Qdrant
     RagApp -->|ファイル保管| SeaweedFS
-    SdApp -->|ローカル中継 /v1/images/generations| SdAPI
-    SdApp -.->|A1111 互換API (ホスト)| HostSD["ホスト上のStable Diffusion"]
-
-    %% 外部クラウドAPI
-    LiteLLM -->|API キー認証| CloudAPI["外部クラウドAPI / OpenAI等"]
+    SdApp -->|画像生成API呼出 (imagen-4)| LiteLLM
+    
+    %% LiteLLMからのルーティング
+    LiteLLM -->|API キー認証| CloudAPI["外部クラウドAPI / Imagen 4等"]
+    LiteLLM -->|フォールバック (sd-local)| SdAPI
 ```
 
 ---
@@ -149,8 +149,11 @@ flowchart TD
     * **第2段階 (ローカルGPU推論フェーズ)**: GPU インフラが整った段階で `SD_USE_PROXY=false` に切り替え、軽量高速な蒸留モデル **`SimianLuo/LCM_Dreamshaper_v7`** (約2GB, 4ステップ推論) をローカルロードして稼働させます。
     * **第3段階 (高品質ローカル推論フェーズ)**: `IMAGE_MODEL_NAME` を **`SDXL-Lightning`** (4-Step/8-Step, 約5GB) に切り替えることで、実用的な高品質ローカル画像生成を実現します。
     * **第4段階 (プロダクションフェーズ)**: 最先端の画像生成モデル **`FLUX.1 [schnell]`** などをロードし、文字の描画や手の形状破綻がない商用クオリティの生成へと、バックエンドや中継層のソース修正不要（環境変数の変更のみ）で安全にスケールアップします。
+  * **[LiteLLM による自動フォールバック構成 (ハイブリッドハブ)]**:
+    * `litellm_config.yaml` 内にローカル推論用モデル `sd-local` (接続先: `local-sd-api`) を登録し、 `fallbacks` 設定に `{"imagen-4": ["sd-local"]}` を定義しました。
+    * これにより、外部 API キー（`GEMINI_API_KEY`）が未設定、または一時的な通信エラーが生じた場合でも、中央プロキシである LiteLLM がリクエストを自動的にローカルの `local-sd-api` 推論エンジンにルーティングしてフォールバック処理します。フロントエンド・バックエンドは一切の接続エラーを意識することなく、透過的にローカル画像生成が完了します。
   * **[LiteLLM Proxy のハブ（軸）化による抽象化]**:
-    * すべての AI リクエスト（LLM、音声、画像）を `open-genai-litellm` に集約・ルーティングしておくことで、裏側のモデルや中継構成を切り替える際も、フロントエンドやバックエンドの再ビルドを伴わずに安全にモデルリプレイスが完了します。
+    * すべての AI リクエスト（LLM、音声、画像、埋め込み）を `open-genai-litellm` に集約・ルーティングしておくことで、裏側のモデルや中継構成を切り替える際も、フロントエンドやバックエンドの再ビルドを伴わずに安全にモデルリプレイスが完了します。
 
 * **RAG 埋め込みエンジンの拡張**:
   * `embedding-jp-api` をさらに拡張し、複数のローカル埋め込みモデル（Rerankerなど）を柔軟に差し替え可能にする。
