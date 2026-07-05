@@ -96,6 +96,41 @@ IMAGE_MODEL_NAME=SimianLuo/LCM_Dreamshaper_v7            # 軽量超高速ロー
 | **高品質ローカル** | `SDXL-Lightning` (4-step/8-step) | 約 5 GB / ローカルGPU推奨 | 実用的な高解像度画像を高速生成可能。 |
 | **プロダクション** | `FLUX.1 [schnell]` など | 約 10 GB以上 / 高性能VRAM必須 | 手の形状や文字描画の破綻がない商用レベルのローカル画像生成。 |
 
+### 🛠️ ローカル画像モデルの具体的な切り替え・変更手順
+
+`local-sd-api` の利用する画像生成モデルを変更する場合は、以下の手順を実行します。
+
+#### 1. `.env` のモデル設定パラメータを編集する
+プロジェクトルートの `.env` ファイル内の関連変数を書き換えます。
+
+* **例1：高品質・高速な `SDXL-Lightning` (8-Step) を GPU 上で動作させる場合**：
+  ```bash
+  IMAGE_INFERENCE_DEVICE=cuda                              # GPU (CUDA) を使用
+  IMAGE_MODEL_NAME=ByteDance/SDXL-Lightning                # Hugging Face モデルID
+  ```
+* **例2：最先端の `FLUX.1 [schnell]` (4-Step) を GPU 上で動作させる場合**：
+  ```bash
+  IMAGE_INFERENCE_DEVICE=cuda                              # GPU (CUDA) を使用
+  IMAGE_MODEL_NAME=black-forest-labs/FLUX.1-schnell         # Hugging Face モデルID
+  ```
+
+#### 2. モデルの自動ロード仕様とロードマップ（実装構想）
+`local-sd-api` 内の推論スクリプトは、指定された `IMAGE_MODEL_NAME` がどのアーキテクチャであるかを自動判別してロードします。
+* **SD 1.5 系 (例: `LCM_Dreamshaper_v7` など)**: 内部で `StableDiffusionPipeline` を選択してロードします。
+* **SDXL 系 (例: `SDXL-Lightning` など)**: 内部で `StableDiffusionXLPipeline` を自動選択します。
+* **FLUX.1 系 (例: `FLUX.1-schnell` など)**: 内部で最新の `FluxPipeline` （diffusers >= 0.30.0以降）を選択してロードする構造へと拡張されます。
+* **LoRA や量子化 (FP16/INT8) の適用**:
+  * GPU メモリ (VRAM) が制限されている環境に向けて、 `torch_dtype=torch.float16` による半精度ロードをサポートしています。
+  * また、将来的に特定のキャラクターやスタイルを反映させるための **LoRA 適用機能 (ローカルロード時に LoRA 重みをマージして推論する拡張構想)** を推論層へ実装することで、基盤モデルを固定したままスタイルの多様化を実現します。
+
+#### 3. コンテナを再構築・再起動して変更を反映する
+設定ファイルを更新後、以下のコマンドを実行してコンテナへ反映します：
+```bash
+# 変更した環境変数をロードした状態でコンテナを強制再構築・再起動
+docker compose up -d --force-recreate local-sd-api
+```
+※ 起動時に Hugging Face から数GB〜十数GBのモデルデータが自動ダウンロードされるため、初回起動時のみインターネット回線速度およびモデル容量に応じたロード時間が発生します。ダウンロード済みのキャッシュデータはコンテナ内のボリュームに永続化されるため、2回目以降は即座に起動します。
+
 ---
 
 ## 6. 接続テストと動作確認
