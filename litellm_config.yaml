@@ -80,6 +80,17 @@ model_list:
     model_info:
       mode: audio_transcription
 
+  # ローカル音声認識 (Whisper-local)
+  - model_name: whisper-local
+    litellm_params:
+      model: openai/whisper-1
+      api_base: "http://local-whisper-api:8000/v1"
+      api_key: "not-needed"
+    model_info:
+      mode: audio_transcription
+
+
+
   # =========================================================================
   #  画像生成
   # =========================================================================

@@ -67,21 +67,28 @@ def test_invoke_local_api_success(mock_post):
 
 
 def test_allow_cloud_api_guard_prevents_litellm_and_forces_local(monkeypatch):
-    # ALLOW_CLOUD_API=False で WHISPER_PROVIDER=litellm を指定した場合
-    monkeypatch.setenv("ALLOW_CLOUD_API", "false")
-    monkeypatch.setenv("WHISPER_PROVIDER", "litellm")
-    
-    # 動的にモジュールを再インポートせずとも、設定値の再評価ロジックが働くか検証するため、
-    # アプリの初期化時点の WHISPER_PROVIDER を変更
+    # ALLOW_CLOUD_API=False で WHISPER_PROVIDER=litellm (外部クラウドモデル) の場合
     import app.main
     monkeypatch.setattr(app.main, "ALLOW_CLOUD_API", False)
     monkeypatch.setattr(app.main, "WHISPER_PROVIDER", "litellm")
+    monkeypatch.setattr(app.main, "LITELLM_AUDIO_MODEL", "whisper-cloud") # クラウドモデル
     
-    # ガードレール再評価ロジックが走り、localにフォールバックされるか検証
-    # (invoke時またはhealth時にPROVIDERがlocalにフォールバックされる処理)
-    # ここでは /health 経由で provider が local になっているかテスト
     response = client.get("/health")
     assert response.status_code == 200
-    # ガードにより強制的に local に変更されることを期待
-    # (実装時に app.main の起動処理やリクエスト処理でフォールバックロジックを入れます)
+    # ガードにより強制的に local にフォールバックされることを期待
     assert response.json()["provider"] == "local"
+
+
+def test_guardrail_allows_local_litellm_target(monkeypatch):
+    # ALLOW_CLOUD_API=False でも、宛先がローカルかつモデルが whisper-local なら許可
+    import app.main
+    monkeypatch.setattr(app.main, "ALLOW_CLOUD_API", False)
+    monkeypatch.setattr(app.main, "WHISPER_PROVIDER", "litellm")
+    monkeypatch.setattr(app.main, "LITELLM_AUDIO_URL", "http://litellm:4000/v1")
+    monkeypatch.setattr(app.main, "LITELLM_AUDIO_MODEL", "whisper-local")
+    
+    response = client.get("/health")
+    assert response.status_code == 200
+    # ガードレールをバイパスして litellm が維持されることを期待
+    assert response.json()["provider"] == "litellm"
+

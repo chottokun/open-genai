@@ -33,7 +33,15 @@ def get_effective_provider() -> str:
     allow_cloud = ALLOW_CLOUD_API or os.environ.get("ALLOW_CLOUD_API", "false").lower() == "true"
     prov = WHISPER_PROVIDER or os.environ.get("WHISPER_PROVIDER", "local")
     
-    if prov == "litellm" and not allow_cloud:
+    # 接続先が Docker 内部のクローズドなローカルアドレスであるか、
+    # ローカル向け音声モデル（whisper-local）であれば、安全であるため allow_cloud=False でも通過させる
+    is_local_target = False
+    url = LITELLM_AUDIO_URL or ""
+    if "litellm:" in url or "localhost" in url or "127.0.0.1" in url or "host.docker.internal" in url:
+        if LITELLM_AUDIO_MODEL == "whisper-local":
+            is_local_target = True
+
+    if prov == "litellm" and not allow_cloud and not is_local_target:
         # クラウドAPI利用が許可されていない場合は、意図しない課金・送信を防ぐため強制的にlocalにフォールバックする
         return "local"
     return prov
