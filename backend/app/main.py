@@ -1522,10 +1522,12 @@ async def generate_image(request: Request) -> str:
     }
     
     sd_app_url = os.environ.get("SD_APP_URL", "http://sd-app:8003/invoke")
+    rag_api_key = os.environ.get("RAG_API_KEY", "local-rag-key")
+    headers = {"X-Api-Key": rag_api_key}
     
     async with httpx.AsyncClient(timeout=120.0) as client:
         try:
-            res = await client.post(sd_app_url, json=sd_payload)
+            res = await client.post(sd_app_url, json=sd_payload, headers=headers)
         except httpx.HTTPError as e:
             raise HTTPException(
                 status_code=502,
