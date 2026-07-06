@@ -22,7 +22,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 import httpx
-from fastapi import FastAPI, Header, Query, Request
+from fastapi import FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import (
     FileResponse,
@@ -1477,6 +1477,77 @@ def _safe_path(key: str) -> str:
     if not full.startswith(base + os.sep) and full != base:
         raise ValueError("invalid path")
     return full
+
+
+@app.post("/image/generate")
+async def generate_image(request: Request) -> str:
+    """ローカル環境用画像生成プロキシ。
+    
+    フロントからのリクエストを受け取り、ローカルの sd-app (Stable Diffusion) に
+    プロキシして画像を生成し、Base64 データを返す。
+    """
+    claims = _claims_from_request(request)
+    if not _user_id(claims):
+        raise HTTPException(status_code=401, detail="認証が必要です")
+
+    body = await request.json()
+    params = body.get("params", {})
+    
+    # フロントエンドのパラメータからプロンプトを組み立てる
+    text_prompts = params.get("textPrompt", [])
+    prompt = ""
+    negative_prompt = ""
+    for p in text_prompts:
+        text = p.get("text", "")
+        weight = p.get("weight", 1)
+        if weight >= 0:
+            prompt += text + " "
+        else:
+            negative_prompt += text + " "
+            
+    prompt = prompt.strip()
+    negative_prompt = negative_prompt.strip()
+    
+    # サイズ (幅を使用、なければ 512)
+    size = params.get("width") or params.get("height") or 512
+    # ステップ数
+    steps = params.get("step") or 20
+    
+    # sd-app の呼び出しペイロード
+    sd_payload = {
+        "prompt": prompt,
+        "negative_prompt": negative_prompt,
+        "size": size,
+        "steps": steps
+    }
+    
+    sd_app_url = os.environ.get("SD_APP_URL", "http://sd-app:8003/invoke")
+    
+    async with httpx.AsyncClient(timeout=120.0) as client:
+        try:
+            res = await client.post(sd_app_url, json=sd_payload)
+        except httpx.HTTPError as e:
+            raise HTTPException(
+                status_code=502,
+                detail=f"画像生成アプリ（sd-app）への接続に失敗しました: {e}"
+            )
+            
+    if res.status_code != 200:
+        raise HTTPException(
+            status_code=res.status_code,
+            detail=f"画像生成に失敗しました (status: {res.status_code}, detail: {res.text})"
+        )
+        
+    data = res.json()
+    artifacts = data.get("artifacts") or []
+    if not artifacts:
+        # sd-app がエラーメッセージを outputs に入れている場合がある
+        error_msg = data.get("outputs") or "画像が生成されませんでした。"
+        raise HTTPException(status_code=500, detail=error_msg)
+        
+    # 最初の画像の Base64 文字列をそのまま返す
+    b64_image = artifacts[0].get("content")
+    return b64_image
 
 
 @app.post("/file/url")
