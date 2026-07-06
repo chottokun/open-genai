@@ -421,6 +421,7 @@ services:
     container_name: open-genai-embedding-jp-api
     ports:
       - "8020:8000"
+    command: --max-client-batch-size 128
     environment:
       # MODEL_IDで読み込むモデルを指定します。デフォルトは既存の cl-nagoya/ruri-v3-30m を引き継ぎます。
       - MODEL_ID=${EMBED_MODEL_NAME:-cl-nagoya/ruri-v3-30m}
