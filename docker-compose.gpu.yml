@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  embedding-jp-api:
+    # GPU用に最適化されたイメージタグを指定します。
+    # タグは搭載されているGPUのCompute Capability（アーキテクチャ）に合わせて選択します。
+    # - 89-1.9: Ada Lovelace世代等 (RTX 40xx, L4等)
+    # - 86-1.9: Ampere世代 (RTX 30xx, A100等)
+    # - 75-1.9: Turing世代 (RTX 20xx, T4等)
+    image: ghcr.io/huggingface/text-embeddings-inference:89-1.9
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

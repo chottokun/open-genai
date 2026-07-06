@@ -412,19 +412,33 @@ services:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
 
-  # --- 日本語特化型 Embedding API ---
+  # --- 日本語特化型 Embedding API (Hugging Face Text Embeddings Inference) ---
   embedding-jp-api:
-    build:
-      context: https://github.com/chottokun/embedding_jp_api.git#main
-      dockerfile: Dockerfile.cpu
+    # デフォルトはCPU版。互換性と安定性を重視。
+    image: ghcr.io/huggingface/text-embeddings-inference:cpu-latest
+    # GPU環境 (RTX 30/40シリーズ等) の場合は、上記をコメントアウトし、以下を有効化してください。
+    # image: ghcr.io/huggingface/text-embeddings-inference:89-1.9 # GPU(Ada Lovelace等)に最適化されたタグ
     container_name: open-genai-embedding-jp-api
     ports:
       - "8020:8000"
     environment:
-      # ruri-v3-30m: ModernBERT-Jaベース・30Mパラメータ・最大8192トークン対応
-      - MODEL_NAME=${EMBED_MODEL_NAME:-cl-nagoya/ruri-v3-30m}
+      # MODEL_IDで読み込むモデルを指定します。デフォルトは既存の cl-nagoya/ruri-v3-30m を引き継ぎます。
+      - MODEL_ID=${EMBED_MODEL_NAME:-cl-nagoya/ruri-v3-30m}
+      - PORT=8000
+      # CPUパフォーマンス向上のためのスレッド設定
+      - OMP_NUM_THREADS=4
+      - MKL_NUM_THREADS=4
     volumes:
-      - huggingface_cache:/root/.cache/huggingface
+      # モデルキャッシュの保存先をTEIデフォルトの /data にマッピング
+      - huggingface_cache:/data
+    # GPU環境で動かす場合は、以下のdeploy設定を有効化してください。
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
     restart: unless-stopped
 
 volumes:

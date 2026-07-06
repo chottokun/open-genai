@@ -157,8 +157,12 @@ curl -X DELETE http://localhost:6333/collections/open_genai_rag
 #### ステップ3：コンテナを再起動
 
 ```bash
-# embedding-jp-api を新モデルで再ビルド
-docker compose up -d --build embedding-jp-api
+# embedding-jp-api を再起動（TEIイメージのためビルドは不要です）
+# CPU環境の場合:
+docker compose up -d embedding-jp-api
+
+# GPU環境の場合 (docker-compose.gpu.yml をオーバーライド適用):
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d embedding-jp-api
 
 # LiteLLM を再構成して新しい設定を読み込む
 docker compose up -d --force-recreate litellm

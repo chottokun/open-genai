@@ -57,7 +57,7 @@ Nginx（`proxy`）を単一の入口とし、フロントエンド（`web`）、
 | :--- | :--- | :--- | :--- |
 | `local-whisper-api` | `local-whisper-api`| `8003:8000` | **[新規]** 音声認識推論層。Kotoba-Whisper やオリジナル Whisper の実行環境（GPU/CPU対応）。 |
 | `local-sd-api` | `local-sd-api` | `8004:8000` | **[新規]** 画像生成推論層。Stable Diffusionの実行環境。 |
-| `open-genai-embedding-jp-api`| `embedding-jp-api`| `8020:8000` | 日本語特化 Embedding (`ruri-v3-30m`) のベクトル化エンジン。 |
+| `open-genai-embedding-jp-api`| `embedding-jp-api`| `8020:8000` | Hugging Face TEI (Text Embeddings Inference) による日本語特化 Embedding (`ruri-v3-30m`等) ベクトル化エンジン。 |
 
 ---
 
