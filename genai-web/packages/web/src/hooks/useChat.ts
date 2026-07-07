@@ -16,6 +16,7 @@ import { useEffect, useMemo } from 'react';
 import { SWRInfiniteKeyedMutator } from 'swr/infinite';
 import { createWithEqualityFn as create } from 'zustand/traditional';
 import { createChat, createMessages, predictStream, predictTitle } from '@/lib/chatApi';
+import { decomposeId } from '@/utils/decomposeId';
 import { getS3Uri } from '@/lib/fileApi';
 import { findModelByModelId, MODELS } from '@/models';
 import { getPrompter } from '../prompts';
@@ -173,7 +174,7 @@ const useChatStore = create<{
       return chat.chatId;
     }
 
-    const { chat: newChat } = await createChat();
+    const { chat: newChat } = await createChat({ usecase: id });
 
     set((state) => {
       const newChats = produce(state.chats, (draft) => {
@@ -720,7 +721,7 @@ export const useChat = (id: string, chatId?: string) => {
     if (!isLoadingMessage && messagesData && !isLoadingChat && chatData) {
       restore(id, messagesData.messages, chatData.chat);
     }
-  }, [isLoadingMessage, isLoadingChat, id]);
+  }, [isLoadingMessage, isLoadingChat, id, chatId, messagesData, chatData, restore]);
 
   const filteredMessages = useMemo(() => {
     return chats[id]?.messages.filter((chat) => chat.role !== 'system') ?? [];
@@ -765,6 +766,7 @@ export const useChat = (id: string, chatId?: string) => {
       return retryGeneration(id, mutateChatList, options);
     },
     chatTitle: chats[id]?.chat?.title,
+    sessionChatId: decomposeId(chats[id]?.chat?.chatId ?? '') || undefined,
     getStopReason: () => {
       return getStopReason(id);
     },

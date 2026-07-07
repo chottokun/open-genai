@@ -13,13 +13,15 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import html
 import json
 import os
 import re
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 from fastapi import FastAPI, Header, HTTPException, Query, Request
@@ -34,7 +36,7 @@ from fastapi.responses import (
 
 from shared import ssrfguard
 
-from . import audit, auth, intauth, llm, ngwords, objstore, policy, storage, teams_store
+from . import audit, auth, image_gen, image_store, intauth, llm, ngwords, objstore, policy, storage, teams_store
 
 # ファイル添付の保存先と、ブラウザから見たバックエンドの公開 URL
 FILES_DIR = os.environ.get("FILES_DIR", "/data/files")
@@ -195,51 +197,6 @@ WHISPER_SEED: dict[str, Any] = {
         "- 雑音が少なくクリアな音声ほど精度が上がります。\n"
         "- 固有名詞や専門用語は誤変換されることがあります。結果は必ず確認してください。\n"
         "- 文字起こし結果はコピーして、そのままチャットで要約・議事録化に使えます。"
-    ),
-    "copyable": False,
-    "status": "published",
-}
-
-# 画像生成(Stable Diffusion) AI アプリ
-SD_APP_URL = os.environ.get("SD_APP_URL", "http://sd-app:8003/invoke")
-_SD_FORM = (
-    '{'
-    '"prompt":{"type":"textarea","title":"プロンプト",'
-    '"desc":"生成したい画像の説明（英語推奨）","required":true},'
-    '"negative_prompt":{"type":"textarea","title":"ネガティブプロンプト",'
-    '"desc":"避けたい要素（任意）"},'
-    '"steps":{"type":"number","title":"ステップ数","default_value":20,"min":1,"max":50},'
-    '"size":{"type":"select","title":"画像サイズ",'
-    '"items":[{"title":"512x512","value":"512"},{"title":"768x768","value":"768"}],'
-    '"default_value":"512"}'
-    '}'
-)
-SD_SEED: dict[str, Any] = {
-    "exAppId": "sd",
-    "teamId": COMMON_TEAM_ID,
-    "exAppName": "画像生成（Stable Diffusion）",
-    "endpoint": SD_APP_URL,
-    "apiKey": RAG_API_KEY,
-    "config": "",
-    "placeholder": _SD_FORM,
-    "description": "プロンプトから画像を生成します（ホストの Stable Diffusion サーバを利用）。",
-    "howToUse": (
-        "## このアプリでできること\n\n"
-        "文章（プロンプト）から画像を生成します。資料の挿絵やイメージ案の作成に使えます。\n\n"
-        "## 操作手順\n\n"
-        "1. 「プロンプト」に生成したい画像の内容を入力します（英語推奨・具体的に）。\n"
-        "2. 必要に応じて「ネガティブプロンプト」に避けたい要素を入力します。\n"
-        "3. 「ステップ数」（既定20）と「画像サイズ」を選びます。\n"
-        "4. 「実行」で画像を生成します。\n\n"
-        "## 各項目\n\n"
-        "- **プロンプト**: 例 `a flat vector illustration of a city hall, simple, clean`。\n"
-        "- **ネガティブプロンプト**: 例 `blurry, text, watermark`（不要な要素を抑制）。\n"
-        "- **ステップ数**: 多いほど描き込みが増えますが時間も増えます（1〜50）。\n"
-        "- **画像サイズ**: 512x512 か 768x768。\n\n"
-        "## 前提・注意\n\n"
-        "- ホスト側で AUTOMATIC1111 互換 API（`/sdapi/v1/txt2img`）の起動が必要です。\n"
-        "- 既定の接続先はホストの `:7860`（`SD_API_URL` で変更可）。生成は GPU のある環境で行います。\n"
-        "- 公開・配布時は著作権・肖像権にご注意ください。"
     ),
     "copyable": False,
     "status": "published",
@@ -515,13 +472,15 @@ EXAPP_SEEDS = [
     RAG_SEED,
     RAG_MANAGE_SEED,
     WHISPER_SEED,
-    SD_SEED,
     AUDIT_SEED,
     USERMGMT_SEED,
     MODELPOLICY_SEED,
     NGWORD_SEED,
     PROMPT_SEED,
 ]
+
+# 源内 Web の汎用ページに統合したため exApp 登録を廃止した ID
+RETIRED_SEED_EXAPP_IDS = ["sd"]
 
 
 def _now_iso() -> str:
@@ -724,6 +683,21 @@ def _md_escape(text: Any) -> str:
     return s
 
 
+def _header_config_value(config: str | None) -> str:
+    """AI アプリ config を HTTP ヘッダ(x-app-config)に載せられる1行文字列へ正規化する。
+
+    UI で整形された JSON（改行入り）をそのままヘッダに入れると httpx が拒否し、
+    /exapps/schema・/exapps/invoke が 502 相当で失敗する。
+    """
+    raw = (config or "").strip()
+    if not raw:
+        return ""
+    try:
+        return json.dumps(json.loads(raw), ensure_ascii=False, separators=(",", ":"))
+    except (json.JSONDecodeError, TypeError):
+        return raw.replace("\r", " ").replace("\n", " ")
+
+
 # 成果物取得（SSRF 対策）の設定
 # - ARTIFACT_FETCH_ALLOWED_HOSTS が指定されていれば、そのホストのみ取得を許可（推奨）。
 # - 未指定でも、プライベート/ループバック/リンクローカル等の内部宛先は常に拒否する。
@@ -734,6 +708,18 @@ _ARTIFACT_ALLOWED_HOSTS = {
     if h.strip()
 }
 _ARTIFACT_MAX_BYTES = int(os.environ.get("ARTIFACT_MAX_BYTES", str(50 * 1024 * 1024)))
+
+# 成果物の配信方式（LGWAN 対応）。
+# - "open"    : 署名付き URL を outputs に直接リンクとして提示（開発・直接 DL 可能な環境向け）。
+# - "carrier" : 署名付き URL を UI に出さず、別途「リンクファイル(.txt/.html)」として
+#               持ち出させる（LGWAN 端末から成果物本体へ直接アクセスできない環境向け）。
+ARTIFACT_DELIVERY_MODE = (os.environ.get("ARTIFACT_DELIVERY_MODE", "open").strip().lower())
+if ARTIFACT_DELIVERY_MODE not in ("open", "carrier"):
+    ARTIFACT_DELIVERY_MODE = "open"
+# キャリアファイルの既定形式（"txt" / "html" / "both"）。"both" は UI からの format 指定で切替。
+ARTIFACT_CARRIER_FORMAT = (os.environ.get("ARTIFACT_CARRIER_FORMAT", "txt").strip().lower())
+if ARTIFACT_CARRIER_FORMAT not in ("txt", "html", "both"):
+    ARTIFACT_CARRIER_FORMAT = "txt"
 
 
 async def _fetch_artifact(file_url: str) -> tuple[bytes | None, str]:
@@ -770,6 +756,8 @@ async def _rehost_artifacts(
         return outputs, artifacts
 
     links: list[tuple[str, str, str]] = []
+    # carrier モードで UI に生 URL を出さず「リンクファイル」で持ち出させる成果物の表示名
+    carrier_names: list[str] = []
     new_arts: list[Any] = []
     for a in artifacts:
         if not isinstance(a, dict):
@@ -792,16 +780,27 @@ async def _rehost_artifacts(
                 mime = mime or fetched_mime
 
         presigned = None
+        object_key = None
         if data is not None and objstore.is_configured():
-            presigned = objstore.put_and_presign(
+            presigned, object_key = objstore.put_and_presign(
                 data, filename=name, content_type=mime, user_id=user_id
             )
 
         final_url = presigned or file_url
         # http(s) 以外(javascript:/data:/相対 等)はリンク化・成果物化しない（注入防止）
         safe_url = final_url if _is_http_url(final_url) else ""
-        new_arts.append({**a, "file_url": safe_url})
-        if safe_url:
+        # carrier モードでは自前ストレージに保存できた成果物の署名 URL を UI から隠し、
+        # object_key 経由で別途「リンクファイル」を発行させる（LGWAN 端末は本体へ直接届かない）。
+        carrier = ARTIFACT_DELIVERY_MODE == "carrier" and bool(object_key)
+        art_out = {**a, "file_url": "" if carrier else safe_url}
+        if object_key:
+            art_out["object_key"] = object_key
+        if mime:
+            art_out["mime_type"] = mime
+        new_arts.append(art_out)
+        if carrier:
+            carrier_names.append(name)
+        elif safe_url:
             links.append((name, safe_url, (mime or "").split(";")[0].strip()))
         try:
             audit.record(
@@ -815,14 +814,80 @@ async def _rehost_artifacts(
         except Exception:  # noqa: BLE001 # nosec B110
             pass
 
-    if links and isinstance(outputs, str):
+    if isinstance(outputs, str) and (links or carrier_names):
         lines = ["", "## 生成されたファイル", ""]
         for name, url, mime in links:
             # 表示名は Markdown/HTML を無効化（リンク注入・フィッシング防止）
             suffix = f"（{_md_escape(mime)}）" if mime else ""
             lines.append(f"- [{_md_escape(name)}]({url})" + suffix)
+        if carrier_names:
+            for name in carrier_names:
+                lines.append(f"- {_md_escape(name)}")
+            lines.append("")
+            lines.append(
+                "LGWAN 端末からは上記ファイルを直接ダウンロードできません。"
+                "下の「リンクファイル」ボタンから取得し、"
+                "データ持ち出し経路でインターネット接続端末へ移してから開いてください。"
+            )
         outputs = outputs + "\n" + "\n".join(lines)
     return outputs, new_arts
+
+
+# ---------------------------------------------------------------------------
+# キャリアファイル（LGWAN 持ち出し用のダウンロード URL 記載ファイル）生成
+# ---------------------------------------------------------------------------
+_JST = timezone(timedelta(hours=9))
+
+
+def _carrier_expiry_text() -> str:
+    """キャリア内に記載する URL 有効期限（署名発行時点から S3_PRESIGN_EXPIRY 秒後）。"""
+    dt = datetime.now(_JST) + timedelta(seconds=objstore.S3_PRESIGN_EXPIRY)
+    return dt.strftime("%Y-%m-%d %H:%M (JST)")
+
+
+def _carrier_txt(display_name: str, url: str, expiry: str) -> str:
+    return (
+        "成果物ダウンロード情報\n"
+        "====================\n"
+        f"ファイル名: {display_name}\n"
+        f"有効期限: {expiry}\n"
+        "ダウンロードURL:\n"
+        f"{url}\n"
+        "\n"
+        "【手順】\n"
+        "1. インターネット接続端末のブラウザで上記 URL を開く\n"
+        "2. 表示されたファイルを保存する\n"
+        "※ この URL を知っていれば期限内は誰でもダウンロードできます。第三者に共有しないでください。\n"
+    )
+
+
+def _carrier_html(display_name: str, url: str, expiry: str) -> str:
+    """外部リソース・スクリプトを含まない単一の静的 HTML を返す。"""
+    name = html.escape(display_name)
+    href = html.escape(url, quote=True)
+    text = html.escape(url)
+    exp = html.escape(expiry)
+    return (
+        "<!DOCTYPE html>\n"
+        '<html lang="ja">\n<head>\n<meta charset="utf-8">\n'
+        '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
+        f"<title>成果物ダウンロード: {name}</title>\n"
+        "<style>body{font-family:sans-serif;max-width:720px;margin:40px auto;padding:0 16px;"
+        "line-height:1.7;color:#1a1a1a}h1{font-size:1.3rem}"
+        ".url{width:100%;box-sizing:border-box;padding:8px;font-family:monospace;font-size:.9rem}"
+        ".btn{display:inline-block;margin:12px 0;padding:10px 20px;background:#1a3aad;color:#fff;"
+        "text-decoration:none;border-radius:6px}.note{color:#555;font-size:.9rem}</style>\n"
+        "</head>\n<body>\n"
+        "<h1>成果物ダウンロード情報</h1>\n"
+        f"<p>ファイル名: <strong>{name}</strong><br>有効期限: {exp}</p>\n"
+        f'<p><a class="btn" href="{href}">インターネット接続端末でダウンロード</a></p>\n'
+        "<p>上のボタンが使えない場合は、次の URL をコピーしてブラウザで開いてください。</p>\n"
+        f'<textarea class="url" rows="4" readonly>{text}</textarea>\n'
+        '<p class="note">※ この URL を知っていれば期限内は誰でもダウンロードできます。'
+        "第三者に共有しないでください。</p>\n"
+        "</body>\n</html>\n"
+    )
+
 
 app = FastAPI(title="Open GENAI Local Backend", version="0.1.0")
 
@@ -839,12 +904,15 @@ app.add_middleware(
 def _startup() -> None:
     storage.init_db()
     teams_store.init_db(seed_exapps=EXAPP_SEEDS)
+    for ex_app_id in RETIRED_SEED_EXAPP_IDS:
+        teams_store.delete_exapp(COMMON_TEAM_ID, ex_app_id)
     # 既存チームの RAG アプリを「検索」「管理」に分割・最新化（冪等）。
     try:
         _ensure_team_rag_split()
     except Exception as e:  # noqa: BLE001
         print(f"[startup] チーム RAG の分割・最新化に失敗: {e}")
     audit.start()
+    objstore.start_retention_scheduler()
     os.makedirs(FILES_DIR, exist_ok=True)
 
 
@@ -1077,7 +1145,13 @@ async def health() -> dict[str, Any]:
 @app.post("/chats")
 async def create_chat(request: Request) -> dict[str, Any]:
     user_id = _user_id(_claims_from_request(request))
-    return {"chat": storage.create_chat(user_id)}
+    body: dict[str, Any] = {}
+    try:
+        body = await request.json()
+    except Exception:  # noqa: BLE001 - body 省略時はデフォルト usecase
+        body = {}
+    usecase = body.get("usecase") or "/chat"
+    return {"chat": storage.create_chat(user_id, usecase)}
 
 
 @app.get("/chats")
@@ -1215,9 +1289,55 @@ def _cloud_model_denied(model: str | dict[str, Any] | None) -> str | None:
     return f"外部クラウドAPIの利用が制限されています（対象モデル: {model}）。ローカルモデルを使用してください。"
 
 
+@app.put("/chats/{chat_id}/messages/{message_id}/image-result")
+async def save_image_result(
+    chat_id: str, message_id: str, request: Request
+) -> JSONResponse:
+    """画像生成結果を assistant メッセージの extraData に永続化する。"""
+    user_id = _user_id(_claims_from_request(request))
+    body = await request.json()
+    images_b64 = body.get("images") or []
+    meta = body.get("meta") or {}
+
+    try:
+        updated = await image_store.persist_image_result(
+            chat_id=chat_id,
+            message_id=message_id,
+            user_id=user_id,
+            images_b64=images_b64,
+            meta=meta
+        )
+        if not updated:
+            return JSONResponse(status_code=404, content={"message": "message not found"})
+        return JSONResponse(content={"message": updated})
+    except ValueError as e:
+        return JSONResponse(status_code=400, content={"message": str(e)})
+
+
 # ---------------------------------------------------------------------------
 # 推論 (genU API / Lambda ストリーム代替)
 # ---------------------------------------------------------------------------
+@app.get("/image/health")
+async def image_health() -> JSONResponse:
+    """画像生成(SD)サーバの稼働状況。フロントの表示出し分けに使う。"""
+    ok = await image_gen.is_sd_up()
+    return JSONResponse(content={"ok": ok})
+
+
+@app.post("/image/generate")
+async def generate_image(request: Request) -> Response:
+    """源内 Web「画像を生成」ページ向け API（Bedrock Lambda 代替）。"""
+    body = await request.json()
+    params = body.get("params") or {}
+    try:
+        image_base64 = await image_gen.generate_image_base64(params)
+    except ValueError as exc:
+        return JSONResponse(status_code=400, content={"message": str(exc)})
+    except RuntimeError as exc:
+        return JSONResponse(status_code=502, content={"message": str(exc)})
+    return Response(content=image_base64, media_type="text/plain")
+
+
 @app.post("/predict")
 async def predict(request: Request) -> Response:
     body = await request.json()
@@ -1676,6 +1796,46 @@ async def list_exapps(request: Request) -> list[Any]:
     return [a for a, ok in zip(candidates, checks) if ok is True]
 
 
+@app.get("/my/app-pins")
+async def list_my_app_pins(request: Request) -> JSONResponse:
+    """本人の AI アプリ ピン留め一覧。"""
+    claims = _claims_from_request(request)
+    if not _user_id(claims):
+        return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+    return JSONResponse(content={"pins": teams_store.list_user_app_pins(_user_id(claims))})
+
+
+@app.post("/my/app-pins")
+async def add_my_app_pin(request: Request) -> JSONResponse:
+    """AI アプリをピン留めする（本人のみ・上限あり）。"""
+    claims = _claims_from_request(request)
+    if not _user_id(claims):
+        return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+    body = await request.json()
+    team_id = body.get("teamId", "")
+    item_id = body.get("itemId", "")
+    if not team_id or not item_id:
+        return JSONResponse(
+            status_code=400, content={"error": "teamId と itemId は必須です"}
+        )
+    pins, error = teams_store.add_user_app_pin(
+        _user_id(claims), team_id, item_id, _is_system_admin(claims)
+    )
+    if error:
+        return JSONResponse(status_code=400, content={"error": error})
+    return JSONResponse(content={"pins": pins})
+
+
+@app.delete("/my/app-pins/{team_id}/{item_id}")
+async def remove_my_app_pin(team_id: str, item_id: str, request: Request) -> JSONResponse:
+    """ピン留めを解除する（本人のみ）。"""
+    claims = _claims_from_request(request)
+    if not _user_id(claims):
+        return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+    pins = teams_store.remove_user_app_pin(_user_id(claims), team_id, item_id)
+    return JSONResponse(content={"pins": pins})
+
+
 @app.post("/exapps/invoke")
 async def invoke_exapp(request: Request) -> JSONResponse:
     """実行要求を、登録された AI アプリの endpoint へプロキシする。"""
@@ -1736,7 +1896,7 @@ async def invoke_exapp(request: Request) -> JSONResponse:
         # ナレッジのスコープ = AI アプリを所有するチーム(teamId)
         "x-scope": team_id,
         # AI アプリ固有の設定(JSON)。Dify 連携等で接続先の判別に使う
-        "x-app-config": app_def.get("config", "") or "",
+        "x-app-config": _header_config_value(app_def.get("config")),
         # 会話継続(疑似チャット)用のセッション ID
         "x-session-id": session_id,
         # 内部サービス間の署名（x-user-*・x-scope の偽装を防ぐ）
@@ -1875,7 +2035,7 @@ async def get_exapp_schema(request: Request) -> JSONResponse:
     _teams_hdr = _user_teams_header(user_id)
     _headers = {
         "x-api-key": app_def.get("apiKey", ""),
-        "x-app-config": app_def.get("config", "") or "",
+        "x-app-config": _header_config_value(app_def.get("config")),
         # ローカル AI アプリがスコープ/権限に応じて動的フォームを作れるよう連携
         "x-scope": team_id,
         "x-user-id": user_id,
@@ -1943,7 +2103,7 @@ async def resolve_exapp_schema(request: Request) -> JSONResponse:
                 json={"inputs": inputs},
                 headers={
                     "x-api-key": app_def.get("apiKey", ""),
-                    "x-app-config": app_def.get("config", "") or "",
+                    "x-app-config": _header_config_value(app_def.get("config")),
                     "x-scope": team_id,
                     "x-user-id": user_id,
                     "x-user-groups": _groups_str,
@@ -2002,6 +2162,75 @@ async def get_exapp_history(
         return {"history": None}
     hist = teams_store.get_exapp_history(teamId, exAppId, createdDate, user_id)
     return {"history": hist}
+
+
+@app.get("/exapps/artifact-carrier")
+async def get_artifact_carrier(
+    request: Request,
+    objectKey: str = Query(default=""),
+    s3Url: str = Query(default=""),
+    format: str = Query(default=""),
+) -> Response:
+    """成果物のダウンロード URL を記載した「リンクファイル(.txt/.html)」を返す。
+
+    LGWAN 端末は成果物本体へ直接アクセスできないため、URL を記したファイルを
+    ダウンロードさせ、データ持ち出し経路でインターネット接続端末へ移して開く運用を支える。
+    """
+    claims = _claims_from_request(request)
+    user_id = _user_id(claims)
+    if not user_id:
+        return JSONResponse(status_code=401, content={"error": "認証が必要です"})
+
+    key = (objectKey or "").strip()
+    if not key and s3Url:
+        key = objstore.key_from_url(s3Url) or ""
+    if not key or not objstore.is_managed_key(key):
+        return JSONResponse(status_code=400, content={"error": "オブジェクトキーが不正です"})
+
+    # 所有者チェック（キーの user_hash セグメント一致。管理者は横断可）
+    if not objstore.owns_key(key, user_id) and not _is_system_admin(claims):
+        return _forbidden("このファイルにアクセスする権限がありません")
+
+    url = objstore.presign_existing(key)
+    if not url:
+        return JSONResponse(status_code=404, content={"error": "ファイルが見つかりません"})
+
+    display_name = objstore.filename_from_key(key)
+    expiry = _carrier_expiry_text()
+
+    fmt = (format or "").strip().lower()
+    if fmt not in ("txt", "html"):
+        fmt = "html" if ARTIFACT_CARRIER_FORMAT == "html" else "txt"
+
+    if fmt == "html":
+        body = _carrier_html(display_name, url, expiry)
+        media_type = "text/html; charset=utf-8"
+        carrier_name = f"{display_name}_link.html"
+    else:
+        body = _carrier_txt(display_name, url, expiry)
+        media_type = "text/plain; charset=utf-8"
+        carrier_name = f"{display_name}_link.txt"
+
+    try:
+        audit.record(
+            request,
+            action="file.carrier",
+            usecase="exapp",
+            output_text=f"{display_name} ({fmt})",
+        )
+    except Exception:  # noqa: BLE001
+        pass
+
+    ascii_name = objstore.sanitize_filename(carrier_name)
+    disposition = (
+        f'attachment; filename="{ascii_name}"; '
+        f"filename*=UTF-8''{quote(carrier_name)}"
+    )
+    return Response(
+        content=body.encode("utf-8"),
+        media_type=media_type,
+        headers={"Content-Disposition": disposition},
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -2302,6 +2531,14 @@ async def delete_exapp_history(
     ):
         return _forbidden()
     if createdDate:
+        if _is_system_admin(claims):
+            hist = teams_store.get_exapp_history(team_id, ex_app_id, createdDate)
+        else:
+            hist = teams_store.get_exapp_history(
+                team_id, ex_app_id, createdDate, user_id
+            )
+        if hist and objstore.is_configured():
+            objstore.delete_keys(objstore.keys_from_artifacts(hist.get("artifacts")))
         if _is_system_admin(claims):
             teams_store.delete_exapp_history(team_id, ex_app_id, createdDate)
         else:

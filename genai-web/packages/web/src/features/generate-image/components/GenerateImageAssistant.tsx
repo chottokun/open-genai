@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { PiLightbulbFilamentBold, PiWarningFill } from 'react-icons/pi';
-import { useLocation } from 'react-router';
 import { Button } from '@/components/ui/dads/Button';
 import { ProgressIndicator } from '@/components/ui/dads/ProgressIndicator';
 import { Ul } from '@/components/ui/dads/Ul';
 import { useGenerateImageStore } from '@/features/generate-image/stores/useGenerateImageStore';
 import { useChat } from '@/hooks/useChat';
+import { useUsecasePath } from '@/hooks/useUsecasePath';
 import { useFollow } from '@/hooks/useFollow';
 import { useLiveStatusMessage } from '@/hooks/useLiveStatusMessage';
 import { useScreen } from '@/hooks/useScreen';
@@ -15,12 +15,39 @@ type Props = {
   onGenerate: (prompt: string, negativePrompt: string, stylePreset?: string) => Promise<void>;
 };
 
+type AssistantImageContent = {
+  prompt: string | null;
+  negativePrompt: string | null;
+  comment: string;
+  recommendedStylePreset: string[];
+  error?: boolean;
+};
+
+const parseAssistantImageContent = (content: string): AssistantImageContent => {
+  const fenced = content.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  const candidate = (fenced ? fenced[1] : content).trim();
+  const start = candidate.indexOf('{');
+  const end = candidate.lastIndexOf('}');
+  if (start < 0 || end <= start) {
+    throw new Error('JSON not found');
+  }
+  const parsed = JSON.parse(candidate.slice(start, end + 1)) as Partial<AssistantImageContent>;
+  return {
+    prompt: parsed.prompt ?? null,
+    negativePrompt: parsed.negativePrompt ?? null,
+    comment: parsed.comment ?? '',
+    recommendedStylePreset: parsed.recommendedStylePreset ?? [],
+  };
+};
+
 export const GenerateImageAssistant = (props: Props) => {
-  const { pathname } = useLocation();
+  const { isGeneratingImage, onGenerate } = props;
+  const { usecase, chatId } = useUsecasePath();
   const { stylePreset } = useGenerateImageStore();
-  const { loading, messages, postChat, popMessage } = useChat(pathname);
+  const { loading, messages, postChat, popMessage } = useChat(usecase, chatId);
   const [isAutoGenerating, setIsAutoGenerating] = useState(false);
   const [isPresetGenerating, setIsPresetGenerating] = useState(false);
+  const wasPromptLoadingRef = useRef(false);
   const { scrollTopAnchorRef, scrollBottomAnchorRef } = useScreen({ useWindowScroll: true });
   const { scrollableContainer, setFollowing } = useFollow();
 
@@ -64,10 +91,9 @@ export const GenerateImageAssistant = (props: Props) => {
         };
       }
       try {
-        const matches = m.content.match(/\{[^{}]*\}/g);
         return {
           role: 'assistant',
-          content: JSON.parse(matches ? matches[0] : '{}'),
+          content: parseAssistantImageContent(m.content),
         };
       } catch (e) {
         console.error(e);
@@ -86,25 +112,32 @@ export const GenerateImageAssistant = (props: Props) => {
   });
 
   useEffect(() => {
-    // メッセージ追加時の画像の自動生成
-    const _length = contents.length;
-    if (contents.length === 0) {
+    // プロンプト生成（postChat のストリーム）が完了した直後のみ画像を自動生成する。
+    // 履歴復元時は loading が true にならないため、再生成を防げる。
+    if (loading) {
+      wasPromptLoadingRef.current = true;
       return;
     }
 
-    const message = contents[_length - 1];
+    if (!wasPromptLoadingRef.current || contents.length === 0) {
+      return;
+    }
+    wasPromptLoadingRef.current = false;
+
+    const idx = contents.length - 1;
+    const message = contents[idx];
     if (
-      !loading &&
       message.role === 'assistant' &&
       message.content.prompt &&
-      message.content.negativePrompt
+      message.content.negativePrompt !== null &&
+      !message.content.error
     ) {
       setIsAutoGenerating(true);
-      props.onGenerate(message.content.prompt, message.content.negativePrompt).finally(() => {
+      onGenerate(message.content.prompt, message.content.negativePrompt ?? '').finally(() => {
         setIsAutoGenerating(false);
       });
     }
-  }, [loading]);
+  }, [loading, contents, onGenerate]);
 
   const onRetrySend = () => {
     popMessage();
@@ -202,7 +235,7 @@ export const GenerateImageAssistant = (props: Props) => {
                   </div>
                 )}
                 {c.content.prompt !== null &&
-                  (contents.length - 1 === idx && props.isGeneratingImage && isAutoGenerating ? (
+                  (contents.length - 1 === idx && isGeneratingImage && isAutoGenerating ? (
                     <>
                       <div className='flex items-center gap-1'>
                         <div className='mr-1.5 ml-0.5 size-5 rounded-full border-3 border-success-1' />
@@ -240,8 +273,7 @@ export const GenerateImageAssistant = (props: Props) => {
                               onClick={() => {
                                 if (preset === stylePreset) return;
                                 setIsPresetGenerating(true);
-                                props
-                                  .onGenerate(
+                                onGenerate(
                                     c.content.prompt ?? '',
                                     c.content.negativePrompt ?? '',
                                     preset,
@@ -261,13 +293,11 @@ export const GenerateImageAssistant = (props: Props) => {
                             onClick={() => {
                               if (stylePreset === '') return;
                               setIsPresetGenerating(true);
-                              props
-                                .onGenerate(
-                                  c.content.prompt ?? '',
-                                  c.content.negativePrompt ?? '',
-                                  '',
-                                )
-                                .finally(() => setIsPresetGenerating(false));
+                              onGenerate(
+                                c.content.prompt ?? '',
+                                c.content.negativePrompt ?? '',
+                                '',
+                              ).finally(() => setIsPresetGenerating(false));
                             }}
                           >
                             未設定

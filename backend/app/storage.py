@@ -116,14 +116,40 @@ def _migrate(conn: sqlite3.Connection) -> None:
         )
 
 
-def create_chat(user_id: str) -> dict[str, Any]:
+def _normalize_usecase(usecase: str) -> str:
+    value = (usecase or "/chat").strip()
+    if not value.startswith("/"):
+        value = f"/{value}"
+    return value
+
+
+def _resolve_chat_usecase(
+    conn: sqlite3.Connection, chat_id: str, stored_usecase: str
+) -> str:
+    """保存済み usecase がデフォルトのとき、先頭メッセージから補完する。"""
+    normalized = _normalize_usecase(stored_usecase)
+    if normalized not in ("", "/chat"):
+        return normalized
+    row = conn.execute(
+        "SELECT usecase FROM messages"
+        " WHERE chatId = ? AND role != 'system'"
+        " ORDER BY seq ASC LIMIT 1",
+        (chat_id,),
+    ).fetchone()
+    if row and row["usecase"]:
+        return _normalize_usecase(row["usecase"])
+    return "/chat"
+
+
+def create_chat(user_id: str, usecase: str = "/chat") -> dict[str, Any]:
     chat_id = str(uuid.uuid4())
     now = _now()
+    normalized_usecase = _normalize_usecase(usecase)
     with _lock, _connect() as conn:
         conn.execute(
             "INSERT INTO chats (chatId, id, usecase, title, userId, createdDate, updatedDate)"
             " VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (chat_id, f"chat#{chat_id}", "/chat", "", user_id, now, now),
+            (chat_id, f"chat#{chat_id}", normalized_usecase, "", user_id, now, now),
         )
         row = conn.execute(
             "SELECT * FROM chats WHERE chatId = ?", (chat_id,)
@@ -158,7 +184,18 @@ def list_chats(user_id: str) -> list[dict[str, Any]]:
             "SELECT * FROM chats WHERE userId = ? ORDER BY updatedDate DESC",
             (user_id,),
         ).fetchall()
-    return [_row_to_chat(r) for r in rows]
+        chats: list[dict[str, Any]] = []
+        for row in rows:
+            chat = _row_to_chat(row)
+            resolved = _resolve_chat_usecase(conn, row["chatId"], row["usecase"])
+            if resolved != row["usecase"]:
+                conn.execute(
+                    "UPDATE chats SET usecase = ? WHERE chatId = ?",
+                    (resolved, row["chatId"]),
+                )
+            chat["usecase"] = resolved
+            chats.append(chat)
+    return chats
 
 
 def find_chat(chat_id: str, user_id: str) -> dict[str, Any] | None:
@@ -167,7 +204,17 @@ def find_chat(chat_id: str, user_id: str) -> dict[str, Any] | None:
             "SELECT * FROM chats WHERE chatId = ? AND userId = ?",
             (chat_id, user_id),
         ).fetchone()
-    return _row_to_chat(row) if row else None
+        if not row:
+            return None
+        chat = _row_to_chat(row)
+        resolved = _resolve_chat_usecase(conn, row["chatId"], row["usecase"])
+        if resolved != row["usecase"]:
+            conn.execute(
+                "UPDATE chats SET usecase = ? WHERE chatId = ?",
+                (resolved, row["chatId"]),
+            )
+        chat["usecase"] = resolved
+        return chat
 
 
 def update_title(chat_id: str, user_id: str, title: str) -> dict[str, Any] | None:
@@ -227,6 +274,30 @@ def list_messages(chat_id: str, user_id: str) -> list[dict[str, Any]]:
             (chat_id,),
         ).fetchall()
     return [_row_to_message(r) for r in rows]
+
+
+def update_message_extra_data(
+    chat_id: str, user_id: str, message_id: str, extra_data: list[dict[str, Any]]
+) -> dict[str, Any] | None:
+    """メッセージの extraData を更新する（所有者・存在チェック付き）。"""
+    with _lock, _connect() as conn:
+        if _chat_owner(conn, chat_id) != user_id:
+            return None
+        row = conn.execute(
+            "SELECT messageId FROM messages WHERE chatId = ? AND messageId = ?",
+            (chat_id, message_id),
+        ).fetchone()
+        if not row:
+            return None
+        conn.execute(
+            "UPDATE messages SET extraData = ? WHERE chatId = ? AND messageId = ?",
+            (json.dumps(extra_data, ensure_ascii=False), chat_id, message_id),
+        )
+        updated = conn.execute(
+            "SELECT * FROM messages WHERE chatId = ? AND messageId = ?",
+            (chat_id, message_id),
+        ).fetchone()
+    return _row_to_message(updated) if updated else None
 
 
 # ---------------------------------------------------------------------------
