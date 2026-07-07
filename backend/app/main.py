@@ -1639,7 +1639,7 @@ async def generate_image(request: Request) -> Response:
     rag_api_key = os.environ.get("RAG_API_KEY", "local-rag-key")
     headers = {"X-Api-Key": rag_api_key}
     
-    async with httpx.AsyncClient(timeout=120.0) as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         try:
             res = await client.post(sd_app_url, json=sd_payload, headers=headers)
         except httpx.HTTPError as e:
