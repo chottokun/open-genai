@@ -1320,22 +1320,16 @@ async def save_image_result(
 @app.get("/image/health")
 async def image_health() -> JSONResponse:
     """画像生成(SD)サーバの稼働状況。フロントの表示出し分けに使う。"""
-    ok = await image_gen.is_sd_up()
-    return JSONResponse(content={"ok": ok})
-
-
-@app.post("/image/generate")
-async def generate_image(request: Request) -> Response:
-    """源内 Web「画像を生成」ページ向け API（Bedrock Lambda 代替）。"""
-    body = await request.json()
-    params = body.get("params") or {}
+    # sd-app の /health を確認する
+    sd_app_url = os.environ.get("SD_APP_URL", "http://sd-app:8003/invoke")
+    health_url = sd_app_url.replace("/invoke", "/health")
     try:
-        image_base64 = await image_gen.generate_image_base64(params)
-    except ValueError as exc:
-        return JSONResponse(status_code=400, content={"message": str(exc)})
-    except RuntimeError as exc:
-        return JSONResponse(status_code=502, content={"message": str(exc)})
-    return Response(content=image_base64, media_type="text/plain")
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            res = await client.get(health_url)
+        ok = (res.status_code == 200 and res.json().get("status") == "ok")
+    except Exception:
+        ok = False
+    return JSONResponse(content={"ok": ok})
 
 
 @app.post("/predict")
@@ -1600,11 +1594,11 @@ def _safe_path(key: str) -> str:
 
 
 @app.post("/image/generate")
-async def generate_image(request: Request) -> str:
+async def generate_image(request: Request) -> Response:
     """ローカル環境用画像生成プロキシ。
     
     フロントからのリクエストを受け取り、ローカルの sd-app (Stable Diffusion) に
-    プロキシして画像を生成し、Base64 データを返す。
+    プロキシして画像を生成し、Base64 データを Response(text/plain) として返す。
     """
     claims = _claims_from_request(request)
     if not _user_id(claims):
@@ -1667,9 +1661,9 @@ async def generate_image(request: Request) -> str:
         error_msg = data.get("outputs") or "画像が生成されませんでした。"
         raise HTTPException(status_code=500, detail=error_msg)
         
-    # 最初の画像の Base64 文字列をそのまま返す
+    # 最初の画像の Base64 文字列を Response で返す
     b64_image = artifacts[0].get("content")
-    return b64_image
+    return Response(content=b64_image, media_type="text/plain")
 
 
 @app.post("/file/url")
