@@ -12,7 +12,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # requirements.txt のコピーとインストール
 COPY requirements.txt .
-RUN pip install --no-cache-dir --default-timeout=1000 --extra-index-url https://download.pytorch.org/whl/cpu -r requirements.txt
+# GPU (CUDA) 対応版の PyTorch をインストールするため、--extra-index-url を外してインストール
+RUN pip install --no-cache-dir --default-timeout=1000 -r requirements.txt
 
 # アプリコードのコピー
 COPY app/ ./app/
