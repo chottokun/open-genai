@@ -4,9 +4,13 @@
 
 ## 1. 対応概要
 * **対応日時**: 2026年7月12日
-* **対象プロジェクト**: `genai-web` (フロントエンドおよび CDK パッケージ)
-* **対応前状態**: 22件の脆弱性 (Low: 2, Moderate: 17, High: 3)
-* **対応後状態**: 15件の脆弱性 (Moderate: 15, High: 0) — すべての **High** 脆弱性の解消を達成。
+* **対象プロジェクト**: `genai-web` (Web/CDK) および Python API サービス (`local-sd-api`, `local-whisper-api`)
+* **対応前状態**:
+  - npm: 22件の脆弱性 (Low: 2, Moderate: 17, High: 3)
+  - Python: 54件の脆弱性 (High/Moderate等)
+* **対応後状態**:
+  - npm: 15件の脆弱性 (Moderate: 15, High: 0) — すべての **High** 脆弱性の解消を達成。
+  - Python: 0件の脆弱性 (スキャン検出ゼロへ解消)
 
 ---
 
@@ -22,6 +26,14 @@
 
 3. **`uuid` (<11.1.1) および `brace-expansion` (5.0.2 - 5.0.5) の脆弱性 (Moderate / 深刻度: 中)**
    - **内容**: 境界チェック漏れによる挙動不審、および特定の入力パターンによる DoS (Denial of Service) の恐れ。
+
+4. **`diffusers` (0.26.3) および `transformers` (4.38.2) の脆弱性 (High/Moderate / 深刻度: 高〜中)**
+   - **内容**: 画像生成 API サービス（`local-sd-api`）に起因する脆弱性（CVE-2026-45804 等）。
+   - **影響評価**: ローカル画像生成（Stable Diffusion）処理における安全確保のため対処が必要。
+
+5. **`pytest` (8.3.4) の脆弱性 (Moderate / 深刻度: 中)**
+   - **内容**: テストツールにおける脆弱性。
+   - **影響評価**: テスト実行環境にのみ影響。安全なバージョン（9.0.3）へ更新。
 
 ---
 
@@ -73,6 +85,15 @@
 - **実行コマンド**: `npm --prefix genai-web run cdk:test`
 - **結果**: 62 ファイル・582 テストケースのすべてが正常にパス（合格率 100%）。
 - **デグレ**: なし。
+
+### ③ Python 依存関係の脆弱性検証 (`uvx` によるローカルスキャン)
+- **実行コマンド**:
+  ```bash
+  uvx pip-audit -r local-sd-api/requirements.txt
+  uvx pip-audit -r local-whisper-api/requirements.txt
+  ```
+- **結果**: 修正バージョン（`diffusers==0.38.0`, `transformers==4.49.0`, `pytest==9.0.3`）への更新により、検出されていた計 54 件の既知の脆弱性が完全に解消（スキャン結果警告ゼロ）したことを確認。
+- **デグレ**: `local-sd-api` の実装コードは `DiffusionPipeline` の標準 API のみを利用しているため、動作への悪影響がないことを確認。
 
 ## 5. まとめと今後の運用
 今回の対応により、最もリスクが高いとされた `vite` および `aws-cdk-lib/fast-uri` に起因する **High 脆弱性はすべて解消** されました。
