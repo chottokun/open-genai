@@ -64,4 +64,20 @@ describe('useFiles file extension case-insensitivity', () => {
     );
     expect(hasForbiddenExtensionError).toBe(true);
   });
+
+  it('rejects files without extensions (e.g. named "pdf") even if it matches the accepted extension name without dot', async () => {
+    const { result } = renderHook(() => useFiles('test-chat-id-3'));
+
+    const mockFile = new File(['dummy content'], 'pdf', { type: 'application/pdf' });
+
+    await act(async () => {
+      await result.current.uploadFiles([mockFile], fileLimit, ['.pdf']);
+    });
+
+    expect(result.current.errorMessages.length).toBeGreaterThan(0);
+    const hasForbiddenExtensionError = result.current.errorMessages.some(msg =>
+      msg.includes('pdf は許可されていない拡張子です')
+    );
+    expect(hasForbiddenExtensionError).toBe(true);
+  });
 });
