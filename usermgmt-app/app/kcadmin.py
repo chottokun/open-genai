@@ -24,7 +24,7 @@ _ALIASES = {
     "last_name": "lastName",
     "name": "name",
     "displayname": "name",
-    "password": "password",
+    "password": "password",  # nosec B105
     "groups": "groups",
     "group": "groups",
     "enabled": "enabled",

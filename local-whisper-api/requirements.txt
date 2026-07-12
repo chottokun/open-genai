@@ -1,0 +1,7 @@
+fastapi==0.139.0
+uvicorn[standard]==0.34.0
+python-multipart==0.0.31
+faster-whisper==1.1.1
+huggingface-hub==0.28.1
+pytest==9.0.3
+httpx==0.28.1

@@ -1,0 +1,31 @@
+name: npm dependency audit
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - "genai-web/package-lock.json"
+      - ".github/workflows/npm-deps-audit.yml"
+  pull_request:
+    paths:
+      - "genai-web/package-lock.json"
+      - ".github/workflows/npm-deps-audit.yml"
+  workflow_dispatch:
+
+jobs:
+  npm-audit:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: genai-web
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22.22.2"
+          cache: npm
+          cache-dependency-path: genai-web/package-lock.json
+
+      - name: Run npm audit
+        run: npm audit --audit-level=high

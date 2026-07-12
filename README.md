@@ -209,9 +209,7 @@ ollama pull qwen2.5:7b
 cp .env.example .env    # 必要に応じて DEFAULT_MODEL などを編集
 ```
 
-利用したいモデルを増やす場合は `genai-web/packages/web/.env` の
-`VITE_APP_MODEL_IDS`（Ollama のモデル名と一致させる）を編集してください。
-モデルの表示名は `genai-web/packages/common/src/application/model.ts` に定義しています。
+利用したいモデルを増やす場合は、[新規モデルの追加・設定ガイド](file:///home/nobuhiko/Project/open-genai/docs/model-addition-guide.md) を参照し、`litellm_config.yaml` へのモデル登録や、外部クラウドAPI制限ポリシーの考慮、フロントエンド（`genai-web`）での定義追加などを行ってください。
 
 #### LLM バックエンドの差し替え（OpenAI 互換）
 
@@ -465,7 +463,16 @@ docker compose exec rag-app sh -lc 'curl -s -X POST http://localhost:8001/ingest
 - ベクトル DB: Qdrant（`qdrant_data` ボリュームに永続化）
 - 回答生成モデル: `.env` の `RAG_MODEL`（既定 `gpt-oss:20b`）
 
-## 文字起こし / 画像生成
+### 💡 アドバンスド構成: クラウド推論 × ローカル日本語 Embedding のハイブリッド構成
+
+「チャット推論は Google Gemini などの強力なクラウド LLM を利用し、ドキュメントのベクトル化（Embedding）はローカルコンテナ（`embedding_jp_api`による `ruri-v3` 等）でセキュアかつ高速に行う」というハイブリッド構成に対応しています。
+
+この構成を導入することで、機密性の高い文書のベクトル化コストやセキュリティ制限をクリアしつつ、高度な推論を利用可能です。
+
+詳細な構成・設定方法については、以下を参照してください：
+👉 [ハイブリッド RAG 構成・導入ガイド](file:///home/nobuhiko/Project/open-genai/docs/hybrid-rag-guide.md)
+
+## 文字起こし / 画像生成（AI アプリ）
 
 文字起こしは **外部マイクロサービスの「AI アプリ」**（`whisper-app`）として提供しています。  
 画像生成は源内 Web の **「画像を生成」ページ**（`/image`）から利用します（`backend` の `/image/generate` がホスト SD へプロキシ）。
@@ -882,7 +889,7 @@ S3_PUBLIC_ENDPOINT=https://files.example.lg.jp
 
 ## 制限事項（ローカル版）
 
-- 画像生成は源内 Web の **「画像を生成」**（`/image`）を利用します。ホストで A1111 互換 SD サーバ（または `scripts/mock-sd-server.py`）が必要です。
+- 画像生成は源内 Web の **「画像を生成」**（`/image`）を利用します。ローカル環境でも `sd-app` / `local-sd-api` 経由で画像が生成できるように API プロキシを実装済みです（別途 `sd-app` / `local-sd-api` またはホスト上の A1111 互換 SD サーバの起動が必要です）
 - AI アプリの呼び出しは同期形式のみ対応（非同期のポーリング形式は未対応）
 - 添付のうち **動画** はローカル LLM が直接扱えないため未対応（画像・ドキュメントは対応）
 - 認証は SAML（Keycloak）で行います。開発用は HTTP・既定パスワードです。

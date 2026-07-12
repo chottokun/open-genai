@@ -24,7 +24,7 @@ from typing import Any
 from urllib.parse import quote
 
 import httpx
-from fastapi import FastAPI, Header, Query, Request
+from fastapi import FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import (
     FileResponse,
@@ -36,7 +36,7 @@ from fastapi.responses import (
 
 from shared import ssrfguard
 
-from . import audit, auth, image_gen, intauth, llm, ngwords, objstore, policy, storage, teams_store
+from . import audit, auth, image_gen, image_store, intauth, llm, ngwords, objstore, policy, storage, teams_store
 
 # ファイル添付の保存先と、ブラウザから見たバックエンドの公開 URL
 FILES_DIR = os.environ.get("FILES_DIR", "/data/files")
@@ -52,7 +52,6 @@ FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173").rstrip("/
 PUBLIC_PATH_PREFIXES = (
     "/health",
     "/auth/",
-    "/files/",  # 添付ファイルの PUT/GET（img タグ等が Authorization を付けられないため）
     "/docs",
     "/openapi.json",
     "/redoc",
@@ -620,7 +619,7 @@ def _ngword_denied(request: Request, text: str, *, usecase: str = "/chat") -> st
             input_text=text,
             output_text=reason or "",
         )
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001 # nosec B110
         pass
     return reason or "入力に使用できない語句が含まれています。"
 
@@ -812,7 +811,7 @@ async def _rehost_artifacts(
                     f"{name} -> {'objstore' if presigned else 'source-url'}"
                 ),
             )
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001 # nosec B110
             pass
 
     if isinstance(outputs, str) and (links or carrier_names):
@@ -928,12 +927,17 @@ async def auth_middleware(request: Request, call_next):
     ):
         return await call_next(request)
 
+    # /files/ へのリクエスト（GET/PUT）はクエリパラメータの token による署名検証を行うため、
+    # 共通の Bearer ヘッダ認証からは除外する。
+    if path.startswith("/files/"):
+        return await call_next(request)
+
     authz = request.headers.get("authorization", "")
     if authz.startswith("Bearer "):
         try:
             auth.verify_token(authz[7:])
             return await call_next(request)
-        except Exception:  # noqa: BLE001 - トークン不正は 401 に集約
+        except Exception:  # noqa: BLE001 # nosec B110 - トークン不正は 401 に集約
             pass
 
     return JSONResponse(
@@ -958,7 +962,7 @@ async def audit_access_middleware(request: Request, call_next):
             status=response.status_code,
             latency_ms=int((time.monotonic() - started) * 1000),
         )
-    except Exception:  # noqa: BLE001 - ログ失敗は本処理に影響させない
+    except Exception:  # noqa: BLE001 # nosec B110 - ログ失敗は本処理に影響させない
         pass
     return response
 
@@ -1212,7 +1216,77 @@ async def create_messages(chat_id: str, request: Request) -> JSONResponse:
     return JSONResponse(content={"messages": recorded})
 
 
-IMAGE_RESULT_EXTRA_NAME = "open-genai-generated-image"
+ALLOW_CLOUD_API = os.environ.get("ALLOW_CLOUD_API", "false").lower() == "true"
+
+
+_litellm_models_cache: list[dict[str, Any]] | None = None
+_litellm_cache_time: float = 0.0
+LITELLM_CACHE_TTL = 60.0  # キャッシュ有効期限（秒）
+
+
+def _fetch_litellm_models_sync() -> list[dict[str, Any]]:
+    global _litellm_models_cache, _litellm_cache_time
+    now = time.time()
+    if _litellm_models_cache is not None and (now - _litellm_cache_time) < LITELLM_CACHE_TTL:
+        return _litellm_models_cache
+
+    from .llm import OPENAI_BASE_URL
+    base_url = OPENAI_BASE_URL.replace("/v1", "").rstrip("/")
+    try:
+        with httpx.Client(timeout=2.0) as client:
+            res = client.get(f"{base_url}/model/info")
+            if res.status_code == 200:
+                data = res.json()
+                _litellm_models_cache = data.get("data", [])
+                _litellm_cache_time = now
+                return _litellm_models_cache
+    except Exception as e:
+        print(f"[_fetch_litellm_models_sync] LiteLLMからのモデル情報取得に失敗: {e}")
+
+    return _litellm_models_cache or []
+
+
+def _cloud_model_denied(model: str | dict[str, Any] | None) -> str | None:
+    if ALLOW_CLOUD_API:
+        return None
+    if not model:
+        return None
+    model_name = ""
+    if isinstance(model, dict):
+        model_name = str(model.get("modelId") or "")
+    else:
+        model_name = str(model)
+    if not model_name:
+        return None
+
+    # 1. まずローカルのハードコードされたキーワードでのチェックを行う（LiteLLMが落ちている場合のフォールバック）
+    local_keywords = ["gemma4", "local-ollama", "ruri-v3", "localhost", "qwen2.5", "sakura"]
+    is_local = any(kw in model_name for kw in local_keywords)
+    if is_local:
+        return None
+
+    # 2. 次に LiteLLM のモデル情報と連動した判定を行う
+    litellm_models = _fetch_litellm_models_sync()
+    for m in litellm_models:
+        m_info = m.get("model_info", {})
+        # model_name（例: 'sakura-gpt-oss-120b'）がモデル設定のキー、または model_info.get("model_name") と一致するか
+        if m_info.get("model_name") == model_name or m.get("model_name") == model_name:
+            lt_params = m.get("litellm_params", {})
+            api_base = lt_params.get("api_base")
+            real_model = lt_params.get("model") or ""
+
+            # api_base が存在する場合、そのURLがローカルまたは安全なドメインかをチェックする
+            if api_base:
+                safe_domains = ["localhost", "127.0.0.1", "host.docker.internal", "embedding-jp-api", "local-sd-api", "sakura.ad.jp"]
+                if any(dom in str(api_base) for dom in safe_domains):
+                    return None
+            
+            # もし `ollama/` プレフィックスのモデルならローカルとみなす
+            if "ollama/" in str(real_model):
+                return None
+
+    # 判定で見つからない、またはクラウドAPIとみなされる場合はブロック
+    return f"外部クラウドAPIの利用が制限されています（対象モデル: {model}）。ローカルモデルを使用してください。"
 
 
 @app.put("/chats/{chat_id}/messages/{message_id}/image-result")
@@ -1225,43 +1299,19 @@ async def save_image_result(
     images_b64 = body.get("images") or []
     meta = body.get("meta") or {}
 
-    stored_images: list[dict[str, str]] = []
-    for b64 in images_b64:
-        if not b64:
-            continue
-        raw_str = b64.split(",", 1)[1] if isinstance(b64, str) and "," in b64 else b64
-        try:
-            raw = base64.b64decode(raw_str)
-        except (ValueError, TypeError):
-            continue
-        key = f"image-gen/{chat_id}/{message_id}/{uuid.uuid4().hex}.png"
-        full = _safe_path(key)
-        os.makedirs(os.path.dirname(full), exist_ok=True)
-        with open(full, "wb") as f:
-            f.write(raw)
-        stored_images.append({"fileUrl": f"{PUBLIC_BASE_URL}/files/{key}"})
-
-    if not stored_images:
-        return JSONResponse(status_code=400, content={"message": "images are empty"})
-
-    payload = {"version": 1, **meta, "images": stored_images}
-    extra_data = [
-        {
-            "type": "json",
-            "name": IMAGE_RESULT_EXTRA_NAME,
-            "source": {
-                "type": "json",
-                "mediaType": "application/json",
-                "data": json.dumps(payload, ensure_ascii=False),
-            },
-        }
-    ]
-    updated = storage.update_message_extra_data(
-        chat_id, user_id, message_id, extra_data
-    )
-    if not updated:
-        return JSONResponse(status_code=404, content={"message": "message not found"})
-    return JSONResponse(content={"message": updated})
+    try:
+        updated = await image_store.persist_image_result(
+            chat_id=chat_id,
+            message_id=message_id,
+            user_id=user_id,
+            images_b64=images_b64,
+            meta=meta
+        )
+        if not updated:
+            return JSONResponse(status_code=404, content={"message": "message not found"})
+        return JSONResponse(content={"message": updated})
+    except ValueError as e:
+        return JSONResponse(status_code=400, content={"message": str(e)})
 
 
 # ---------------------------------------------------------------------------
@@ -1270,35 +1320,33 @@ async def save_image_result(
 @app.get("/image/health")
 async def image_health() -> JSONResponse:
     """画像生成(SD)サーバの稼働状況。フロントの表示出し分けに使う。"""
-    ok = await image_gen.is_sd_up()
-    return JSONResponse(content={"ok": ok})
-
-
-@app.post("/image/generate")
-async def generate_image(request: Request) -> Response:
-    """源内 Web「画像を生成」ページ向け API（Bedrock Lambda 代替）。"""
-    body = await request.json()
-    params = body.get("params") or {}
+    # sd-app の /health を確認する
+    sd_app_url = os.environ.get("SD_APP_URL", "http://sd-app:8003/invoke")
+    health_url = sd_app_url.replace("/invoke", "/health")
     try:
-        image_base64 = await image_gen.generate_image_base64(params)
-    except ValueError as exc:
-        return JSONResponse(status_code=400, content={"message": str(exc)})
-    except RuntimeError as exc:
-        return JSONResponse(status_code=502, content={"message": str(exc)})
-    return Response(content=image_base64, media_type="text/plain")
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            res = await client.get(health_url)
+        ok = (res.status_code == 200 and res.json().get("status") == "ok")
+    except Exception:
+        ok = False
+    return JSONResponse(content={"ok": ok})
 
 
 @app.post("/predict")
 async def predict(request: Request) -> Response:
     body = await request.json()
+    model = body.get("model")
+    cloud_denied = _cloud_model_denied(model)
+    if cloud_denied:
+        return JSONResponse(status_code=403, content={"error": cloud_denied})
     messages = body.get("messages", [])
-    denied = _model_denied(_claims_from_request(request), body.get("model"))
+    denied = _model_denied(_claims_from_request(request), model)
     if denied:
         return JSONResponse(status_code=403, content={"error": denied})
     ng = _ngword_denied(request, _last_user_text(messages))
     if ng:
         return JSONResponse(status_code=403, content={"error": ng})
-    text = await llm.chat_once(messages, body.get("model"))
+    text = await llm.chat_once(messages, model)
     return JSONResponse(content=text)
 
 
@@ -1318,12 +1366,13 @@ async def predict_title(request: Request) -> str:
     claims = _claims_from_request(request)
     user_id = _user_id(claims)
     body = await request.json()
-    # 許可外モデルではタイトル生成もしない（空タイトルを返す）
-    if _model_denied(claims, body.get("model")):
+    model = body.get("model")
+    # 許可外モデルやクラウド制限モデルではタイトル生成もしない（空タイトルを返す）
+    if _model_denied(claims, model) or _cloud_model_denied(model):
         return ""
     prompt = body.get("prompt", "")
     messages = [{"role": "user", "content": prompt}]
-    raw = await llm.chat_once(messages, body.get("model"))
+    raw = await llm.chat_once(messages, model)
     title = _clean_title(raw)
 
     # クラウド版同様、生成したタイトルをサーバ側でチャットに保存する
@@ -1437,6 +1486,8 @@ async def predict_stream(request: Request) -> StreamingResponse:
     # 利用ポリシーで許可されていないモデルはブロック（エラー行を1件流して終了）
     denied = _model_denied(_claims_from_request(request), model)
     if not denied:
+        denied = _cloud_model_denied(model)
+    if not denied:
         denied = _ngword_denied(request, _last_user_text(messages))
     if denied:
         async def _blocked():
@@ -1531,27 +1582,137 @@ async def export_audit_logs(request: Request) -> Response:
 # ---------------------------------------------------------------------------
 def _safe_path(key: str) -> str:
     """FILES_DIR 配下に収まる安全な絶対パスへ解決する（パストラバーサル防止）。"""
-    full = os.path.normpath(os.path.join(FILES_DIR, key))
-    if not full.startswith(os.path.abspath(FILES_DIR) + os.sep) and full != os.path.abspath(
-        FILES_DIR
-    ):
+    # パストラバーサル対策: 親ディレクトリへの参照や絶対パスを無効化する
+    if ".." in key or key.startswith("/") or "\x00" in key:
+        raise ValueError("invalid path")
+
+    base = os.path.abspath(FILES_DIR)
+    full = os.path.normpath(os.path.join(base, key))
+    if not full.startswith(base + os.sep) and full != base:
         raise ValueError("invalid path")
     return full
+
+
+@app.post("/image/generate")
+async def generate_image(request: Request) -> Response:
+    """ローカル環境用画像生成プロキシ。
+    
+    フロントからのリクエストを受け取り、ローカルの sd-app (Stable Diffusion) に
+    プロキシして画像を生成し、Base64 データを Response(text/plain) として返す。
+    """
+    claims = _claims_from_request(request)
+    if not _user_id(claims):
+        raise HTTPException(status_code=401, detail="認証が必要です")
+
+    body = await request.json()
+    params = body.get("params", {})
+    
+    # フロントエンドのパラメータからプロンプトを組み立てる
+    text_prompts = params.get("textPrompt", [])
+    prompt = ""
+    negative_prompt = ""
+    for p in text_prompts:
+        text = p.get("text", "")
+        weight = p.get("weight", 1)
+        if weight >= 0:
+            prompt += text + " "
+        else:
+            negative_prompt += text + " "
+            
+    prompt = prompt.strip()
+    negative_prompt = negative_prompt.strip()
+    
+    # サイズ (幅を使用、なければ 512)
+    size = params.get("width") or params.get("height") or 512
+    # ステップ数
+    steps = params.get("step") or 20
+    
+    # sd-app の呼び出しペイロード
+    sd_payload = {
+        "prompt": prompt,
+        "negative_prompt": negative_prompt,
+        "size": size,
+        "steps": steps
+    }
+    
+    sd_app_url = os.environ.get("SD_APP_URL", "http://sd-app:8003/invoke")
+    rag_api_key = os.environ.get("RAG_API_KEY", "local-rag-key")
+    headers = {"X-Api-Key": rag_api_key}
+    
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        try:
+            res = await client.post(sd_app_url, json=sd_payload, headers=headers)
+        except httpx.HTTPError as e:
+            raise HTTPException(
+                status_code=502,
+                detail=f"画像生成アプリ（sd-app）への接続に失敗しました: {e}"
+            )
+            
+    if res.status_code != 200:
+        raise HTTPException(
+            status_code=res.status_code,
+            detail=f"画像生成に失敗しました (status: {res.status_code}, detail: {res.text})"
+        )
+        
+    data = res.json()
+    artifacts = data.get("artifacts") or []
+    if not artifacts:
+        # sd-app がエラーメッセージを outputs に入れている場合がある
+        error_msg = data.get("outputs") or "画像が生成されませんでした。"
+        raise HTTPException(status_code=500, detail=error_msg)
+        
+    # 最初の画像の Base64 文字列を Response で返す
+    b64_image = artifacts[0].get("content")
+    return Response(content=b64_image, media_type="text/plain")
 
 
 @app.post("/file/url")
 async def get_upload_url(request: Request) -> str:
     """アップロード先 URL を発行する（源内 Web の署名付き URL 取得を代替）。"""
+    claims = _claims_from_request(request)
+    if not _user_id(claims):
+        return _forbidden("認証が必要です")
+
     body = await request.json()
     filename = body.get("filename") or f"file.{body.get('mediaFormat', 'bin')}"
     # ファイル名はそのまま使うとパス衝突するため UUID ディレクトリに格納する
     safe_name = os.path.basename(filename)
     key = f"{uuid.uuid4()}/{safe_name}"
-    return f"{PUBLIC_BASE_URL}/files/{key}"
+    
+    # 有効期限 1時間 (3600秒) のアップロード専用ワンタイムトークンを生成
+    token = auth.mint_file_token(key, sub="file_upload", ttl_seconds=3600)
+    return f"{PUBLIC_BASE_URL}/files/{key}?token={token}"
+
+
+@app.get("/file/url")
+async def get_download_url(
+    request: Request,
+    bucketName: str = Query(...),
+    filePrefix: str = Query(...),
+    region: str = Query(...)
+) -> str:
+    """ダウンロード用のワンタイム署名付き URL を発行する。"""
+    claims = _claims_from_request(request)
+    if not _user_id(claims):
+        return _forbidden("認証が必要です")
+
+    # ダウンロード用トークン (有効期限15分 = 900秒)
+    token = auth.mint_file_token(filePrefix, sub="file_access", ttl_seconds=900)
+    return f"{PUBLIC_BASE_URL}/files/{filePrefix}?token={token}"
 
 
 @app.put("/files/{key:path}")
-async def put_file(key: str, request: Request) -> dict[str, Any]:
+async def put_file(key: str, request: Request, token: str = Query(None)) -> dict[str, Any]:
+    if not token:
+        return JSONResponse(status_code=401, content={"error": "missing token"})
+
+    try:
+        payload = auth.verify_token(token)
+        if payload.get("sub") != "file_upload" or payload.get("path") != key:
+            return JSONResponse(status_code=403, content={"error": "invalid token"})
+    except Exception:
+        return JSONResponse(status_code=401, content={"error": "expired or invalid token"})
+
     full = _safe_path(key)
     os.makedirs(os.path.dirname(full), exist_ok=True)
     data = await request.body()
@@ -1561,7 +1722,17 @@ async def put_file(key: str, request: Request) -> dict[str, Any]:
 
 
 @app.get("/files/{key:path}")
-async def get_file(key: str) -> FileResponse:
+async def get_file(key: str, token: str = Query(None)) -> FileResponse:
+    if not token:
+        return JSONResponse(status_code=401, content={"error": "missing token"})
+
+    try:
+        payload = auth.verify_token(token)
+        if payload.get("sub") != "file_access" or payload.get("path") != key:
+            return JSONResponse(status_code=403, content={"error": "invalid token"})
+    except Exception:
+        return JSONResponse(status_code=401, content={"error": "expired or invalid token"})
+
     full = _safe_path(key)
     if not os.path.isfile(full):
         return JSONResponse(status_code=404, content={"message": "file not found"})
@@ -1685,6 +1856,17 @@ async def invoke_exapp(request: Request) -> JSONResponse:
         and not teams_store.is_team_member(team_id, user_id)
     ):
         return _forbidden("このアプリを実行する権限がありません")
+
+    # config のバリデーション
+    config_raw = app_def.get("config", "") or ""
+    if config_raw:
+        try:
+            json.loads(config_raw)
+        except json.JSONDecodeError:
+            return JSONResponse(
+                status_code=400,
+                content={"error": f"AI アプリの設定(config)が不正な JSON 形式です: {ex_app_id}"},
+            )
 
     # 禁止ワード/機密情報の入力制限（管理系 exApp はルール設定で語を含むため除外）
     if ex_app_id not in ADMIN_ONLY_EXAPP_IDS:
@@ -1824,6 +2006,17 @@ async def get_exapp_schema(request: Request) -> JSONResponse:
         and not teams_store.is_team_member(team_id, user_id)
     ):
         return _forbidden("このアプリを参照する権限がありません")
+
+    # config のバリデーション
+    config_raw = app_def.get("config", "") or ""
+    if config_raw:
+        try:
+            json.loads(config_raw)
+        except json.JSONDecodeError:
+            return JSONResponse(
+                status_code=400,
+                content={"error": f"AI アプリの設定(config)が不正な JSON 形式です: {ex_app_id}"},
+            )
 
     endpoint = app_def.get("endpoint", "")
     if endpoint.endswith("/invoke"):

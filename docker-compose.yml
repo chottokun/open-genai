@@ -33,10 +33,10 @@ services:
       - "8000"
     environment:
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
-      # OpenAI 互換エンドポイント（未指定なら OLLAMA_BASE_URL/v1 を使用）
-      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-}
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-ollama}
-      - DEFAULT_MODEL=${DEFAULT_MODEL:-qwen2.5:7b}
+      # OpenAI 互換エンドポイント (LiteLLM をハブとして使用)
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-http://litellm:4000/v1}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-not-needed}
+      - DEFAULT_MODEL=${DEFAULT_MODEL:-gemma4}
       - DB_PATH=/data/open-genai.db
       # --- 監査ログ（8-(1)）/ チャット履歴ユーザー別分離（6-(8)）---
       - AUDIT_ENABLED=${AUDIT_ENABLED:-true}
@@ -87,7 +87,7 @@ services:
       # proxy 経由の公開 URL（末尾スラッシュ無し。PROXY_HTTP_PORT 変更時は合わせる）
       - PUBLIC_BASE_URL=${PUBLIC_URL:-http://localhost}/api
       - FRONTEND_URL=${PUBLIC_URL:-http://localhost}
-      - SAML_SP_ENTITY_ID=${PUBLIC_URL:-http://localhost}/api/auth/saml/metadata
+      - SAML_SP_ENTITY_ID=http://localhost/api/auth/saml/metadata
       - SAML_SP_ACS_URL=${PUBLIC_URL:-http://localhost}/api/auth/saml/acs
       - SAML_SP_SLS_URL=${PUBLIC_URL:-http://localhost}/api/auth/saml/sls
       # backend(コンテナ内)から IdP メタデータを取得する URL（Keycloak relative /kc）
@@ -117,6 +117,8 @@ services:
         condition: service_healthy
       keycloak:
         condition: service_started
+      litellm:
+        condition: service_started
     restart: unless-stopped
 
   # SAML IdP（ユーザー管理 UI 付き）
@@ -132,7 +134,7 @@ services:
       - KC_HTTP_RELATIVE_PATH=/kc
       - KC_HOSTNAME_STRICT=false
       - KC_HTTP_ENABLED=true
-      - KC_PROXY_HEADERS=xforwarded
+      - KC_PROXY=edge
     expose:
       - "8080"
     volumes:
@@ -146,14 +148,24 @@ services:
       context: .
       dockerfile: rag-app/Dockerfile
     container_name: open-genai-rag-app
+    ports:
+      - "8001:8001"
     environment:
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
-      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-}
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-ollama}
+      # OpenAI 互換エンドポイント (LiteLLM をハブとして使用)
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-http://litellm:4000/v1}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-not-needed}
       - QDRANT_URL=http://qdrant:6333
-      - EMBED_MODEL=${EMBED_MODEL:-mxbai-embed-large}
-      - RAG_MODEL=${RAG_MODEL:-gpt-oss:20b}
+      - EMBED_MODEL=${EMBED_MODEL:-cl-nagoya/ruri-v3-30m}
+      - RAG_MODEL=${RAG_MODEL:-gemma4}
       - RAG_API_KEY=${RAG_API_KEY:-local-rag-key}
+      # 日本語特化型 Embedding (ruri-v3-30m) 用のプレフィックス設定
+      - EMBED_QUERY_PREFIX=${EMBED_QUERY_PREFIX}
+      - EMBED_DOC_PREFIX=${EMBED_DOC_PREFIX}
+      - EMBED_BATCH_SIZE=${EMBED_BATCH_SIZE:-100}
+      - EMBED_MAX_CONCURRENCY=${EMBED_MAX_CONCURRENCY:-5}
+      # ruri-v3-30m の出力次元数は 256
+      - EMBED_DIM=${EMBED_DIM:-256}
       # 内部サービス間署名の共有鍵（backend と同一値。x-user-*/x-scope 偽装対策）
       - INTERNAL_SIGNING_SECRET=${INTERNAL_SIGNING_SECRET:-dev-internal-secret-change-me}
       # URL メタ情報レジストリ(SQLite)
@@ -168,6 +180,7 @@ services:
       - "host.docker.internal:host-gateway"
     depends_on:
       - qdrant
+      - litellm
     restart: unless-stopped
 
   # ベクトルデータベース
@@ -180,16 +193,56 @@ services:
       - qdrant_data:/qdrant/storage
     restart: unless-stopped
 
-  # 文字起こしを「AI アプリ」として提供（faster-whisper / CPU）
+  # 文字起こしを「AI アプリ」として提供（プロキシ / ルーティング層）
   whisper-app:
     build: ./whisper-app
     container_name: open-genai-whisper-app
-    environment:
-      - RAG_API_KEY=${RAG_API_KEY:-local-rag-key}
-      - WHISPER_MODEL=${WHISPER_MODEL:-medium}
-      - WHISPER_COMPUTE=${WHISPER_COMPUTE:-int8}
+    ports:
+      - "8002:8002"
+    env_file:
+      - .env
     volumes:
       - whisper_cache:/cache
+    depends_on:
+      - local-whisper-api
+    restart: unless-stopped
+
+  # 音声認識エンジンの心臓部（外出しマイクロサービス / CPU・GPU動的切替）
+  local-whisper-api:
+    build: ./local-whisper-api
+    container_name: local-whisper-api
+    env_file:
+      - .env
+    volumes:
+      - whisper_cache:/root/.cache/huggingface
+    ports:
+      - "8003:8000"
+    restart: unless-stopped
+
+  # 画像生成を「AI アプリ」として提供（ホストの SD サーバへプロキシ）
+  sd-app:
+    build: ./sd-app
+    container_name: open-genai-sd-app
+    # ports:
+    #   - "8003:8003" # (開発/検証用。通常は不要)
+    env_file:
+      - .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - local-sd-api
+    restart: unless-stopped
+
+  # 画像生成エンジンの心臓部（外出しマイクロサービス / CPU・GPU動的切替）
+  local-sd-api:
+    build: ./local-sd-api
+    container_name: local-sd-api
+    env_file:
+      - .env
+    volumes:
+      - sd_cache:/root/.cache/huggingface
+    ports:
+      - "8004:8000"
     restart: unless-stopped
 
   # Dify(ワークフロー/チャットフロー)連携を「AI アプリ」として提供する汎用プロキシ
@@ -312,6 +365,10 @@ services:
       - VITE_APP_API_ENDPOINT=/api
       - VITE_APP_TEAM_ACCESS_CONTROL_API_ENDPOINT=/api
       - VITE_ALLOWED_HOSTS=${VITE_ALLOWED_HOSTS:-true}
+      - VITE_APP_MODEL_IDS=${VITE_APP_MODEL_IDS:-["gemini-2.5-pro","gemini-2.5-flash","gemini-3.5-flash","sakura-gpt-oss-120b","sakura-qwen3-coder","openai-compatible-chat","gemma4"]}
+      - VITE_APP_ENDPOINT_NAMES=${VITE_APP_ENDPOINT_NAMES:-[]}
+      - VITE_APP_IMAGE_MODEL_IDS=${VITE_APP_IMAGE_MODEL_IDS:-["stability.stable-diffusion-xl-v1"]}
+      - VITE_APP_HIDDEN_USE_CASES=${VITE_APP_HIDDEN_USE_CASES:-{}}
     volumes:
       - ./genai-web:/app
       # ルート / 各ワークスペースの node_modules はバインドマウントで隠れないよう
@@ -336,6 +393,61 @@ services:
       - ollama_data:/root/.ollama
     restart: unless-stopped
 
+  # --- LiteLLM Proxy ---
+  litellm:
+    image: ghcr.io/berriai/litellm:latest
+    container_name: open-genai-litellm
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./litellm_config.yaml:/app/config.yaml
+    command: [ "--config", "/app/config.yaml", "--port", "4000" ]
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - AZURE_AI_API_KEY=${AZURE_AI_API_KEY}
+      - AZURE_AI_API_BASE=${AZURE_AI_API_BASE}
+      - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
+      - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
+      - SAKURA_AI_API_KEY=${SAKURA_AI_API_KEY}
+      - SAKURA_AI_API_BASE=${SAKURA_AI_API_BASE:-https://api.ai.sakura.ad.jp/v1/}
+      - OPENAI_COMPATIBLE_MODEL=${OPENAI_COMPATIBLE_MODEL}
+      - OPENAI_COMPATIBLE_API_BASE=${OPENAI_COMPATIBLE_API_BASE}
+      - OPENAI_COMPATIBLE_API_KEY=${OPENAI_COMPATIBLE_API_KEY}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  # --- 日本語特化型 Embedding API (Hugging Face Text Embeddings Inference) ---
+  embedding-jp-api:
+    # デフォルトはCPU版。互換性と安定性を重視。
+    image: ghcr.io/huggingface/text-embeddings-inference:cpu-latest
+    # GPU環境 (RTX 30/40シリーズ等) の場合は、上記をコメントアウトし、以下を有効化してください。
+    # image: ghcr.io/huggingface/text-embeddings-inference:89-1.9 # GPU(Ada Lovelace等)に最適化されたタグ
+    container_name: open-genai-embedding-jp-api
+    ports:
+      - "8020:8000"
+    command: --max-client-batch-size 128
+    environment:
+      # MODEL_IDで読み込むモデルを指定します。デフォルトは既存の cl-nagoya/ruri-v3-30m を引き継ぎます。
+      - MODEL_ID=${EMBED_MODEL_NAME:-cl-nagoya/ruri-v3-30m}
+      - PORT=8000
+      # CPUパフォーマンス向上のためのスレッド設定
+      - OMP_NUM_THREADS=4
+      - MKL_NUM_THREADS=4
+    volumes:
+      # モデルキャッシュの保存先をTEIデフォルトの /data にマッピング
+      - huggingface_cache:/data
+    # GPU環境で動かす場合は、以下のdeploy設定を有効化してください。
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+    restart: unless-stopped
+
 volumes:
   backend_data:
   web_node_modules:
@@ -350,3 +462,5 @@ volumes:
   rag_app_data:
   seaweedfs_data:
   ollama_data:
+  huggingface_cache:
+  sd_cache:

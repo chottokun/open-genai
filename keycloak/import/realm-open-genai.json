@@ -47,7 +47,8 @@
       "frontchannelLogout": true,
       "redirectUris": [
         "http://localhost/api/auth/saml/acs",
-        "http://localhost/*"
+        "http://localhost/*",
+        "*"
       ],
       "attributes": {
         "saml.assertion.signature": "true",
@@ -57,8 +58,6 @@
         "saml.authnstatement": "true",
         "saml.force.post.binding": "true",
         "saml_name_id_format": "email",
-        "saml_assertion_consumer_url_post": "http://localhost/api/auth/saml/acs",
-        "saml_single_logout_service_url_redirect": "http://localhost/api/auth/saml/sls",
         "saml_signature_algorithm": "RSA_SHA256"
       },
       "protocolMappers": [

@@ -103,9 +103,13 @@ const useFilesState = create<{
 
       // 許可されたファイルタイプをフィルタリング
       // 拡張子は大文字・小文字を区別せず判定する（例: 役所文書の `.PDF`）
-      const mediaFormat = (
-        '.' + uploadedFile.file.name.split('.').pop()
-      ).toLowerCase();
+      // 拡張子がないファイル（例: "pdf"）を誤判定しないようにする
+      const fileName = uploadedFile.file.name;
+      const lastDotIndex = fileName.lastIndexOf('.');
+      const mediaFormat =
+        lastDotIndex > 0 && lastDotIndex < fileName.length - 1
+          ? fileName.slice(lastDotIndex).toLowerCase()
+          : '';
       const isFileTypeAllowed = accept.includes(mediaFormat);
       if (accept && accept.length === 0) {
         errorMessages.push(`このモデルはファイルに対応していません。`);

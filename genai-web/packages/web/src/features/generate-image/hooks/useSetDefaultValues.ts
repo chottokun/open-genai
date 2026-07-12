@@ -16,8 +16,8 @@ export const useSetDefaultValues = () => {
   const modelId = getModelId();
 
   useEffect(() => {
-    const defaultModelId = !modelId ? modelIds[0] : modelId;
-    const defaultImageGenModelId = !imageGenModelId ? imageGenModelIds[0] : imageGenModelId;
+    const defaultModelId = !modelId ? (modelIds[0] ?? '') : modelId;
+    const defaultImageGenModelId = !imageGenModelId ? (imageGenModelIds[0] ?? '') : imageGenModelId;
 
     if (search !== '') {
       const params = Object.fromEntries(

@@ -1,0 +1,15 @@
+services:
+  # ローカル画像生成（local-sd-api）で GPU を使用する構成を追加
+  local-sd-api:
+    build:
+      context: ./local-sd-api
+      dockerfile: Dockerfile.gpu
+    environment:
+      - IMAGE_INFERENCE_DEVICE=cuda
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

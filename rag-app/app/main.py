@@ -79,7 +79,7 @@ async def ingest_documents(
     上書きとなり重複しない（重複排除）。tags は分類用のフラットなラベル配列。
     """
     tags = [t for t in (tags or []) if t]
-    items: list[dict[str, Any]] = []
+    all_chunks: list[dict[str, Any]] = []
     seen: set[str] = set()
     for doc in docs:
         text = doc.get("text", "")
@@ -89,21 +89,30 @@ async def ingest_documents(
             if cid in seen:
                 continue  # 同一リクエスト内の重複も排除
             seen.add(cid)
-            vector = await embeddings.embed(chunk)
-            items.append(
-                {
-                    "id": cid,
-                    "vector": vector,
-                    "payload": {
-                        "text": chunk,
-                        "source": source,
-                        "scope": scope,
-                        "tags": tags,
-                    },
-                }
-            )
-    if not items:
+            all_chunks.append({"id": cid, "text": chunk, "source": source})
+
+    if not all_chunks:
         return 0
+
+    # バッチ埋め込み
+    texts = [c["text"] for c in all_chunks]
+    vectors = await embeddings.embed(texts)
+
+    items: list[dict[str, Any]] = []
+    for chunk_info, vec in zip(all_chunks, vectors):
+        items.append(
+            {
+                "id": chunk_info["id"],
+                "vector": vec,
+                "payload": {
+                    "text": chunk_info["text"],
+                    "source": chunk_info["source"],
+                    "scope": scope,
+                    "tags": tags,
+                },
+            }
+        )
+
     return await vectorstore.upsert(items)
 
 
@@ -172,10 +181,16 @@ async def ephemeral_search(
             chunks.append((doc.get("source", "uploaded"), chunk))
     if not chunks:
         return []
-    qvec = await embeddings.embed(question, is_query=True)
+
+    # 質問と全チャンクをまとめて埋め込み（質問は is_query=True が必要なので分ける）
+    qvec_task = embeddings.embed(question, is_query=True)
+    texts = [c[1] for c in chunks]
+    vecs_task = embeddings.embed(texts)
+
+    qvec, vecs = await asyncio.gather(qvec_task, vecs_task)
+
     scored: list[dict[str, Any]] = []
-    for source, text in chunks:
-        vec = await embeddings.embed(text)
+    for (source, text), vec in zip(chunks, vecs):
         scored.append(
             {"score": _cosine(qvec, vec), "payload": {"text": text, "source": source}}
         )
@@ -458,6 +473,7 @@ async def ingest(request: Request, x_api_key: str | None = Header(default=None))
     body = await request.json()
     docs = body.get("documents", [])
     scope = (body.get("scope") or DEFAULT_SCOPE).strip()
+    await vectorstore.ensure_collection()
     tags = _parse_tags(body.get("tags"))
     added = await ingest_documents(docs, scope, tags)
     return {"added_chunks": added, "total_chunks": await vectorstore.count()}

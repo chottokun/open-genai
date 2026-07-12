@@ -77,7 +77,7 @@ def _read_policy() -> dict[str, Any]:
             data = json.loads(row[0])
             if isinstance(data, dict):
                 return data
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001 # nosec B110
         pass
     return dict(_DEFAULT_POLICY)
 

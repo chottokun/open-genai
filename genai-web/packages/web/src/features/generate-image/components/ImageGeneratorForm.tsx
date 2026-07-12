@@ -186,7 +186,7 @@ export const ImageGeneratorForm = (props: Props) => {
           labelClassName='text-std-16B-170 mt-0!'
           isVertical
           isFullWidth
-          value={imageGenModelId}
+          value={imageGenModelId ?? ''}
           onChange={setImageGenModelId}
           options={imageGenModelIds.map((m) => {
             return { value: m, label: findModelDisplayNameByModelId(m) };
