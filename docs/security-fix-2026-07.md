@@ -89,10 +89,10 @@
 ### ③ Python 依存関係の脆弱性検証 (`uvx` によるローカルスキャン)
 - **実行コマンド**:
   ```bash
-  uvx pip-audit -r local-sd-api/requirements.txt
-  uvx pip-audit -r local-whisper-api/requirements.txt
+  uvx --python 3.12 pip-audit -r local-sd-api/requirements.txt
+  uvx --python 3.12 pip-audit -r local-whisper-api/requirements.txt
   ```
-- **結果**: 修正バージョン（`diffusers==0.38.0`, `transformers==4.49.0`, `pytest==9.0.3`）への更新により、検出されていた計 54 件の既知の脆弱性が完全に解消（スキャン結果警告ゼロ）したことを確認。
+- **結果**: 最終的な解決バージョン（`diffusers==0.39.0`, `transformers==5.13.1`, `torch==2.13.0`, `pytest==9.1.1`, `huggingface-hub==1.23.0`）への固定・更新により、検出されていた計 54 件の既知の脆弱性が完全に解消（警告ゼロ）したことを確認。
 - **デグレ**: `local-sd-api` の実装コードは `DiffusionPipeline` の標準 API のみを利用しているため、動作への悪影響がないことを確認。
 
 ## 5. まとめと今後の運用
