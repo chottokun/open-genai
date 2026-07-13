@@ -134,7 +134,7 @@ describe('TeamAppEditForm', () => {
         name: /APIリクエストのデータ形式/,
       }) as HTMLTextAreaElement;
       expect(textarea).toBeDefined();
-      expect(textarea.getAttribute('required')).toBe('');
+      expect(textarea.getAttribute('required')).toBeNull();
       expect(textarea.value).toBe('{"test": "data"}');
     });
 
@@ -447,8 +447,8 @@ describe('TeamAppEditForm', () => {
 
       const endpointInput = screen.getByRole('textbox', { name: /APIエンドポイントのURL/ });
       await user.clear(endpointInput);
-      // Use http instead of https to trigger schema validation error
-      fillInput(endpointInput, 'http://invalid.example.com');
+      // Use ftp instead of http/https to trigger schema validation error (since http is allowed in Open GENAI)
+      fillInput(endpointInput, 'ftp://invalid.example.com');
 
       const submitButton = screen.getByRole('button', { name: '更新' });
       await user.click(submitButton);
