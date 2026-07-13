@@ -101,7 +101,7 @@ describe('TeamAppCreateForm', () => {
 
       const textarea = screen.getByRole('textbox', { name: /APIリクエストのデータ形式/ });
       expect(textarea).toBeDefined();
-      expect(textarea.getAttribute('required')).toBe('');
+      expect(textarea.getAttribute('required')).toBeNull();
     });
 
     it('renders config textarea', () => {
@@ -373,8 +373,8 @@ describe('TeamAppCreateForm', () => {
       await user.type(howToUseInput, 'テストアプリの使い方');
 
       const endpointInput = screen.getByRole('textbox', { name: /APIエンドポイントのURL/ });
-      // Use http instead of https to trigger schema validation error
-      fillInput(endpointInput, 'http://invalid.example.com');
+      // Use ftp instead of http/https to trigger schema validation error (since http is allowed in Open GENAI)
+      fillInput(endpointInput, 'ftp://invalid.example.com');
 
       const apiKeyInput = screen.getByRole('textbox', { name: /APIキー/ });
       await user.type(apiKeyInput, 'test-api-key');
