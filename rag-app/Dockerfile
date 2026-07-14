@@ -10,6 +10,7 @@ COPY rag-app/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY shared ./shared
+RUN pip install --no-cache-dir -e ./shared
 COPY rag-app/app ./app
 
 EXPOSE 8001

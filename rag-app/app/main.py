@@ -596,8 +596,14 @@ async def invoke(
     # ナレッジのスコープ（= AI アプリを所有するチーム。共通チームは共有ナレッジ）
     scope = (x_scope or DEFAULT_SCOPE).strip()
 
-    body = await request.json()
-    inputs = body.get("inputs", body)
+    try:
+        from shared.schemas.rag import RagInvokeRequest
+        body = await request.json()
+        req = RagInvokeRequest.model_validate(body)
+        inputs = req.inputs.model_dump()
+    except Exception as e:
+        return JSONResponse(status_code=400, content={"error": f"Invalid request schema: {e}"})
+
     action = (inputs.get("action") or "ask").strip()
     top_k = int(inputs.get("top_k") or 4)
     tags = _parse_tags(inputs.get("tags"))
