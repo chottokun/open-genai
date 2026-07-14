@@ -26,6 +26,30 @@ SECRET = os.environ.get("INTERNAL_SIGNING_SECRET", "")
 MAX_AGE = int(os.environ.get("INTERNAL_SIG_MAX_AGE", "300"))
 
 
+def verify_secret_strength() -> None:
+    """INTERNAL_SIGNING_SECRET の暗号強度とデフォルト値チェックを行い、脆弱な場合はシステムを停止する。"""
+    # 開発用などで未設定（空文字列）の場合は、下位互換性およびスキップモードのため許容する
+    if not SECRET:
+        return
+
+    weak_keys = {
+        "dev-internal-secret-change-me",
+        "please-change-to-a-long-random-secret",
+        "test-signing-secret",
+        "change-me-open-genai-secret",
+    }
+    if SECRET in weak_keys:
+        raise ValueError(
+            f"Security Error (Crash-On-Weak-Key): INTERNAL_SIGNING_SECRET はデフォルトの弱い鍵 ({SECRET!r}) に設定されています。"
+            "本番環境および開発環境のセキュリティ向上のため、32バイト以上の独自の鍵に変更してください。"
+        )
+    if len(SECRET) < 32:
+        raise ValueError(
+            f"Security Error (Crash-On-Weak-Key): INTERNAL_SIGNING_SECRET の長さが32バイト未満 ({len(SECRET)} バイト) です。"
+            "SHA256 で安全とされる 32バイト（256ビット）以上の強固な秘密鍵を設定してください。"
+        )
+
+
 def _norm(values: str | None) -> str:
     # 順序非依存にするため正規化（空白除去・ソート・空要素除去）
     return ",".join(sorted(x.strip() for x in (values or "").split(",") if x.strip()))

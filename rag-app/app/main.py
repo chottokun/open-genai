@@ -225,6 +225,7 @@ SAMPLE_DOCS = [
 
 @app.on_event("startup")
 async def _startup() -> None:
+    intauth.verify_secret_strength()
     await vectorstore.ensure_collection()
     try:
         urlstore.init_db()

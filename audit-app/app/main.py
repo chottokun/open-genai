@@ -33,6 +33,11 @@ ADMIN_GROUP = os.environ.get("AUDIT_ADMIN_GROUP", "SystemAdminGroup")
 app = FastAPI(title="Open GENAI Audit Viewer App", version="0.1.0")
 
 
+@app.on_event("startup")
+def _startup() -> None:
+    intauth.verify_secret_strength()
+
+
 def _check_key(x_api_key: str | None) -> JSONResponse | None:
     if API_KEY and x_api_key != API_KEY:
         return JSONResponse(status_code=401, content={"error": "invalid api key"})

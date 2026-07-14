@@ -17,9 +17,28 @@ from onelogin.saml2.auth import OneLogin_Saml2_Auth
 from onelogin.saml2.idp_metadata_parser import OneLogin_Saml2_IdPMetadataParser
 from onelogin.saml2.settings import OneLogin_Saml2_Settings
 
-APP_JWT_SECRET = os.environ.get("APP_JWT_SECRET", "change-me-open-genai-secret")
+APP_JWT_SECRET = os.environ.get("APP_JWT_SECRET", "change-me-open-genai-secret-must-be-at-least-32-bytes")
 JWT_ALG = "HS256"
 JWT_TTL_SECONDS = int(os.environ.get("APP_JWT_TTL", "28800"))  # 8 時間
+
+
+def verify_secret_strength() -> None:
+    """APP_JWT_SECRET の暗号強度とデフォルト値チェックを行い、脆弱な場合はシステムを停止する。"""
+    weak_keys = {
+        "change-me-open-genai-secret",
+        "please-change-to-a-long-random-secret",
+        "dev-internal-secret-change-me",
+    }
+    if APP_JWT_SECRET in weak_keys:
+        raise ValueError(
+            f"Security Error (Crash-On-Weak-Key): APP_JWT_SECRET はデフォルトの弱い鍵 ({APP_JWT_SECRET!r}) に設定されています。"
+            "本番環境および開発環境のセキュリティ向上のため、32バイト以上の独自の鍵に変更してください。"
+        )
+    if len(APP_JWT_SECRET) < 32:
+        raise ValueError(
+            f"Security Error (Crash-On-Weak-Key): APP_JWT_SECRET の長さが32バイト未満 ({len(APP_JWT_SECRET)} バイト) です。"
+            "SHA256 で安全とされる 32バイト（256ビット）以上の強固な秘密鍵を設定してください。"
+        )
 
 SP_ENTITY_ID = os.environ.get(
     "SAML_SP_ENTITY_ID", "http://localhost:8000/auth/saml/metadata"

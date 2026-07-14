@@ -246,6 +246,7 @@ def _build_form_schema(
 
 @app.on_event("startup")
 def _startup() -> None:
+    intauth.verify_secret_strength()
     try:
         catalog.init_db()
         # 標準テンプレートが未登録なら投入（冪等）

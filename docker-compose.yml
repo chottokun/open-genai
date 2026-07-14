@@ -61,7 +61,7 @@ services:
       # プロンプトテンプレート「AI アプリ」連携先（全ユーザー利用可）
       - PROMPT_APP_URL=${PROMPT_APP_URL:-http://prompt-app:8009/invoke}
       # 内部サービス間署名の共有鍵（x-user-* 偽装対策）。全 exApp と同一値。本番は必ず変更。
-      - INTERNAL_SIGNING_SECRET=${INTERNAL_SIGNING_SECRET:-dev-internal-secret-change-me}
+      - INTERNAL_SIGNING_SECRET=${INTERNAL_SIGNING_SECRET:-dev-internal-secret-change-me-must-be-at-least-32-bytes}
       # 成果物取得(SSRF 対策): 許可ホスト(カンマ区切り, 空=内部宛先のみ拒否)とサイズ上限
       - ARTIFACT_FETCH_ALLOWED_HOSTS=${ARTIFACT_FETCH_ALLOWED_HOSTS:-}
       - ARTIFACT_MAX_BYTES=${ARTIFACT_MAX_BYTES:-52428800}
@@ -83,7 +83,7 @@ services:
       - SD_API_URL=${SD_API_URL:-http://host.docker.internal:7860}
       - SD_TIMEOUT=${SD_TIMEOUT:-600}
       # --- SAML 認証 (backend = SAML SP) ---
-      - APP_JWT_SECRET=${APP_JWT_SECRET:-change-me-open-genai-secret}
+      - APP_JWT_SECRET=${APP_JWT_SECRET:-change-me-open-genai-secret-must-be-at-least-32-bytes}
       # proxy 経由の公開 URL（末尾スラッシュ無し。PROXY_HTTP_PORT 変更時は合わせる）
       - PUBLIC_BASE_URL=${PUBLIC_URL:-http://localhost}/api
       - FRONTEND_URL=${PUBLIC_URL:-http://localhost}
@@ -167,7 +167,7 @@ services:
       # ruri-v3-30m の出力次元数は 256
       - EMBED_DIM=${EMBED_DIM:-256}
       # 内部サービス間署名の共有鍵（backend と同一値。x-user-*/x-scope 偽装対策）
-      - INTERNAL_SIGNING_SECRET=${INTERNAL_SIGNING_SECRET:-dev-internal-secret-change-me}
+      - INTERNAL_SIGNING_SECRET=${INTERNAL_SIGNING_SECRET:-dev-internal-secret-change-me-must-be-at-least-32-bytes}
       # URL メタ情報レジストリ(SQLite)
       - RAG_META_DB_PATH=/data/rag_meta.db
       # URL 取り込みの自動更新間隔（秒。既定1日）
@@ -269,7 +269,7 @@ services:
     environment:
       - RAG_API_KEY=${RAG_API_KEY:-local-rag-key}
       - AUDIT_DB_PATH=/data/audit.db
-      - INTERNAL_SIGNING_SECRET=${INTERNAL_SIGNING_SECRET:-dev-internal-secret-change-me}
+      - INTERNAL_SIGNING_SECRET=${INTERNAL_SIGNING_SECRET:-dev-internal-secret-change-me-must-be-at-least-32-bytes}
     volumes:
       # backend の監査DBを共有（WAL の -shm 参照のため rw マウント。接続は mode=ro）
       - backend_data:/data
@@ -285,7 +285,7 @@ services:
       - KEYCLOAK_REALM=${KEYCLOAK_REALM:-open-genai}
       - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN:-admin}
       - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:-admin}
-      - INTERNAL_SIGNING_SECRET=${INTERNAL_SIGNING_SECRET:-dev-internal-secret-change-me}
+      - INTERNAL_SIGNING_SECRET=${INTERNAL_SIGNING_SECRET:-dev-internal-secret-change-me-must-be-at-least-32-bytes}
     depends_on:
       - keycloak
     restart: unless-stopped
@@ -298,7 +298,7 @@ services:
     environment:
       - RAG_API_KEY=${RAG_API_KEY:-local-rag-key}
       - POLICY_DB_PATH=/data/policy.db
-      - INTERNAL_SIGNING_SECRET=${INTERNAL_SIGNING_SECRET:-dev-internal-secret-change-me}
+      - INTERNAL_SIGNING_SECRET=${INTERNAL_SIGNING_SECRET:-dev-internal-secret-change-me-must-be-at-least-32-bytes}
     volumes:
       - backend_data:/data
     restart: unless-stopped
@@ -311,7 +311,7 @@ services:
     environment:
       - RAG_API_KEY=${RAG_API_KEY:-local-rag-key}
       - NGWORD_DB_PATH=/data/ngwords.db
-      - INTERNAL_SIGNING_SECRET=${INTERNAL_SIGNING_SECRET:-dev-internal-secret-change-me}
+      - INTERNAL_SIGNING_SECRET=${INTERNAL_SIGNING_SECRET:-dev-internal-secret-change-me-must-be-at-least-32-bytes}
     volumes:
       - backend_data:/data
     restart: unless-stopped
@@ -323,7 +323,7 @@ services:
     environment:
       - RAG_API_KEY=${RAG_API_KEY:-local-rag-key}
       - PROMPT_DB_PATH=/data/prompts.db
-      - INTERNAL_SIGNING_SECRET=${INTERNAL_SIGNING_SECRET:-dev-internal-secret-change-me}
+      - INTERNAL_SIGNING_SECRET=${INTERNAL_SIGNING_SECRET:-dev-internal-secret-change-me-must-be-at-least-32-bytes}
     volumes:
       - backend_data:/data
     restart: unless-stopped

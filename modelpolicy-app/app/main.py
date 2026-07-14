@@ -95,6 +95,7 @@ def _write_policy(policy: dict[str, Any]) -> None:
 
 @app.on_event("startup")
 def _startup() -> None:
+    intauth.verify_secret_strength()
     try:
         _init_db()
     except Exception as e:  # noqa: BLE001

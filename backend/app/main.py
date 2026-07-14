@@ -902,6 +902,10 @@ app.add_middleware(
 
 @app.on_event("startup")
 def _startup() -> None:
+    # 安全装置：JWT鍵および内部通信鍵の強度検証（Crash-On-Weak-Key）
+    auth.verify_secret_strength()
+    intauth.verify_secret_strength()
+
     storage.init_db()
     teams_store.init_db(seed_exapps=EXAPP_SEEDS)
     for ex_app_id in RETIRED_SEED_EXAPP_IDS:

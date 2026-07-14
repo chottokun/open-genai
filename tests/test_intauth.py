@@ -7,7 +7,7 @@ from app import intauth
 
 @pytest.fixture(autouse=True)
 def signing_secret(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(intauth, "SECRET", "test-signing-secret")
+    monkeypatch.setattr(intauth, "SECRET", "test-signing-secret-must-be-at-least-32-bytes")
     monkeypatch.setattr(intauth, "MAX_AGE", 300)
 
 
