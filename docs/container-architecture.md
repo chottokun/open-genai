@@ -12,7 +12,7 @@ Nginx（`proxy`）を単一の入口とし、フロントエンド（`web`）、
 
 ---
 
-## 2. コンテナ役割一覧（全31コンテナの系統別分類）
+## 2. コンテナ役割一覧（全20コンテナの系統別分類）
 
 システムを構成するコンテナ群は、その役割に応じて以下の4つの系統に分類されます。
 
@@ -58,6 +58,7 @@ Nginx（`proxy`）を単一の入口とし、フロントエンド（`web`）、
 | `local-whisper-api` | `local-whisper-api`| `8003:8000` | **[新規]** 音声認識推論層。Kotoba-Whisper やオリジナル Whisper の実行環境（GPU/CPU対応）。 |
 | `local-sd-api` | `local-sd-api` | `8004:8000` | **[新規]** 画像生成推論層。Stable Diffusionの実行環境。 |
 | `open-genai-embedding-jp-api`| `embedding-jp-api`| `8020:8000` | Hugging Face TEI (Text Embeddings Inference) による日本語特化 Embedding (`ruri-v3-30m`等) ベクトル化エンジン。 |
+| `open-genai-ollama` | `ollama` | `11434:11434` | ローカル LLM（Qwen2.5 等）の推論実行環境（GPU/CPU対応）。 |
 
 ---
 
@@ -95,6 +96,7 @@ flowchart TD
         WhisperAPI["local-whisper-api : 音声推論"]
         SdAPI["local-sd-api : 画像推論"]
         EmbedAPI["embedding-jp-api : ベクトル化"]
+        OllamaAPI["ollama : LLM推論"]
     end
 
     %% ユーザーからのアクセス
@@ -121,6 +123,7 @@ flowchart TD
     %% LiteLLMからのルーティング
     LiteLLM -->|API キー認証| CloudAPI["外部クラウドAPI / Imagen 4等"]
     LiteLLM -->|フォールバック（sd-local）| SdAPI
+    LiteLLM -->|ローカルLLM接続 /v1/chat/completions| OllamaAPI
 ```
 
 ---
