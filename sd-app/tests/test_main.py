@@ -74,6 +74,7 @@ def test_allow_cloud_api_guard_prevents_litellm_and_forces_local(monkeypatch):
     import app.main
     monkeypatch.setattr(app.main, "ALLOW_CLOUD_API", False)
     monkeypatch.setattr(app.main, "IMAGE_PROVIDER", "litellm")
+    monkeypatch.setattr(app.main, "LITELLM_IMAGE_URL", "https://api.openai.com/v1")
     
     # A1111ヘルスチェックをモック（503回避）
     mock_get = MagicMock()
@@ -87,3 +88,16 @@ def test_allow_cloud_api_guard_prevents_litellm_and_forces_local(monkeypatch):
         assert response.status_code == 200
         # ガードにより強制的に local に変更されることを期待
         assert response.json()["provider"] == "local"
+
+
+def test_guardrail_allows_local_litellm_target(monkeypatch):
+    # ALLOW_CLOUD_API=False でも、宛先がローカルなら許可
+    import app.main
+    monkeypatch.setattr(app.main, "ALLOW_CLOUD_API", False)
+    monkeypatch.setattr(app.main, "IMAGE_PROVIDER", "litellm")
+    monkeypatch.setattr(app.main, "LITELLM_IMAGE_URL", "http://litellm:4000/v1")
+
+    response = client.get("/health")
+    assert response.status_code == 200
+    # ガードレールをバイパスして litellm が維持されることを期待
+    assert response.json()["provider"] == "litellm"
