@@ -32,6 +32,7 @@
 - `sd-app` および `whisper-app` のローカルLiteLLMターゲット判定テストをパラメータ化（`pytest.mark.parametrize`）し、`localhost`、`127.0.0.1`、`host.docker.internal` 等を網羅するように堅牢化
 - `local-whisper-api` において `faster_whisper` モジュールのインポート時のみ一時的に `sys.modules` へモックを追加・削除する手動方式へ改善し、グローバル汚染とモジュールキャッシュ消失によるエラーを回避
 - 静的解析 `ruff` の警告解消（未使用インポートの削除、および意図的なインポート順箇所への `# noqa: E402` 追加）
+- Web/UI（`genai-web`）のプロダクションビルドにおける TypeScript 型エラー（未使用変数 `pathname` の削除、`Array.prototype.at` の互換性修正、`routes.tsx` の `flatMap` における `RouteObject` 型アサーション）の解消
 
 ### Security
 
