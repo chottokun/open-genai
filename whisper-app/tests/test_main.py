@@ -80,12 +80,21 @@ def test_allow_cloud_api_guard_prevents_litellm_and_forces_local(monkeypatch):
     assert response.json()["provider"] == "local"
 
 
-def test_guardrail_allows_local_litellm_target(monkeypatch):
+@pytest.mark.parametrize(
+    "local_url",
+    [
+        "http://litellm:4000/v1",
+        "http://localhost:4000/v1",
+        "http://127.0.0.1:4000/v1",
+        "http://host.docker.internal:4000/v1",
+    ]
+)
+def test_guardrail_allows_local_litellm_target(monkeypatch, local_url):
     # ALLOW_CLOUD_API=False でも、宛先がローカルかつモデルが whisper-local なら許可
     import app.main
     monkeypatch.setattr(app.main, "ALLOW_CLOUD_API", False)
     monkeypatch.setattr(app.main, "WHISPER_PROVIDER", "litellm")
-    monkeypatch.setattr(app.main, "LITELLM_AUDIO_URL", "http://litellm:4000/v1")
+    monkeypatch.setattr(app.main, "LITELLM_AUDIO_URL", local_url)
     monkeypatch.setattr(app.main, "LITELLM_AUDIO_MODEL", "whisper-local")
     
     response = client.get("/health")
