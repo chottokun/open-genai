@@ -6,10 +6,9 @@ mock_diffusers = MagicMock()
 sys.modules["diffusers"] = mock_diffusers
 sys.modules["torch"] = MagicMock()
 
-import os
-from unittest.mock import patch
-import pytest
-from fastapi.testclient import TestClient
+import os  # noqa: E402
+from unittest.mock import patch  # noqa: E402
+from fastapi.testclient import TestClient  # noqa: E402
 
 # テスト前に環境変数をモック設定
 os.environ["IMAGE_INFERENCE_DEVICE"] = "cpu"
@@ -17,8 +16,8 @@ os.environ["IMAGE_MODEL_NAME"] = "dummy-sd-model"
 os.environ["SD_USE_PROXY"] = "false"  # デフォルトはローカル動作テスト
 
 # appのインポート
-from app.main import app
-import app.main as main
+from app.main import app  # noqa: E402
+import app.main as main  # noqa: E402
 
 client = TestClient(app)
 

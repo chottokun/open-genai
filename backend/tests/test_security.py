@@ -1,4 +1,3 @@
-import os
 import tempfile
 import pytest
 from fastapi.testclient import TestClient
@@ -86,7 +85,7 @@ def test_put_and_get_file_with_token():
     assert response.status_code == 200
     assert response.content == content
 
-from unittest.mock import patch
+from unittest.mock import patch  # noqa: E402
 
 def test_exapp_config_validation():
     # 管理者権限のトークンを作成

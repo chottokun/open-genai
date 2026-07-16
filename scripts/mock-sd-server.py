@@ -12,7 +12,6 @@
 from __future__ import annotations
 
 import argparse
-import base64
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 

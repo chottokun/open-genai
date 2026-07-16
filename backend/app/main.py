@@ -36,7 +36,7 @@ from fastapi.responses import (
 
 from shared import ssrfguard
 
-from . import audit, auth, image_gen, image_store, intauth, llm, ngwords, objstore, policy, storage, teams_store
+from . import audit, auth, image_store, intauth, llm, ngwords, objstore, policy, storage, teams_store
 
 # ファイル添付の保存先と、ブラウザから見たバックエンドの公開 URL
 FILES_DIR = os.environ.get("FILES_DIR", "/data/files")

@@ -1,7 +1,6 @@
 import os
 import sys
 from unittest.mock import MagicMock, patch
-import pytest
 from fastapi.testclient import TestClient
 
 # テスト前に環境変数をモック設定
@@ -11,7 +10,7 @@ os.environ["AUDIO_MODEL_NAME"] = "dummy-model"
 
 # appのインポート時にfaster_whisperをモックし、インポート完了後に削除する
 sys.modules["faster_whisper"] = MagicMock()
-from app.main import app
+from app.main import app  # noqa: E402
 del sys.modules["faster_whisper"]
 
 client = TestClient(app)

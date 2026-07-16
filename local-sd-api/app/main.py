@@ -2,8 +2,8 @@ import os
 import tempfile
 import base64
 import httpx
-from typing import Any, List, Optional
-from fastapi import FastAPI, HTTPException
+from typing import Any, Optional
+from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
