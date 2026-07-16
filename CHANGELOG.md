@@ -26,6 +26,17 @@
 
 ## [Unreleased]
 
+### Testing
+
+- `sd-app` の `test_allow_cloud_api_guard_prevents_litellm_and_forces_local` に `LITELLM_IMAGE_URL` のモックを追加し、テスト失敗を解消
+- `sd-app` および `whisper-app` のローカルLiteLLMターゲット判定テストをパラメータ化（`pytest.mark.parametrize`）し、`localhost`、`127.0.0.1`、`host.docker.internal` 等を網羅するように堅牢化
+- `local-whisper-api` において `faster_whisper` モジュールのインポート時のみ一時的に `sys.modules` へモックを追加・削除する手動方式へ改善し、グローバル汚染とモジュールキャッシュ消失によるエラーを回避
+- 静的解析 `ruff` の警告解消（未使用インポートの削除、および意図的なインポート順箇所への `# noqa: E402` 追加）
+
+### Security
+
+- `pip-audit` にて検出された `setuptools` の脆弱性（`PYSEC-2026-3447`）対応のため、仮想環境内の `setuptools` を脆弱性修正版 `83.0.0` にアップデート
+
 ---
 
 ## [0.3.1] - 2026-07-14
