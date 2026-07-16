@@ -116,7 +116,7 @@ export const createRoutes = (): RouteObject[] => {
         },
         { path: 'docs/api-request-data-format', element: <ApiRequestDataFormatPage /> },
         { path: '*', element: <NotFound /> },
-      ].flatMap((r) => (Array.isArray(r) ? r : r ? [r] : [])),
+      ].flatMap<RouteObject>((r) => (Array.isArray(r) ? r : r ? [r] : [])),
     },
-  ].flatMap((r) => (Array.isArray(r) ? r : r ? [r] : []));
+  ].flatMap<RouteObject>((r) => (Array.isArray(r) ? r : r ? [r] : []));
 };
