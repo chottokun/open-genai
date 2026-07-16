@@ -1,5 +1,8 @@
-import os
+import sys
 from unittest.mock import MagicMock, patch
+sys.modules["faster_whisper"] = MagicMock()
+
+import os
 import pytest
 from fastapi.testclient import TestClient
 
@@ -8,10 +11,8 @@ os.environ["AUDIO_INFERENCE_DEVICE"] = "cpu"
 os.environ["AUDIO_COMPUTE_TYPE"] = "int8"
 os.environ["AUDIO_MODEL_NAME"] = "dummy-model"
 
-# WhisperModel のロードをモックしてインポート
-with patch("faster_whisper.WhisperModel") as mock_whisper:
-    # appのインポート時にWhisperModelが初期化されるため、パッチを当てた状態でインポート
-    from app.main import app
+# appのインポート
+from app.main import app
 
 client = TestClient(app)
 

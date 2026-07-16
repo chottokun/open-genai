@@ -74,6 +74,7 @@ def test_allow_cloud_api_guard_prevents_litellm_and_forces_local(monkeypatch):
     import app.main
     monkeypatch.setattr(app.main, "ALLOW_CLOUD_API", False)
     monkeypatch.setattr(app.main, "IMAGE_PROVIDER", "litellm")
+    monkeypatch.setattr(app.main, "LITELLM_IMAGE_URL", "https://api.openai.com/v1")
     
     # A1111ヘルスチェックをモック（503回避）
     mock_get = MagicMock()
