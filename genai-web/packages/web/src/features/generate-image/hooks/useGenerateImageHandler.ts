@@ -53,11 +53,6 @@ export const useGenerateImageHandler = (
     clearImage();
     setGenerating(true);
 
-    if (!imageGenModelId) {
-      setGenerating(false);
-      return;
-    }
-
     const modelConfig = MODEL_INFO[imageGenModelId];
     if (!modelConfig) {
       console.error(`Unknown model: ${imageGenModelId}`);

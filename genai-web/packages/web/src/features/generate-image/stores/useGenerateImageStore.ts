@@ -113,8 +113,7 @@ export const useGenerateImageStore = create<GenerateImageStore>((set, get) => {
 
   return {
     ...initialState,
-    setImageGenModelId: (rawModelId) => {
-      const imageGenModelId = rawModelId ?? '';
+    setImageGenModelId: (imageGenModelId) => {
       const newResolutionPresets = getResolutionPresets(imageGenModelId);
       const newResolution = newResolutionPresets[0];
       const currentMode = get().generationMode;

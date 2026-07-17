@@ -25,25 +25,7 @@ export const ButtonCopy = (props: Props) => {
     }
 
     try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(message);
-      } else {
-        // フォールバック: 非 HTTPS 環境下などで navigator.clipboard が undefined の場合
-        const textArea = document.createElement('textarea');
-        textArea.value = message;
-        textArea.style.position = 'fixed';
-        textArea.style.top = '0';
-        textArea.style.left = '0';
-        textArea.style.opacity = '0';
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        const successful = document.execCommand('copy');
-        document.body.removeChild(textArea);
-        if (!successful) {
-          throw new Error('document.execCommand("copy") が false を返しました');
-        }
-      }
+      await navigator.clipboard.writeText(message);
     } catch (error) {
       console.error('クリップボードへのコピーに失敗しました', error);
       return;
