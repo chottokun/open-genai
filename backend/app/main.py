@@ -1324,15 +1324,8 @@ async def save_image_result(
 @app.get("/image/health")
 async def image_health() -> JSONResponse:
     """画像生成(SD)サーバの稼働状況。フロントの表示出し分けに使う。"""
-    # sd-app の /health を確認する
-    sd_app_url = os.environ.get("SD_APP_URL", "http://sd-app:8003/invoke")
-    health_url = sd_app_url.replace("/invoke", "/health")
-    try:
-        async with httpx.AsyncClient(timeout=3.0) as client:
-            res = await client.get(health_url)
-        ok = (res.status_code == 200 and res.json().get("status") == "ok")
-    except Exception:
-        ok = False
+    from app.image_gen import is_sd_up
+    ok = await is_sd_up()
     return JSONResponse(content={"ok": ok})
 
 
@@ -1601,8 +1594,8 @@ def _safe_path(key: str) -> str:
 async def generate_image(request: Request) -> Response:
     """ローカル環境用画像生成プロキシ。
     
-    フロントからのリクエストを受け取り、ローカルの sd-app (Stable Diffusion) に
-    プロキシして画像を生成し、Base64 データを Response(text/plain) として返す。
+    フロントからのリクエストを受け取り、選択されたプロバイダ（local / litellm / local_api）で
+    画像を生成し、Base64 データを Response(text/plain) として返す。
     """
     claims = _claims_from_request(request)
     if not _user_id(claims):
@@ -1611,62 +1604,12 @@ async def generate_image(request: Request) -> Response:
     body = await request.json()
     params = body.get("params", {})
     
-    # フロントエンドのパラメータからプロンプトを組み立てる
-    text_prompts = params.get("textPrompt", [])
-    prompt = ""
-    negative_prompt = ""
-    for p in text_prompts:
-        text = p.get("text", "")
-        weight = p.get("weight", 1)
-        if weight >= 0:
-            prompt += text + " "
-        else:
-            negative_prompt += text + " "
-            
-    prompt = prompt.strip()
-    negative_prompt = negative_prompt.strip()
-    
-    # サイズ (幅を使用、なければ 512)
-    size = params.get("width") or params.get("height") or 512
-    # ステップ数
-    steps = params.get("step") or 20
-    
-    # sd-app の呼び出しペイロード
-    sd_payload = {
-        "prompt": prompt,
-        "negative_prompt": negative_prompt,
-        "size": size,
-        "steps": steps
-    }
-    
-    sd_app_url = os.environ.get("SD_APP_URL", "http://sd-app:8003/invoke")
-    rag_api_key = os.environ.get("RAG_API_KEY", "local-rag-key")
-    headers = {"X-Api-Key": rag_api_key}
-    
-    async with httpx.AsyncClient(timeout=300.0) as client:
-        try:
-            res = await client.post(sd_app_url, json=sd_payload, headers=headers)
-        except httpx.HTTPError as e:
-            raise HTTPException(
-                status_code=502,
-                detail=f"画像生成アプリ（sd-app）への接続に失敗しました: {e}"
-            )
-            
-    if res.status_code != 200:
-        raise HTTPException(
-            status_code=res.status_code,
-            detail=f"画像生成に失敗しました (status: {res.status_code}, detail: {res.text})"
-        )
+    from app.image_gen import generate_image_base64
+    try:
+        b64_image = await generate_image_base64(params)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
         
-    data = res.json()
-    artifacts = data.get("artifacts") or []
-    if not artifacts:
-        # sd-app がエラーメッセージを outputs に入れている場合がある
-        error_msg = data.get("outputs") or "画像が生成されませんでした。"
-        raise HTTPException(status_code=500, detail=error_msg)
-        
-    # 最初の画像の Base64 文字列を Response で返す
-    b64_image = artifacts[0].get("content")
     return Response(content=b64_image, media_type="text/plain")
 
 

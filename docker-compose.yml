@@ -219,20 +219,6 @@ services:
       - "8003:8000"
     restart: unless-stopped
 
-  # 画像生成を「AI アプリ」として提供（ホストの SD サーバへプロキシ）
-  sd-app:
-    build: ./sd-app
-    container_name: open-genai-sd-app
-    # ports:
-    #   - "8003:8003" # (開発/検証用。通常は不要)
-    env_file:
-      - .env
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    depends_on:
-      - local-sd-api
-    restart: unless-stopped
-
   # 画像生成エンジンの心臓部（外出しマイクロサービス / CPU・GPU動的切替）
   local-sd-api:
     build: ./local-sd-api
