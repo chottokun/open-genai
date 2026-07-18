@@ -10,6 +10,7 @@
 | [v0.2.1](https://github.com/hirokawaguchi/open-genai/releases/tag/v0.2.1) | `be88a0d` 以降 | セキュリティ更新・リリース前品質保証 |
 | [v0.3.0](https://github.com/hirokawaguchi/open-genai/releases/tag/v0.3.0) | `daac82e` 以降 | 画像生成の源内一本化・アプリピン留め・LGWAN 成果物キャリア配信 |
 | [v0.3.1](https://github.com/hirokawaguchi/open-genai/releases/tag/v0.3.1) | `e047dae` 以降 | 起動手順の修正・CI 修正・添付拡張子判定の修正 |
+| [v0.3.2](https://github.com/hirokawaguchi/open-genai/releases/tag/v0.3.2) | `fbd6ad0` 以降 | Upstream v0.3.2同期・検証・SSRF allowlist改善・テスト追加 |
 
 ## 設計思想の転換（0.1 → 0.2）
 
@@ -26,13 +27,34 @@
 
 ## [Unreleased]
 
-### Testing
+---
 
+## [0.3.2] - 2026-07-18
+
+### Upstream v0.3.2 同期
+
+- **新機能**:
+  - Dify DSL設定に `DeepResearch` および `MultiFileGenerator` ワークフローを追加。
+  - RAG検索結果に「引用アコーディオン（Citations Accordion）」表示機能を追加し、フロントエンドで折りたたみ表示に対応。
+  - テキストエリア入力（AIアプリやチャット入力）において、Enterキー押下時の送信UXの向上（Shift+Enterで改行、IME変換中の誤送信防止）。
+  - RAGの「ナレッジ管理（管理者）」アプリを `ADMIN_TEAM` から `COMMON_TEAM` へ移行（teamId のスコープ不一致による登録先と検索先の乖離の修正）。
+- **セキュリティ / SSRF保護強化**:
+  - 許可リスト（allowlist）に登録されたホストについては、プライベート/ループバックIP（`host.docker.internal` 等）への名前解決を特別に許可（ローカル/セルフホストDify連携用）。クラウドメタデータ等のリンクローカルIPは引き続き拒否。
+- **移行処理**:
+  - 起動時に、旧「ナレッジ管理」で誤って `ADMIN_TEAM` スコープに登録されていたベクトルデータおよびURLソースを自動的に `COMMON_TEAM` （共有ナレッジ）へ付け替える移行処理を追加。
+
+### Testing & Fixed
+
+- フロントエンドに `ChatInput` のEnterキー送信結合テストを追加。
+- フロントエンドに引用アコーディオン（`<details>`）の開閉インタラクションテストを追加。
+- フロントエンドに `useSetDefaultValues` フックの単体テストを新規追加し、空配列などの境界値における安全なフォールバックを検証。
+- `teams_store.py` 内の if/elif チェーンを辞書ルックアップに変更し、コードの保守性を向上。
+- `useSetDefaultValues.ts` において、モデルID配列が空の際の `undefined` フォールバックバグを `?? ''` を復帰させて修正。
+- `ChatPage.tsx` の未使用変数 `pathname` の削除、および `ensureImagePersistTarget.ts` での `Array.prototype.at` 使用箇所の互換性修正により、ビルドエラーを完全に解消。
 - `sd-app` の `test_allow_cloud_api_guard_prevents_litellm_and_forces_local` に `LITELLM_IMAGE_URL` のモックを追加し、テスト失敗を解消
 - `sd-app` および `whisper-app` のローカルLiteLLMターゲット判定テストをパラメータ化（`pytest.mark.parametrize`）し、`localhost`、`127.0.0.1`、`host.docker.internal` 等を網羅するように堅牢化
 - `local-whisper-api` において `faster_whisper` モジュールのインポート時のみ一時的に `sys.modules` へモックを追加・削除する手動方式へ改善し、グローバル汚染とモジュールキャッシュ消失によるエラーを回避
 - 静的解析 `ruff` の警告解消（未使用インポートの削除、および意図的なインポート順箇所への `# noqa: E402` 追加）
-- Web/UI（`genai-web`）のプロダクションビルドにおける TypeScript 型エラー（未使用変数 `pathname` の削除、`Array.prototype.at` の互換性修正、`routes.tsx` の `flatMap` における `RouteObject` 型アサーション）の解消
 
 ### Security
 
