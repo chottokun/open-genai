@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import asyncio
 from unittest.mock import MagicMock, patch
 import pytest
 from conftest import load_service_module
@@ -60,9 +61,8 @@ def test_build_a1111_payload_requires_prompt() -> None:
         raise AssertionError("expected ValueError")
 
 
-@pytest.mark.asyncio
 @patch("httpx.AsyncClient.get")
-async def test_is_sd_up_local_success(mock_get, monkeypatch) -> None:
+def test_is_sd_up_local_success(mock_get, monkeypatch) -> None:
     mock_res = MagicMock()
     mock_res.status_code = 200
     async def mock_get_coro(*args, **kwargs):
@@ -70,26 +70,24 @@ async def test_is_sd_up_local_success(mock_get, monkeypatch) -> None:
     mock_get.side_effect = mock_get_coro
 
     monkeypatch.setattr(image_gen, "IMAGE_PROVIDER", "local")
-    up = await image_gen.is_sd_up()
+    up = asyncio.run(image_gen.is_sd_up())
     assert up is True
 
 
-@pytest.mark.asyncio
 @patch("httpx.AsyncClient.get")
-async def test_is_sd_up_local_failure(mock_get, monkeypatch) -> None:
+def test_is_sd_up_local_failure(mock_get, monkeypatch) -> None:
     async def mock_get_coro(*args, **kwargs):
         import httpx
         raise httpx.ConnectError("Connection refused")
     mock_get.side_effect = mock_get_coro
 
     monkeypatch.setattr(image_gen, "IMAGE_PROVIDER", "local")
-    up = await image_gen.is_sd_up()
+    up = asyncio.run(image_gen.is_sd_up())
     assert up is False
 
 
-@pytest.mark.asyncio
 @patch("httpx.AsyncClient.get")
-async def test_is_sd_up_litellm_success(mock_get, monkeypatch) -> None:
+def test_is_sd_up_litellm_success(mock_get, monkeypatch) -> None:
     mock_res = MagicMock()
     mock_res.status_code = 200
     async def mock_get_coro(*args, **kwargs):
@@ -97,13 +95,12 @@ async def test_is_sd_up_litellm_success(mock_get, monkeypatch) -> None:
     mock_get.side_effect = mock_get_coro
 
     monkeypatch.setattr(image_gen, "IMAGE_PROVIDER", "litellm")
-    up = await image_gen.is_sd_up()
+    up = asyncio.run(image_gen.is_sd_up())
     assert up is True
 
 
-@pytest.mark.asyncio
 @patch("httpx.AsyncClient.get")
-async def test_is_sd_up_local_api_success(mock_get, monkeypatch) -> None:
+def test_is_sd_up_local_api_success(mock_get, monkeypatch) -> None:
     mock_res = MagicMock()
     mock_res.status_code = 200
     async def mock_get_coro(*args, **kwargs):
@@ -111,13 +108,12 @@ async def test_is_sd_up_local_api_success(mock_get, monkeypatch) -> None:
     mock_get.side_effect = mock_get_coro
 
     monkeypatch.setattr(image_gen, "IMAGE_PROVIDER", "local_api")
-    up = await image_gen.is_sd_up()
+    up = asyncio.run(image_gen.is_sd_up())
     assert up is True
 
 
-@pytest.mark.asyncio
 @patch("httpx.AsyncClient.post")
-async def test_generate_image_base64_local_success(mock_post, monkeypatch) -> None:
+def test_generate_image_base64_local_success(mock_post, monkeypatch) -> None:
     mock_res = MagicMock()
     mock_res.status_code = 200
     mock_res.json.return_value = {"images": ["data:image/png;base64,dummy_local_png"]}
@@ -126,15 +122,14 @@ async def test_generate_image_base64_local_success(mock_post, monkeypatch) -> No
     mock_post.side_effect = mock_post_coro
 
     monkeypatch.setattr(image_gen, "IMAGE_PROVIDER", "local")
-    b64 = await image_gen.generate_image_base64(
+    b64 = asyncio.run(image_gen.generate_image_base64(
         {"textPrompt": [{"text": "a cat", "weight": 1}]}
-    )
+    ))
     assert b64 == "dummy_local_png"
 
 
-@pytest.mark.asyncio
 @patch("httpx.AsyncClient.post")
-async def test_generate_image_base64_local_api_success(mock_post, monkeypatch) -> None:
+def test_generate_image_base64_local_api_success(mock_post, monkeypatch) -> None:
     mock_res = MagicMock()
     mock_res.status_code = 200
     mock_res.json.return_value = {"data": [{"b64_json": "dummy_local_api_png"}]}
@@ -143,15 +138,14 @@ async def test_generate_image_base64_local_api_success(mock_post, monkeypatch) -
     mock_post.side_effect = mock_post_coro
 
     monkeypatch.setattr(image_gen, "IMAGE_PROVIDER", "local_api")
-    b64 = await image_gen.generate_image_base64(
+    b64 = asyncio.run(image_gen.generate_image_base64(
         {"textPrompt": [{"text": "a cat", "weight": 1}]}
-    )
+    ))
     assert b64 == "dummy_local_api_png"
 
 
-@pytest.mark.asyncio
 @patch("httpx.AsyncClient.post")
-async def test_generate_image_base64_litellm_success(mock_post, monkeypatch) -> None:
+def test_generate_image_base64_litellm_success(mock_post, monkeypatch) -> None:
     mock_res = MagicMock()
     mock_res.status_code = 200
     mock_res.json.return_value = {"data": [{"b64_json": "dummy_litellm_png"}]}
@@ -160,9 +154,9 @@ async def test_generate_image_base64_litellm_success(mock_post, monkeypatch) -> 
     mock_post.side_effect = mock_post_coro
 
     monkeypatch.setattr(image_gen, "IMAGE_PROVIDER", "litellm")
-    b64 = await image_gen.generate_image_base64(
+    b64 = asyncio.run(image_gen.generate_image_base64(
         {"textPrompt": [{"text": "a cat", "weight": 1}]}
-    )
+    ))
     assert b64 == "dummy_litellm_png"
 
 
