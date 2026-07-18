@@ -188,12 +188,11 @@ def upsert_seed_exapp(app: dict[str, Any]) -> None:
                 ).fetchone()
                 if team_row:
                     new_team_name = team_row["teamName"]
-                elif new_team == COMMON_TEAM_ID:
-                    new_team_name = "共通アプリ"
-                elif new_team == ADMIN_TEAM_ID:
-                    new_team_name = ADMIN_TEAM_NAME
                 else:
-                    new_team_name = ""
+                    new_team_name = {
+                        COMMON_TEAM_ID: "共通アプリ",
+                        ADMIN_TEAM_ID: ADMIN_TEAM_NAME,
+                    }.get(new_team, "")
                 conn.execute(
                     "UPDATE exapp_histories SET teamId = ?, teamName = ?"
                     " WHERE teamId = ? AND exAppId = ?",
