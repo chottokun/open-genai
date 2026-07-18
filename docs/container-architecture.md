@@ -41,7 +41,6 @@ Nginx（`proxy`）を単一の入口とし、フロントエンド（`web`）、
 | コンテナ名 | サービス名 | ポート (内部/外部) | 主な役割 |
 | :--- | :--- | :--- | :--- |
 | `open-genai-whisper-app` | `whisper-app` | `8002:8002` | 音声認識のプロキシ・ルーティング層。認証検証と推論中継。 |
-| `open-genai-sd-app` | `sd-app` | `8000:-` | 画像生成AIアプリ。ローカルSD(A1111)またはLiteLLMへのプロキシ。 |
 | `open-genai-rag-app` | `rag-app` | `8001:8001` | RAG（ドキュメント検索・埋め込み）AIアプリ。非同期バッチ処理を内包。 |
 | `open-genai-prompt-app` | `prompt-app` | `8009:-` | プロンプトエンジニアリング・テンプレート管理用AIアプリ。 |
 | `open-genai-usermgmt-app` | `usermgmt-app` | `8006:-` | Keycloakと連携した組織・ユーザー管理AIアプリ。 |
@@ -55,8 +54,8 @@ Nginx（`proxy`）を単一の入口とし、フロントエンド（`web`）、
 
 | コンテナ名 | サービス名 | ポート (内部/外部) | 主な役割 |
 | :--- | :--- | :--- | :--- |
-| `local-whisper-api` | `local-whisper-api`| `8003:8000` | **[新規]** 音声認識推論層。Kotoba-Whisper やオリジナル Whisper の実行環境（GPU/CPU対応）。 |
-| `local-sd-api` | `local-sd-api` | `8004:8000` | **[新規]** 画像生成推論層。Stable Diffusionの実行環境。 |
+| `local-whisper-api` | `local-whisper-api`| `8003:8000` | 音声認識推論層。Kotoba-Whisper やオリジナル Whisper の実行環境（GPU/CPU対応）。 |
+| `local-sd-api` | `local-sd-api` | `8004:8000` | 画像生成推論層。Stable Diffusionの実行環境。 |
 | `open-genai-embedding-jp-api`| `embedding-jp-api`| `8020:8000` | Hugging Face TEI (Text Embeddings Inference) による日本語特化 Embedding (`ruri-v3-30m`等) ベクトル化エンジン。 |
 | `open-genai-ollama` | `ollama` | `11434:11434` | ローカル LLM（Qwen2.5 等）の推論実行環境（GPU/CPU対応）。 |
 
@@ -88,7 +87,6 @@ flowchart TD
     subgraph apps ["AIアプリ層 (exApps)"]
         WhisperApp["whisper-app : 音声プロキシ"]
         RagApp["rag-app : RAGロジック"]
-        SdApp["sd-app : 画像プロキシ"]
         OtherApps["その他アプリ : 監査/ポリシー等"]
     end
 
@@ -97,6 +95,10 @@ flowchart TD
         SdAPI["local-sd-api : 画像推論"]
         EmbedAPI["embedding-jp-api : ベクトル化"]
         OllamaAPI["ollama : LLM推論"]
+    end
+
+    subgraph host ["ホスト環境 (任意)"]
+        HostSD["ホスト側 : Stable Diffusion"]
     end
 
     %% ユーザーからのアクセス
@@ -110,15 +112,18 @@ flowchart TD
     Backend -->|LLMチャット推論中継| LiteLLM
     Backend -->|HMAC署名付き呼び出し| WhisperApp
     Backend -->|HMAC署名付き呼び出し| RagApp
-    Backend -->|HMAC署名付き呼び出し| SdApp
     Backend -->|HMAC署名付き呼び出し| OtherApps
+    
+    %% Backendからの直接画像生成ルーティング (IMAGE_PROVIDER別)
+    Backend -->|画像生成（litellm）| LiteLLM
+    Backend -->|ローカル画像生成（local_api）| SdAPI
+    Backend -->|ホスト画像生成（local）| HostSD
 
     %% AIアプリからの下流呼び出し
     WhisperApp -->|ローカル中継 /v1/audio/transcriptions| WhisperAPI
     RagApp -->|ローカル中継 /v1/embeddings| EmbedAPI
     RagApp -->|ベクトル検索 / 格納| Qdrant
     RagApp -->|ファイル保管| SeaweedFS
-    SdApp -->|画像生成API呼出（imagen-4）| LiteLLM
     
     %% LiteLLMからのルーティング
     LiteLLM -->|API キー認証| CloudAPI["外部クラウドAPI / Imagen 4等"]
@@ -130,27 +135,27 @@ flowchart TD
 
 ## 4. マイクロサービス化の設計指針と実装完了実績
 
-今回、音声認識（Whisper）および画像生成（Stable Diffusion）を、リクエスト中継・認証層（`whisper-app`, `sd-app`）と推論エンジン層（`local-whisper-api`, `local-sd-api`）に完全に分離したアプローチは、今後のマイクロサービス設計の標準モデルとなります。
+本プロジェクトでは、リソース負荷の偏りに応じて、コンテナ（プロセス）を完全に分離するマイクロサービスアプローチと、逆に無駄な中継層を排除してバックエンドに直接統合するアプローチを最適に使い分けています。
 
-### 4.1 分割（外出し）のメリット
+### 4.1 分割と統合のメリット
 1. **リソース配置の最適化**:
-   * 重い推論コンテナ側にのみ GPU やメモリを集中させることができ、Webアプリケーション側（`backend`）のリソースを圧迫しません。
-2. **モデル切り替えの容易性**:
-   * 環境変数の設定変更（`.env`）だけで、様々なオープンソースモデルをフロント/バックエンドの改修なしに瞬時に切り替えられます。
-3. **セキュリティ境界の明確化**:
-   * `ALLOW_CLOUD_API=false` の安全ガードレールをプロキシ層で一括管理し、ローカル閉域通信と外部クラウド通信を論理的に分離します。
+   * 重い推論コンテナ（`local-whisper-api`、`local-sd-api`）側にのみ GPU やメモリを集中させることができ、Webアプリケーション側（`backend`）のリソースを圧迫しません。
+2. **中継コンテナの排除と簡素化**:
+   * 画像生成（Stable Diffusion）のように、以前存在していた中継プロキシ（`sd-app`）を廃止し、`backend` の `image_gen.py` コンポーネントにロジックを直接統合することで、無駄なネットワークホップと常時起動プロセス（コンテナ）数を削減し、システム全体を効率化しました。
+3. **モデル切り替えの容易性**:
+   * 環境変数の設定変更（`.env`）だけで、様々なオープンソースモデルや外部API（LiteLLM経由）をフロント/バックエンドの改修なしに切り替えられます。
 
-### 4.2 実装完了済みのマイクロサービス移行実績 (As-Is)
+### 4.2 実装完了済みのマイクロサービス・統合実績 (As-Is)
 * **音声認識 (Whisper) のコンテナ分離と LiteLLM ハブ統合 [対応完了]**:
   * `whisper-app` と `local-whisper-api` へ完全分離し、 `whisper-local` として LiteLLM Proxy へ一元統合を完了。
-* **画像生成 (Stable Diffusion) の完全コンテナ化と段階的アップグレード [対応完了]**:
-  * ホストの AUTOMATIC1111 サーバへの依存を解消し、コンテナ内推論エンジン `local-sd-api` の切り出しを完了しました。
-  * **ハイブリッド・プロキシ構成 (Toxicity & OOM Guard)**:
-    `local-sd-api` は、 `SD_USE_PROXY` の設定に応じて「ローカルでの重いモデル推論」と「LiteLLM Proxy 透過中継」を動的に切り替え可能。
+* **画像生成 (Stable Diffusion / 外部モデル) のバックエンド統合と段階的アップグレード [対応完了]**:
+  * `sd-app` コンテナを廃止し、画像生成プロバイダ切り替えおよびヘルスチェック機能を `backend/app/image_gen.py` に直接統合。
+  * **任意のコンテナ起動選択（オン/オフ機能）**:
+    ローカルでの画像生成が不要（または外部のLiteLLM経由のみ）な環境では、重い `local-sd-api` コンテナの起動をオフに設定可能。起動時には `local-sd-api` が自動検知され機能します。
   * **LiteLLM 自動フォールバック (ハイブリッドハブ)**:
-    `imagen-4` でキー未設定時や通信エラー時に、LiteLLM が自動的にローカルの `sd-local` へフェイルオーバー中継する仕組みを完了。
+    `imagen-4` でキー未設定時や通信エラー時に、LiteLLM が自動的にローカルの `sd-local` へフェイルオーバー中継する仕組みをサポート。
   * **段階的スケール設計**:
-    `SimianLuo/LCM_Dreamshaper_v7` による CPU での超軽量実動検証から、 `SDXL-Lightning` や `FLUX.1 [schnell]` などの高品質ローカルGPU推論への段階的アップグレード手順を整備。
+    `SimianLuo/LCM_Dreamshaper_v7` による CPU での超軽量実動検証から、 `ByteDance/SDXL-Lightning` や `black-forest-labs/FLUX.1-schnell` などの高品質ローカルGPU推論への段階的アップグレード手順を整備。
 * **LiteLLM Proxy のハブ（軸）化による抽象化 [対応完了]**:
   * すべての AI リクエスト（LLM、音声、画像、埋め込み）を `open-genai-litellm` に集約・ルーティングしておくことで、裏側のモデルや中継構成を切り替える際も、フロントエンドやバックエンドの再ビルドを伴わずに安全にモデルリプレイスが完了します。
 
