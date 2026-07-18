@@ -1,4 +1,5 @@
 import { render } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { InvokeExAppResponse } from 'genai-web';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ExAppResult } from '../../../../src/features/exapp/components/ExAppResult.tsx';
@@ -109,7 +110,7 @@ describe('ExAppResult', () => {
     expect(image.tagName).toEqual('IMG');
   });
 
-  it('renders citation accordion for RAG sources', () => {
+  it('renders citation accordion for RAG sources and allows toggling details', async () => {
     const mockResponse = createMockExAppResponse({
       artifacts: [
         {
@@ -124,10 +125,20 @@ describe('ExAppResult', () => {
       exAppResponse: mockResponse,
     });
 
-    const { getByText } = render(<ExAppResult shouldShowConversationHistory={false} />);
+    const { container, getByText } = render(<ExAppResult shouldShowConversationHistory={false} />);
 
     expect(getByText('[1] sample.pdf（類似度: 0.800）')).toBeDefined();
     expect(getByText('これはヒットしたチャンク本文です。')).toBeDefined();
+
+    const details = container.querySelector('details');
+    expect(details).toBeDefined();
+    expect(details?.open).toBe(false);
+
+    // summary要素をクリックしてアコーディオンを展開
+    const summary = getByText('[1] sample.pdf（類似度: 0.800）');
+    await userEvent.click(summary);
+    
+    expect(details?.open).toBe(true);
   });
 
   it('renders copy button when result exists', () => {

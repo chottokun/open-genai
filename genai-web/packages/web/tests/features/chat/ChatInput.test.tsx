@@ -93,12 +93,6 @@ vi.mock('@/components/ui/icons/SendIcon', () => ({
   SendIcon: () => <span />,
 }));
 
-vi.mock('@/utils/keyboard', () => ({
-  isSubmitKey: () => false,
-  requestSubmitOnEnter: () => {},
-  submitKeyHint: 'Enter で送信 / Shift+Enter で改行',
-}));
-
 const defaultProps = {
   onSend: vi.fn(),
   fileUpload: false,
@@ -116,6 +110,15 @@ const renderChatInput = (props = {}) => {
 describe('ChatInput', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    
+    // JSDOMポリフィル: HTMLFormElement.prototype.requestSubmit が未定義の場合の対策
+    if (typeof HTMLFormElement !== 'undefined' && !HTMLFormElement.prototype.requestSubmit) {
+      HTMLFormElement.prototype.requestSubmit = function (this: HTMLFormElement) {
+        const event = new Event('submit', { cancelable: true, bubbles: true });
+        this.dispatchEvent(event);
+      };
+    }
+
     mockUseParams.mockReturnValue({ chatId: undefined });
     mockUseLocation.mockReturnValue({
       pathname: '/chat',
@@ -264,6 +267,31 @@ describe('ChatInput', () => {
 
       const textarea = screen.getByRole('textbox');
       expect(textarea.getAttribute('rows')).toBe('1');
+    });
+  });
+
+  describe('keyboard integration', () => {
+    it('should call onSend when Enter is pressed without Shift key', async () => {
+      const onSend = vi.fn();
+      renderChatInput({ onSend });
+
+      const textarea = screen.getByRole('textbox');
+      await userEvent.type(textarea, 'test message{Enter}');
+
+      await waitFor(() => {
+        expect(onSend).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it('should not call onSend and allow typing when Shift+Enter is pressed', async () => {
+      const onSend = vi.fn();
+      renderChatInput({ onSend });
+
+      const textarea = screen.getByRole('textbox');
+      await userEvent.type(textarea, 'line 1{Shift>}{Enter}{/Shift}line 2');
+
+      expect(onSend).not.toHaveBeenCalled();
+      expect((textarea as HTMLTextAreaElement).value).toBe('line 1\nline 2');
     });
   });
 });
