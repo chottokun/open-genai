@@ -46,8 +46,13 @@ done
 ensure_python_env() {
   if [ ! -d "$VENV_DIR" ]; then
     echo "pytest 用 venv を作成: $VENV_DIR"
-    python3 -m venv "$VENV_DIR"
-    "$VENV_DIR/bin/pip" install -q -r tests/requirements.txt
+    if command -v uv >/dev/null 2>&1; then
+      uv venv "$VENV_DIR"
+      uv pip install -p "$VENV_DIR" -r tests/requirements.txt
+    else
+      python3 -m venv "$VENV_DIR"
+      "$VENV_DIR/bin/pip" install -q -r tests/requirements.txt
+    fi
   fi
   # shellcheck disable=SC1091
   source "$VENV_DIR/bin/activate"
