@@ -10,7 +10,8 @@
 | [v0.2.1](https://github.com/hirokawaguchi/open-genai/releases/tag/v0.2.1) | `be88a0d` 以降 | セキュリティ更新・リリース前品質保証 |
 | [v0.3.0](https://github.com/hirokawaguchi/open-genai/releases/tag/v0.3.0) | `daac82e` 以降 | 画像生成の源内一本化・アプリピン留め・LGWAN 成果物キャリア配信 |
 | [v0.3.1](https://github.com/hirokawaguchi/open-genai/releases/tag/v0.3.1) | `e047dae` 以降 | 起動手順の修正・CI 修正・添付拡張子判定の修正 |
-| [v0.3.2](https://github.com/hirokawaguchi/open-genai/releases/tag/v0.3.2) | `fbd6ad0` 以降 | Upstream v0.3.2同期・検証・SSRF allowlist改善・テスト追加 |
+| [v0.3.2](https://github.com/hirokawaguchi/open-genai/releases/tag/v0.3.2) | `1a9eb42` 以降 | 出典表示・ローカルDify成果物取得・Enter送信など |
+| [v0.4.0](https://github.com/hirokawaguchi/open-genai/releases/tag/v0.4.0) | （本リリース） | 構造化 RAG・ナレッジ MCP・Dify 連携事例・マイナンバー検査 |
 
 ## 設計思想の転換（0.1 → 0.2）
 
@@ -27,38 +28,78 @@
 
 ## [Unreleased]
 
+### Dify MultiFileGenerator: 単一 HTML 成果物
+
+- [`MultiFileGenerator.yml`](dify-app/dsl/MultiFileGenerator.yml) の出力形式に `html` を追加（単一自己完結・デジタル庁デザインシステム風の体裁）
+- `dify-app` の MIME→拡張子補正に `text/html` を追加
+
 ---
 
-## [0.3.2] - 2026-07-18
+## [0.4.0] - 2026-07-25
 
-### Upstream v0.3.2 同期
+### 構造化 RAG と検索モード自動選択
 
-- **新機能**:
-  - Dify DSL設定に `DeepResearch` および `MultiFileGenerator` ワークフローを追加。
-  - RAG検索結果に「引用アコーディオン（Citations Accordion）」表示機能を追加し、フロントエンドで折りたたみ表示に対応。
-  - テキストエリア入力（AIアプリやチャット入力）において、Enterキー押下時の送信UXの向上（Shift+Enterで改行、IME変換中の誤送信防止）。
-  - RAGの「ナレッジ管理（管理者）」アプリを `ADMIN_TEAM` から `COMMON_TEAM` へ移行（teamId のスコープ不一致による登録先と検索先の乖離の修正）。
-- **セキュリティ / SSRF保護強化**:
-  - 許可リスト（allowlist）に登録されたホストについては、プライベート/ループバックIP（`host.docker.internal` 等）への名前解決を特別に許可（ローカル/セルフホストDify連携用）。クラウドメタデータ等のリンクローカルIPは引き続き拒否。
-- **移行処理**:
-  - 起動時に、旧「ナレッジ管理」で誤って `ADMIN_TEAM` スコープに登録されていたベクトルデータおよびURLソースを自動的に `COMMON_TEAM` （共有ナレッジ）へ付け替える移行処理を追加。
+- 規程・マニュアル向けのツリー索引（`ingest_tree` / PageIndex 系）と共通 `POST /retrieve` を追加
+- `mode=auto` で候補に応じて `full` / `hybrid` / `vector` / `tree` を自動選択
+- 簡易・URL 登録でも全文を保持。タグ未付与は検索対象外
+- ナレッジ UI を検索／タグ／登録／管理に分割し、タグ中心の運用に整理
 
-### Testing & Fixed
+### ナレッジ検索 MCP と機械向け API
 
-- フロントエンドに `ChatInput` のEnterキー送信結合テストを追加。
-- フロントエンドに引用アコーディオン（`<details>`）の開閉インタラクションテストを追加。
-- フロントエンドに `useSetDefaultValues` フックの単体テストを新規追加し、空配列などの境界値における安全なフォールバックを検証。
-- `teams_store.py` 内の if/elif チェーンを辞書ルックアップに変更し、コードの保守性を向上。
-- `useSetDefaultValues.ts` において、モデルID配列が空の際の `undefined` フォールバックバグを `?? ''` を復帰させて修正。
-- `ChatPage.tsx` の未使用変数 `pathname` の削除、および `ensureImagePersistTarget.ts` での `Array.prototype.at` 使用箇所の互換性修正により、ビルドエラーを完全に解消。
-- `sd-app` の `test_allow_cloud_api_guard_prevents_litellm_and_forces_local` に `LITELLM_IMAGE_URL` のモックを追加し、テスト失敗を解消
-- `sd-app` および `whisper-app` のローカルLiteLLMターゲット判定テストをパラメータ化（`pytest.mark.parametrize`）し、`localhost`、`127.0.0.1`、`host.docker.internal` 等を網羅するように堅牢化
-- `local-whisper-api` において `faster_whisper` モジュールのインポート時のみ一時的に `sys.modules` へモックを追加・削除する手動方式へ改善し、グローバル汚染とモジュールキャッシュ消失によるエラーを回避
-- 静的解析 `ruff` の警告解消（未使用インポートの削除、および意図的なインポート順箇所への `# noqa: E402` 追加）
+- `knowledge-mcp`（Streamable HTTP `:8002/mcp`）を追加。`knowledge_list_tags` / `knowledge_list_docs` / `knowledge_search` で `rag-app` をラップ
+- `rag-app` に機械向け `GET /knowledge/tags` を追加し、`GET /knowledge/docs` も API キーのみで利用可能に
+- `knowledge_search` / `/retrieve` で `source`・`doc_id` による資料内検索を全 mode に通す（`auto` 時は構造化なら tree、なければ vector）
+- 出典アコーディオン表示名に節タイトル・ページ範囲を付与（例: `[2] 規程.pdf / 第3章 / p.10-12`）
 
-### Security
+### Dify 連携（事例 DSL・出典抽出）
 
-- `pip-audit` にて検出された `setuptools` の脆弱性（`PYSEC-2026-3447`）対応のため、仮想環境内の `setuptools` を脆弱性修正版 `83.0.0` にアップデート
+- HTTP 固定 WF（根拠付き Q&A）: [`OpenGENAI-KnowledgeAgent.yml`](dify-app/dsl/OpenGENAI-KnowledgeAgent.yml)
+- Agent + MCP chatflow: [`OpenGENAI-KnowledgeAgent.chatflow.yml`](dify-app/dsl/OpenGENAI-KnowledgeAgent.chatflow.yml)
+- 応用例（議事録スタンス）: [`OpenGENAI-MinutesStance.yml`](dify-app/dsl/OpenGENAI-MinutesStance.yml)
+- `dify-app` が Agent の `agent_log` / ツール応答から `citation_artifacts` を拾い、回答本文の `[n]` に合わせて出典を絞り込み
+
+### ドキュメント
+
+- 公開ガイド: [`docs/knowledge-api.md`](docs/knowledge-api.md) / [`docs/knowledge-mcp.md`](docs/knowledge-mcp.md) / [`docs/dify-knowledge.md`](docs/dify-knowledge.md)
+- README の API／Dify 詳細を上記へ移し、リンク中心に短縮
+
+### 個人番号（マイナンバー）検査
+
+- `shared/mynumber.py` と禁止語ルールの `check_mynumber` を追加（検査数字一致のみブロック）
+- 旧設定の `\d{12}` 単純一致はマイナンバー検査へ委譲。UUID（teamId 等）は誤検知しないよう除外
+
+### テスト
+
+- 出典抽出・MCP ヘルパ・マイナンバー・retrieve の `source` 正規化などの回帰テストを追加
+- `scripts/run-regression-tests.sh` で venv の pytest を明示し、`conftest` の import パスを修正
+
+---
+
+## [0.3.2] - 2026-07-17
+
+### 出典表示（RAG / Dify）
+
+- RAG 検索ヒットと Dify Knowledge Retrieval の引用を `text/x.open-genai.citation` artifact として返し、源内 UI でアコーディオン表示（`ExAppCitations`）
+- ダウンロード一覧からは citation を除外し、ファイル成果物と分離
+
+### ローカル／セルフホスト Dify 向け成果物取得
+
+- SSRF ガードで allowlist ホストの private/loopback 解決を許可（リンクローカルは拒否のまま）
+- `ARTIFACT_FETCH_ALLOWED_HOSTS` に `host.docker.internal` 等を載せる手順を README / `.env.example` に明記
+
+### UX
+
+- 入力欄の送信を Enter（Shift+Enter で改行、IME 変換中は除外）に統一
+- AI アプリ複製で endpoint / apiKey を編集可能にし、入力フォーム JSON（`uiFormat`）を任意化
+
+### ナレッジ管理
+
+- `rag-manage` を共有チーム（COMMON）へ移設し、旧 ADMIN スコープのチャンク／URL を一度きり移行
+- シードアプリの teamId 変更時に履歴・ピン留めを追随
+
+### Added
+
+- 検証用 Dify DSL: `DeepResearch` / `DeepResearch.chatflow` / `MultiFileGenerator`
 
 ---
 
@@ -185,7 +226,9 @@
 
 ---
 
-[Unreleased]: https://github.com/hirokawaguchi/open-genai/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/hirokawaguchi/open-genai/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/hirokawaguchi/open-genai/compare/v0.3.2...v0.4.0
+[0.3.2]: https://github.com/hirokawaguchi/open-genai/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/hirokawaguchi/open-genai/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/hirokawaguchi/open-genai/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/hirokawaguchi/open-genai/compare/v0.2.0...v0.2.1

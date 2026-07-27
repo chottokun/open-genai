@@ -1,6 +1,6 @@
 # Open GENAI
 
-![Version](https://img.shields.io/badge/version-0.3.1-blue)
+![Version](https://img.shields.io/badge/version-0.4.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![LLM](https://img.shields.io/badge/LLM-Ollama%20%2F%20OpenAI--compatible-0a7)
 ![Stack](https://img.shields.io/badge/stack-FastAPI%20%7C%20React%20%7C%20Qdrant%20%7C%20Keycloak-success)
@@ -10,7 +10,7 @@
 デジタル庁がオープンソースで公開したガバメント AI「源内（GENAI）」を、
 **完全ローカル環境 × ローカル LLM（OpenAI 互換 API）** で動かすためのプロジェクトです。
 
-> **バージョン:** 現在 **v0.3.1**（起動手順・CI・添付拡張子判定の修正）。v0.3.0 = 画像生成の源内一本化・アプリピン留め・LGWAN 成果物キャリア配信、v0.2.1 = セキュリティ・品質保証、v0.2.0 = 自治体・閉域向け拡張、v0.1.0 = ローカル源内化の第一段階。
+> **バージョン:** 現在 **v0.4.0**（構造化 RAG・ナレッジ MCP・Dify 連携事例・マイナンバー検査）。v0.3.2 = 出典表示・ローカルDify成果物取得・Enter送信など、v0.3.1 = 起動手順・CI・添付拡張子判定の修正、v0.3.0 = 画像生成の源内一本化・アプリピン留め・LGWAN 成果物キャリア配信、v0.2.1 = セキュリティ・品質保証、v0.2.0 = 自治体・閉域向け拡張、v0.1.0 = ローカル源内化の第一段階。
 > 変更履歴は [CHANGELOG.md](CHANGELOG.md) を参照。
 
 > **免責 / Disclaimer**: 本リポジトリは有志による**非公式フォーク**です。デジタル庁とは一切関係がなく、
@@ -40,7 +40,7 @@ Linux + NVIDIA GPU 機（例: **NVIDIA DGX Spark**）でも動作します。
 
 本番は `docker-compose.prod.yml` で TLS(443) 終端。閉域検証は HTTP(80) のみ（`docker-compose.verify.yml`）。SeaweedFS（8333）は本番 compose ではホスト非公開で、成果物のダウンロードは `S3_PUBLIC_ENDPOINT` 経由のリバースプロキシを別途用意します（詳細は「成果物ファイル」節）。
 
-> **変更履歴:** [CHANGELOG.md](CHANGELOG.md)（**v0.3.1** = 起動手順・CI・添付拡張子判定の修正、**v0.3.0** = 画像生成の源内一本化・アプリピン留め・LGWAN 成果物キャリア配信、**v0.2.1** = セキュリティ・品質保証、**v0.2.0** = 自治体・閉域向け拡張、**v0.1.0** = ローカル源内化）
+> **変更履歴:** [CHANGELOG.md](CHANGELOG.md)（**v0.4.0** = 構造化 RAG・ナレッジ MCP・Dify 連携事例・マイナンバー検査、**v0.3.2** = 出典表示・ローカルDify成果物取得・Enter送信など、**v0.3.1** = 起動手順・CI・添付拡張子判定の修正、**v0.3.0** = 画像生成の源内一本化・アプリピン留め・LGWAN 成果物キャリア配信、**v0.2.1** = セキュリティ・品質保証、**v0.2.0** = 自治体・閉域向け拡張、**v0.1.0** = ローカル源内化）
 
 ## 設計思想：自治体・閉域運用への拡張
 
@@ -73,6 +73,7 @@ Linux + NVIDIA GPU 機（例: **NVIDIA DGX Spark**）でも動作します。
 | `genai-web/` | デジタル庁 源内 Web（フォーク + ローカル化パッチ。同梱） |
 | `backend/` | ローカル LLM 用の代替バックエンド（FastAPI / Team API も兼ねる） |
 | `rag-app/` | RAG を「行政実務用 AI アプリ」として提供するマイクロサービス（FastAPI） |
+| `knowledge-mcp/` | ナレッジ検索 MCP（Streamable HTTP。`/retrieve` 等の薄いラッパ） |
 | `whisper-app/` | 文字起こしを「AI アプリ」として提供（faster-whisper / CPU） |
 | `dify-app/` | 外部 Dify（ワークフロー / チャットフロー）を「AI アプリ」として連携する汎用プロキシ（FastAPI） |
 | `shared/` | 共用モジュール（`docextract.py` ドキュメント抽出、`ssrfguard.py` SSRF 対策） |
@@ -83,6 +84,7 @@ Linux + NVIDIA GPU 機（例: **NVIDIA DGX Spark**）でも動作します。
 | `prompt-app/` | プロンプトテンプレートカタログ（標準／個人／グループ共有） |
 | `seaweedfs/` | 成果物配信用 S3 互換ストレージ設定 |
 | `scripts/` | 運用スクリプト（契約終了時の完全削除・報告書生成 等） |
+| `docs/` | Open GENAI レイヤのガイド（[ナレッジ API](docs/knowledge-api.md) / [MCP](docs/knowledge-mcp.md) / [Dify 事例](docs/dify-knowledge.md)） |
 | `docker-compose.yml` | proxy + web / backend / … をまとめて起動（HTTP :80 のみ公開） |
 | `docker-compose.prod.yml` | 本番 TLS 構成（proxy :80/:443 のみ公開） |
 | `docker-compose.verify.yml` | 本番スタックの HTTP 検証用オーバーライド（自己署名不要） |
@@ -213,8 +215,9 @@ cp .env.example .env    # 必要に応じて DEFAULT_MODEL などを編集
 cp genai-web/packages/web/.env.example genai-web/packages/web/.env    # 必要に応じて VITE_APP_MODEL_IDS などを編集
 ```
 
-利用したいモデルを増やす場合は、[新規モデルの追加・設定ガイド](file:///home/nobuhiko/Project/open-genai/docs/model-addition-guide.md) を参照し、`litellm_config.yaml` へのモデル登録や、外部クラウドAPI制限ポリシーの考慮、フロントエンド（`genai-web`）での定義追加などを行ってください。
-また、フロントエンド側でモデルを選択可能にするためには、`genai-web/packages/web/.env` の `VITE_APP_MODEL_IDS` （LiteLLM の `model_name` と一致させる）への追加が必要です。モデルの表示名は `genai-web/packages/common/src/application/model.ts` に定義しています。
+利用したいモデルを増やす場合は `genai-web/packages/web/.env` の
+`VITE_APP_MODEL_IDS`（Ollama のモデル名と一致させる）を編集してください。
+モデルの表示名は `genai-web/packages/common/src/application/model.ts` に定義しています。
 
 #### LLM バックエンドの差し替え（OpenAI 互換）
 
@@ -434,7 +437,10 @@ SAML 経由で backend に渡る主な属性:
 使い方:
 1. ヘッダーの **「AI アプリ」** を開く → **「ナレッジ検索」** を選択
 2. 質問を入力して「実行」。知識ベースを検索し、**出典付き**で回答します
-3. 「参照ドキュメント」に **PDF / Word(.docx) / Excel(.xlsx) / テキスト(.txt/.md/.csv 等)** を添付すると回答に利用します（テキスト抽出は `shared/docextract.py` を backend と共用）
+3. 必要ならタグで絞り込みます（**タグ未付与の資料は検索対象外**）
+
+検索方式（ベクトル／構造化／ハイブリッド／全文）は UI では選びません。
+対象資料の状態に応じて `rag-app` が自動選択します（後述の `/retrieve` と同じ方針）。
 
 ### 知識ベースのスコープ（チーム単位で分離）
 
@@ -442,42 +448,35 @@ SAML 経由で backend に渡る主な属性:
 フォルダ階層ではなく、**タグ（フラットなラベル）** と **URL 取り込み** で整理します。
 
 - **共通チームの RAG**: 全認証済みユーザーが使う**共有**ナレッジ
-- **チーム作成時**に「検索用」「管理用」の 2 アプリを自動登録（管理用は `dynamic_schema` で動的フォーム）
+- **チーム作成時**に次の 4 アプリを自動登録（いずれも `dynamic_schema`）
+  - ナレッジ検索 / タグ管理 / ドキュメント登録 / ドキュメント管理
 - 取り込み／検索／削除はすべて、そのアプリが属するチームの `scope`（= `teamId`）内に限定
+- **ドキュメント登録**
+  - **標準**: ツリー索引（構造化）＋ベクトル。規程・マニュアル向け
+  - **簡易**: 全文保存＋ベクトル（ツリーなし）。散発的な資料向け
+  - **URL**: ページ取り込み（全文＋ベクトル）。定期再クロール対象
 - **URL 取り込み**: 行政 HP 等の URL を登録し、定期再クロール（`URL_FETCH_ALLOWED_HOSTS` で許可ホスト制限、SSRF 対策付き）
-- **タグ**: チャンクに複数タグを付与し、検索時の絞り込みに利用
-
-### 知識ベースの管理（AIアプリのフォームから）
-
-各チームの **「〇〇のナレッジ管理」** exApp（動的フォーム）から、検索用アプリではなく管理操作を行います。
-
-- **添付ファイルの扱い**: 「知識ベースに登録（永続）」/「この質問だけで使う（一時）」を選べます
-- **操作例**: タグ一覧、URL 取り込み／一覧／削除／再取り込み、出典削除、全消去
+- **タグ**: チャンク／文書に複数タグを付与し、検索時の絞り込みに利用（未付与は登録可・検索対象外）
 - **重複排除**: 同一内容のチャンクは（出典＋本文のハッシュで）重複登録されません
-- 管理者操作は `SystemAdminGroup` またはチーム管理者が実行可能
 
-知識ベースへの一括登録（CLI 例。`scope` を省略すると共通チームへ登録）:
+### RAG Retrieval API（機械向け）
+
+人間向け Q&A は `POST /invoke`（源内 exApp）。Dify 等から節／チャンクを取り出すときは **`POST /retrieve`** など機械向け API を使います（開発時ホスト `:8001`）。
+
+詳細・curl 事例（タグ横断／`source` 指定／サンプル登録）は **[docs/knowledge-api.md](docs/knowledge-api.md)** を参照。
+
+最短疎通:
 
 ```bash
-docker compose exec rag-app sh -lc 'curl -s -X POST http://localhost:8001/ingest \
+curl -s -X POST http://127.0.0.1:8001/retrieve \
   -H "x-api-key: local-rag-key" -H "Content-Type: application/json" \
-  -d "{\"scope\":\"00000000-0000-0000-0000-000000000000\",\"documents\":[{\"text\":\"登録したい本文\",\"source\":\"出典名\"}]}"'
+  -d '{"question":"管理者は誰ですか","mode":"auto","top_k":4,"scope":"00000000-0000-0000-0000-000000000000","tags":["規程"]}'
 ```
 
-- 埋め込み: Ollama `mxbai-embed-large`（`ollama pull mxbai-embed-large` が必要）
-- ベクトル DB: Qdrant（`qdrant_data` ボリュームに永続化）
-- 回答生成モデル: `.env` の `RAG_MODEL`（既定 `gpt-oss:20b`）
+- 埋め込み: Ollama `mxbai-embed-large` / ベクトル: Qdrant / メタ: SQLite
+- E2E: `scripts/e2e-tree-rag.sh`
 
-### 💡 アドバンスド構成: クラウド推論 × ローカル日本語 Embedding のハイブリッド構成
-
-「チャット推論は Google Gemini などの強力なクラウド LLM を利用し、ドキュメントのベクトル化（Embedding）はローカルコンテナ（`embedding_jp_api`による `ruri-v3` 等）でセキュアかつ高速に行う」というハイブリッド構成に対応しています。
-
-この構成を導入することで、機密性の高い文書のベクトル化コストやセキュリティ制限をクリアしつつ、高度な推論を利用可能です。
-
-詳細な構成・設定方法については、以下を参照してください：
-👉 [ハイブリッド RAG 構成・導入ガイド](file:///home/nobuhiko/Project/open-genai/docs/hybrid-rag-guide.md)
-
-## 文字起こし / 画像生成（AI アプリ）
+## 文字起こし / 画像生成
 
 文字起こしは **外部マイクロサービスの「AI アプリ」**（`whisper-app`）として提供しています。  
 画像生成は源内 Web の **「画像を生成」ページ**（`/image`）から利用します（`backend` の `/image/generate` がホスト SD へプロキシ）。
@@ -559,10 +558,10 @@ Dify Studio の「APIアクセス」に表示される Base URL（`https://api.d
 
 - APIキーは **`app-` で始まるワークフロー用キー**（そのアプリ専用。別フローのキーは不可）
 - ワークフローを **公開** してから呼び出す
-- 成果物の再ホスト（Dify ファイル URL の取得）用に `.env` へ以下を追加:
+- 成果物の再ホスト（Dify ファイル URL の取得）用に `.env` へ以下を追加（ローカル／セルフホストと併用する場合はホストを追記）:
 
 ```bash
-ARTIFACT_FETCH_ALLOWED_HOSTS=files.dify.ai,upload.dify.ai
+ARTIFACT_FETCH_ALLOWED_HOSTS=files.dify.ai,upload.dify.ai,host.docker.internal
 ```
 
 ##### セルフホスト版（Docker 等）
@@ -573,6 +572,8 @@ ARTIFACT_FETCH_ALLOWED_HOSTS=files.dify.ai,upload.dify.ai
 | --- | --- |
 | 標準（API が `/v1`） | `http://host.docker.internal/v1` |
 | nginx 等で `/api/v1` にマウント | `http://host.docker.internal/api/v1` |
+
+成果物ファイルの URL ホスト（`FILES_URL`）は API ホストと異なることがあります。再ホストのため `.env` の `ARTIFACT_FETCH_ALLOWED_HOSTS` に **ファイル URL のホスト名** を追加してください（例: `host.docker.internal`、公開ドメイン、リバプロのホスト名）。allowlist に載せたホストは private IP 解決も許可されます。
 
 ```json
 {"dify_base_url":"http://host.docker.internal/v1","dify_app_type":"workflow","response_field":"result"}
@@ -585,10 +586,43 @@ ARTIFACT_FETCH_ALLOWED_HOSTS=files.dify.ai,upload.dify.ai
 - `dify_base_url`: Dify の API ベース URL（末尾 `/v1` または環境の表示どおり）。**必須**（未設定時は `.env` の `DIFY_BASE_URL` を使用）。
 - `dify_app_type`: `workflow` または `chat`（既定 `chat`）。
 - `query_field`（chat）: ユーザー入力をどの入力キーから取るか（既定 `query`、後方互換で `question` も可）。
-- `response_field`（workflow）: Dify の `outputs`（dict）から表示に使うキー。未指定なら単一キーはその値、複数キーは全体を整形。
+- `response_field`（workflow）: Dify の `outputs` から表示に使うキー。
+  文字列（`"report"`）または配列（`["report","citations"]`）を指定可。
+  エイリアス `response_fields` も可。未指定なら `report` 等を優先。
+- 出典アコーディオン: workflow の `citation_artifacts`（JSON 配列、または
+  `mime_type=text/x.open-genai.citation` 相当）を `dify-app` が artifacts に載せ、
+  源内 UI（`ExAppCitations`）でリンク風見出し＋展開本文として表示する。
 - `file_var`（任意, chat / workflow 共通）: 添付ファイルを渡す Dify の入力変数名。通常は `/v1/parameters` から**自動検出**するため指定不要。
 
 > 「コンフィグ（JSON）」の既定値 `{"max_payload_size":"6MB"}` は、上記の Dify 接続情報に置き換えて構いません。
+
+#### OpenGENAI ナレッジ連携（Dify）
+
+検索の正本は `rag-app` の HTTP API。Dify 側は **HTTP ノード** か **Agent + MCP** で組みます。
+
+| 経路 | DSL | ガイド |
+| --- | --- | --- |
+| HTTP 固定 WF（入門・本丸） | [`OpenGENAI-KnowledgeAgent.yml`](dify-app/dsl/OpenGENAI-KnowledgeAgent.yml) | [docs/dify-knowledge.md](docs/dify-knowledge.md) 事例 1 |
+| Agent + MCP | [`OpenGENAI-KnowledgeAgent.chatflow.yml`](dify-app/dsl/OpenGENAI-KnowledgeAgent.chatflow.yml) | [docs/knowledge-mcp.md](docs/knowledge-mcp.md) / 事例 2 |
+| 応用（議事録スタンス） | [`OpenGENAI-MinutesStance.yml`](dify-app/dsl/OpenGENAI-MinutesStance.yml) | [docs/dify-knowledge.md](docs/dify-knowledge.md) 事例 3 |
+
+サンプル文書: [`knowledge-qa-sample.md`](dify-app/dsl/samples/knowledge-qa-sample.md)（入門）、[`minutes-stance-sample.md`](dify-app/dsl/samples/minutes-stance-sample.md)（応用）。
+
+セルフホスト Dify では SSRF 許可が必要です（詳細はガイド）:
+
+```bash
+SSRF_PROXY_ALLOW_PRIVATE_DOMAINS=host.docker.internal
+```
+
+源内登録の例（workflow / chat）:
+
+```json
+{"dify_base_url":"http://host.docker.internal:8088/v1","dify_app_type":"workflow","response_field":"report"}
+```
+
+```json
+{"dify_base_url":"http://host.docker.internal:8088/v1","dify_app_type":"chat","query_field":"query"}
+```
 
 #### 検証用ワークフロー（SeaweedFS ファイル出力テスト）
 
@@ -597,6 +631,7 @@ ARTIFACT_FETCH_ALLOWED_HOSTS=files.dify.ai,upload.dify.ai
 | ファイル | 内容 |
 | --- | --- |
 | [`dify-app/dsl/File Output Test.yml`](dify-app/dsl/File Output Test.yml) | 公開 URL から PDF を取得し `result_file` として返すワークフロー |
+| [`dify-app/dsl/MultiFileGenerator.yml`](dify-app/dsl/MultiFileGenerator.yml) | 複数文書から `markdown` / `html` / `text` / `json` / `docx` / `pptx` を生成。`html` は単一自己完結（デジタル庁デザインシステム風）。署名 URL またはローカルでブラウザ表示可能 |
 
 **手順:**
 
@@ -632,7 +667,7 @@ curl -s -w "\nHTTP %{http_code}\n" \
 | `401` | API キー不一致・未公開 | 正しい `app-` キー、ワークフロー公開を確認 |
 | 入力フォームが出ない / 実行しても何も表示されない | コンフィグ JSON の改行 | 1 行 JSON に修正し backend 再起動 |
 | `※必須` エラー（値が入っているのに） | 動的スキーマの `default_value` 未同期 | ページをリロード（修正済み。古い web イメージの場合は再ビルド） |
-| ファイルリンクが Dify 直 URL のまま | `ARTIFACT_FETCH_ALLOWED_HOSTS` 未設定、または backend 未再起動 | `.env` に Dify ホストを追加、`docker compose up -d backend` |
+| ファイルリンクが Dify 直 URL のまま（`host.docker.internal` 等） | 再ホスト失敗。`ARTIFACT_FETCH_ALLOWED_HOSTS` に **ファイル URL のホスト**が無い、または backend 未再起動 | `.env` に該当ホスト（例: `host.docker.internal`）を追加し `docker compose up -d backend`。成功時は SeaweedFS の署名付き URL になる |
 | `502`（源内からの実行） | `dify-app` 未起動、コンフィグ改行 | `docker compose ps`、コンフィグを確認 |
 
 #### APIリクエストのデータ形式(JSON) の例（= AI アプリの placeholder / 入力フォーム）
@@ -717,7 +752,7 @@ Dify 等が返すファイル URL をそのまま利用者に渡さず、`backen
 | `S3_PRESIGN_EXPIRY` | `86400`（24h） | 署名付き URL の有効期限（秒）。**ファイル本体の保持期限ではない** |
 | `S3_ARTIFACT_RETENTION_DAYS` | `30` | 成果物と実行履歴の保持日数（超過分を日次削除。`0` で無効） |
 | `S3_ARTIFACT_PURGE_INTERVAL` | `86400` | 上記パージの実行間隔（秒） |
-| `ARTIFACT_FETCH_ALLOWED_HOSTS` | （空） | Dify クラウド利用時は `files.dify.ai,upload.dify.ai` を推奨 |
+| `ARTIFACT_FETCH_ALLOWED_HOSTS` | （空） | 成果物取得を許可するホスト。クラウドは `files.dify.ai,upload.dify.ai`、ローカルは `host.docker.internal`、セルフホストは FILES_URL のホストを追加。allowlist ホストは private IP も可 |
 | `ARTIFACT_DELIVERY_MODE` | `open`（本番既定 `carrier`） | 配信方式。`open`=結果画面に直接リンク、`carrier`=リンクファイル持ち出し（下記 LGWAN） |
 | `ARTIFACT_CARRIER_FORMAT` | `txt` | `carrier` 時のリンクファイル形式（`txt` / `html` / `both`） |
 
@@ -894,7 +929,7 @@ S3_PUBLIC_ENDPOINT=https://files.example.lg.jp
 
 ## 制限事項（ローカル版）
 
-- 画像生成は源内 Web の **「画像を生成」**（`/image`）を利用します。ローカル環境でも `sd-app` / `local-sd-api` 経由で画像が生成できるように API プロキシを実装済みです（別途 `sd-app` / `local-sd-api` またはホスト上の A1111 互換 SD サーバの起動が必要です）
+- 画像生成は源内 Web の **「画像を生成」**（`/image`）を利用します。ホストで A1111 互換 SD サーバ（または `scripts/mock-sd-server.py`）が必要です。
 - AI アプリの呼び出しは同期形式のみ対応（非同期のポーリング形式は未対応）
 - 添付のうち **動画** はローカル LLM が直接扱えないため未対応（画像・ドキュメントは対応）
 - 認証は SAML（Keycloak）で行います。開発用は HTTP・既定パスワードです。
