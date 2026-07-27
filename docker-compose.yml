@@ -148,8 +148,6 @@ services:
       context: .
       dockerfile: rag-app/Dockerfile
     container_name: open-genai-rag-app
-    ports:
-      - "8001:8001"
     environment:
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
       # OpenAI 互換エンドポイント (LiteLLM をハブとして使用)
