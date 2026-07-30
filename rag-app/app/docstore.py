@@ -85,6 +85,9 @@ def init_db() -> None:
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_docs_scope ON docs(scope)"
         )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_tree_nodes_parent ON tree_nodes(doc_id, parent_id)"
+        )
 
 
 def _now() -> str:
@@ -349,15 +352,68 @@ def get_all_pages(doc_id: str) -> list[dict[str, Any]]:
 
 
 def get_nodes_with_text(doc_id: str, node_ids: list[str]) -> list[dict[str, Any]]:
-    out: list[dict[str, Any]] = []
+    if not node_ids:
+        return []
+
+    # SQLite parameters limits defense (chunk into 500 items max)
+    CHUNK_SIZE = 500
+    nodes: list[dict[str, Any]] = []
+
+    with _connect() as conn:
+        for i in range(0, len(node_ids), CHUNK_SIZE):
+            chunk = node_ids[i : i + CHUNK_SIZE]
+            placeholders = ",".join("?" for _ in chunk)
+            rows = conn.execute(
+                f"""
+                SELECT node_id, title, summary, page_start, page_end,
+                       parent_id, sort_order
+                FROM tree_nodes
+                WHERE doc_id = ? AND node_id IN ({placeholders})
+                """,
+                (doc_id, *chunk),
+            ).fetchall()
+            nodes.extend([dict(r) for r in rows])
+
+        if not nodes:
+            return []
+
+        # Collect distinct page numbers needed by the retrieved nodes
+        unique_pages = set()
+        for n in nodes:
+            for p in range(n["page_start"], n["page_end"] + 1):
+                unique_pages.add(p)
+
+        pages_list = sorted(unique_pages)
+        pages_dict = {}
+        if pages_list:
+            for i in range(0, len(pages_list), CHUNK_SIZE):
+                page_chunk = pages_list[i : i + CHUNK_SIZE]
+                placeholders = ",".join("?" for _ in page_chunk)
+                pages_rows = conn.execute(
+                    f"""
+                    SELECT page, text FROM pages
+                    WHERE doc_id = ? AND page IN ({placeholders})
+                    """,
+                    (doc_id, *page_chunk),
+                ).fetchall()
+                for r in pages_rows:
+                    pages_dict[r["page"]] = r["text"]
+
+    out_map: dict[str, dict[str, Any]] = {}
+    for node in nodes:
+        node_pages = []
+        for p in range(node["page_start"], node["page_end"] + 1):
+            if p in pages_dict:
+                node_pages.append({"page": p, "text": pages_dict[p]})
+        text = "\n\n".join(p["text"] for p in node_pages if p.get("text"))
+        out_map[node["node_id"]] = {**node, "text": text, "pages": node_pages}
+
+    # Preserve the original order of node_ids
+    ordered_out: list[dict[str, Any]] = []
     for nid in node_ids:
-        node = get_node(doc_id, nid)
-        if not node:
-            continue
-        pages = get_page_texts(doc_id, node["page_start"], node["page_end"])
-        text = "\n\n".join(p["text"] for p in pages if p.get("text"))
-        out.append({**node, "text": text, "pages": pages})
-    return out
+        if nid in out_map:
+            ordered_out.append(out_map[nid])
+    return ordered_out
 
 
 def delete_by_source(scope: str, source: str) -> bool:

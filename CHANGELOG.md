@@ -28,6 +28,19 @@
 
 ## [Unreleased]
 
+### データベースおよびクエリのパフォーマンス高速化（大幅な応答速度改善）
+
+- **RAGノード一括取得のバッチ最適化 (`get_nodes_with_text`)**
+  - 従来各ノードごとにループを回し個別にDB接続とクエリを投げていた（$O(N)$回）実装を、単一接続内で `IN` 句およびページ範囲クエリを用いて完全に一括（2クエリのみ）で取得するように最適化。
+  - SQLiteのパラメータ数制限（IN句の上限）対策として、自動的に500ノード単位でチャンク分割して処理する安全設計を採用。
+  - ベンチマークにて **約3.5倍の高速化** を実証。
+- **RAGツリー探索の高速化 (`get_children`)**
+  - Tree RAGの探索ルックアップに `(doc_id, parent_id)` 複合インデックス (`idx_tree_nodes_parent`) を追加。全ツリー走査のオーバヘッドを最小化。
+  - ベンチマークにて **約9.6倍の高速化** を実証。
+- **チーム・AIアプリ権限チェックの最適化**
+  - `team_users` テーブルの `userId` に `idx_team_users_user` インデックスを追加。主キーが `(teamId, userId)` であるために発生していた `WHERE userId = ?` 時のフルテーブルスキャンを完全に解消し、ユーザー認可判断を高速化（ベンチマークで **約1.4倍の高速化** を実証）。
+  - `exapps` テーブルのチーム別取得高速化のため、`teamId` に対するインデックス (`idx_exapps_team`) を追加。
+
 ### Dify MultiFileGenerator: 単一 HTML 成果物
 
 - [`MultiFileGenerator.yml`](dify-app/dsl/MultiFileGenerator.yml) の出力形式に `html` を追加（単一自己完結・デジタル庁デザインシステム風の体裁）
