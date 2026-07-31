@@ -40,6 +40,34 @@ async def test_prepare_saml_request_forwarded_headers():
 
 
 @pytest.mark.asyncio
+async def test_prepare_saml_request_defaults_without_forwarded_headers():
+    """X-Forwarded-* が無い場合のデフォルト動作（http 80 / https 443 判定）の検証"""
+    # 1. HTTP デフォルト
+    mock_http = MagicMock(spec=Request)
+    mock_http.method = "GET"
+    mock_http.url.scheme = "http"
+    mock_http.url.path = "/auth/saml/acs"
+    mock_http.query_params = QueryParams()
+    mock_http.headers = Headers({"host": "localhost"})
+
+    req_http = await _prepare_saml_request(mock_http)
+    assert req_http["https"] == "off"
+    assert req_http["server_port"] == "80"
+
+    # 2. HTTPS デフォルト
+    mock_https = MagicMock(spec=Request)
+    mock_https.method = "GET"
+    mock_https.url.scheme = "https"
+    mock_https.url.path = "/auth/saml/acs"
+    mock_https.query_params = QueryParams()
+    mock_https.headers = Headers({"host": "localhost"})
+
+    req_https = await _prepare_saml_request(mock_https)
+    assert req_https["https"] == "on"
+    assert req_https["server_port"] == "443"
+
+
+@pytest.mark.asyncio
 async def test_auth_acs_handles_saml_exception():
     """saml_auth.process_response() が例外を発行した場合、303 で auth-error にリダイレクトされキャッシュがリセットされるか"""
     mock_request = MagicMock(spec=Request)
