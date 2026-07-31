@@ -1108,17 +1108,30 @@ async def auth_login(request: Request) -> Response:
 async def auth_acs(request: Request) -> Response:
     req = await _prepare_saml_request(request)
     saml_auth = auth.build_saml_auth(req)
-    saml_auth.process_response()
-    errors = saml_auth.get_errors()
     relay = req["post_data"].get("RelayState") or FRONTEND_URL
     target = relay if str(relay).startswith("http") else FRONTEND_URL
 
+    try:
+        saml_auth.process_response()
+    except Exception as exc:  # noqa: BLE001 — IdP 応答の検証例外をログイン失敗へ落とす
+        reason = str(exc) or type(exc).__name__
+        print(f"[auth] SAML 検証例外: {reason}")
+        audit.record(
+            request, action="auth.login", status=401, output_text=f"SAML検証例外: {reason}"
+        )
+        # Keycloak 再構成後の古い IdP メタデータ/証明書キャッシュを次回で刷新する
+        auth.reset_settings_cache()
+        return RedirectResponse(f"{FRONTEND_URL}/auth-error", status_code=303)
+
+    errors = saml_auth.get_errors()
     if errors or not saml_auth.is_authenticated():
         reason = saml_auth.get_last_error_reason() or ",".join(errors)
         print(f"[auth] SAML 検証失敗: {reason}")
         audit.record(
             request, action="auth.login", status=401, output_text=f"SAML検証失敗: {reason}"
         )
+        # Keycloak 再構成後の古い IdP メタデータ/証明書キャッシュを次回で刷新する
+        auth.reset_settings_cache()
         return RedirectResponse(f"{FRONTEND_URL}/auth-error", status_code=303)
 
     attrs = saml_auth.get_attributes()
