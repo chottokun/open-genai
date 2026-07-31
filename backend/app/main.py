@@ -1064,12 +1064,20 @@ async def _prepare_saml_request(request: Request) -> dict[str, Any]:
         "host", "localhost:8000"
     )
     forwarded_port = request.headers.get("x-forwarded-port")
-    if forwarded_port:
-        server_port = forwarded_port
-    elif ":" in host:
-        server_port = host.split(":", 1)[1]
+    if forwarded_proto == "https":
+        if forwarded_port and forwarded_port != "80":
+            server_port = forwarded_port
+        elif ":" in host:
+            server_port = host.split(":", 1)[1]
+        else:
+            server_port = "443"
     else:
-        server_port = "443" if forwarded_proto == "https" else "80"
+        if forwarded_port:
+            server_port = forwarded_port
+        elif ":" in host:
+            server_port = host.split(":", 1)[1]
+        else:
+            server_port = "80"
     return {
         "https": "on" if forwarded_proto == "https" else "off",
         "http_host": host,
