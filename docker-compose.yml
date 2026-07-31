@@ -216,7 +216,7 @@ services:
     build: ./whisper-app
     container_name: open-genai-whisper-app
     ports:
-      - "8002:8002"
+      - "${WHISPER_APP_PORT:-8010}:8002"
     env_file:
       - .env
     volumes:
