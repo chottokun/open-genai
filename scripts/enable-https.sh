@@ -24,8 +24,16 @@ if [ -f "${ENV_FILE}" ]; then
   fi
 fi
 
-DOMAIN="${1:-${DEFAULT_DOMAIN}}"
-PORT="${2:-8443}"
+ARG1="${1:-}"
+ARG2="${2:-}"
+
+if [[ "${ARG1}" =~ ^[0-9]+$ ]]; then
+  PORT="${ARG1}"
+  DOMAIN="${DEFAULT_DOMAIN}"
+else
+  DOMAIN="${ARG1:-${DEFAULT_DOMAIN}}"
+  PORT="${ARG2:-8443}"
+fi
 
 echo "=========================================================="
 echo "🔒 HTTPS 有効化セットアップを開始します"
