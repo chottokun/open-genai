@@ -391,6 +391,18 @@ export const modelMetadata: Record<string, ModelMetadata> = {
     flags: MODEL_FEATURE.IMAGE_GEN,
     displayName: 'Stable Diffusion (ローカル)',
   },
+  'local-sd3.5': {
+    flags: MODEL_FEATURE.IMAGE_GEN,
+    displayName: 'Stable Diffusion 3.5 (Xinference)',
+  },
+  'gpt-image-1': {
+    flags: MODEL_FEATURE.IMAGE_GEN,
+    displayName: 'GPT-Image-1 (OpenAI)',
+  },
+  'standard-image-gen': {
+    flags: MODEL_FEATURE.IMAGE_GEN,
+    displayName: '標準画像生成モデル (標準)',
+  },
 
   // Stability AI Image Gen
   'stability.stable-diffusion-xl-v1': {
