@@ -1059,30 +1059,26 @@ async def _prepare_saml_request(request: Request) -> dict[str, Any]:
         form = {k: v for k, v in raw.items()}
     # リバースプロキシ配下では request.url.scheme が http のままになるため、
     # X-Forwarded-* を優先して Recipient 検証用の公開 URL を組み立てる。
-    forwarded_proto = request.headers.get("x-forwarded-proto", request.url.scheme)
-    host = request.headers.get("x-forwarded-host") or request.headers.get(
+    forwarded_proto = str(request.headers.get("x-forwarded-proto", request.url.scheme)).lower()
+    host_header = request.headers.get("x-forwarded-host") or request.headers.get(
         "host", "localhost:8000"
     )
-    forwarded_port = request.headers.get("x-forwarded-port")
+    clean_host = host_header.split(":")[0]
+    
     if forwarded_proto == "https":
-        # HTTPS 通信の場合、server_port は原則 443 (または host 内の特定ポート) とし、
-        # リバースプロキシが誤って 80 を送ってきても 443 へ強力補正する。
-        if ":" in host:
-            server_port = host.split(":", 1)[1]
-        elif forwarded_port and forwarded_port not in ("80", "443"):
-            server_port = forwarded_port
-        else:
-            server_port = "443"
+        server_port = "443"
     else:
+        forwarded_port = request.headers.get("x-forwarded-port")
         if forwarded_port:
-            server_port = forwarded_port
-        elif ":" in host:
-            server_port = host.split(":", 1)[1]
+            server_port = str(forwarded_port)
+        elif ":" in host_header:
+            server_port = str(host_header.split(":", 1)[1])
         else:
             server_port = "80"
+            
     return {
         "https": "on" if forwarded_proto == "https" else "off",
-        "http_host": host.split(":")[0],  # ホスト名のみ（ポート番号は付与しない）
+        "http_host": clean_host,
         "server_port": server_port,
         "script_name": _saml_script_name(request),
         "get_data": dict(request.query_params),
