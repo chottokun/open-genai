@@ -120,11 +120,13 @@ def build_saml_auth(req: dict[str, Any]) -> OneLogin_Saml2_Auth:
     import copy
     settings = copy.deepcopy(get_saml_settings())
     
-    host = req.get("http_host", "")
+    host = req.get("http_host", "").split(":")[0]
     proto = "https" if req.get("https") == "on" else "http"
+    if proto == "https":
+        req["server_port"] = "443"
     
     if host:
-        # リクエスト時の Host ヘッダ（ポート含む）で ACS / SLS の接続先を動的差し替え
+        # リクエスト時の Host ヘッダで ACS / SLS の接続先を動的差し替え
         for key in ("assertionConsumerService", "singleLogoutService"):
             orig_url = settings["sp"][key]["url"]
             parsed = urlparse(orig_url)
