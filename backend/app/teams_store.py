@@ -123,6 +123,9 @@ def init_db(seed_exapps: list[dict[str, Any]] | None = None) -> None:
                 pinnedDate TEXT NOT NULL,
                 PRIMARY KEY (userId, teamId, itemId)
             );
+
+            CREATE INDEX IF NOT EXISTS idx_team_users_user ON team_users(userId);
+            CREATE INDEX IF NOT EXISTS idx_exapps_team ON exapps(teamId);
             """
         )
         # 共通チーム / 管理者ツール チーム（いずれもシステム管理下の固定チーム）
