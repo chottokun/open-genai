@@ -1,7 +1,17 @@
 import { CRI_PREFIX_PATTERN, modelMetadata } from '@genai-web/common';
 import type { Model } from 'genai-web';
 
-const bedrockModelIds: string[] = (JSON.parse(import.meta.env.VITE_APP_MODEL_IDS) as string[])
+const safeParseJsonArray = (str: string | undefined): string[] => {
+  if (!str) return [];
+  try {
+    const parsed = JSON.parse(str);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const bedrockModelIds: string[] = safeParseJsonArray(import.meta.env.VITE_APP_MODEL_IDS)
   .map((name: string) => name.trim())
   .filter((name: string) => name);
 
@@ -10,13 +20,11 @@ const duplicateBaseModelIds = new Set(
     .map((modelId) => modelId.replace(CRI_PREFIX_PATTERN, ''))
     .filter((item, index, arr) => arr.indexOf(item) !== index),
 );
-const endpointNames: string[] = JSON.parse(import.meta.env.VITE_APP_ENDPOINT_NAMES)
+const endpointNames: string[] = safeParseJsonArray(import.meta.env.VITE_APP_ENDPOINT_NAMES)
   .map((name: string) => name.trim())
   .filter((name: string) => name);
 
-const imageGenModelIds: string[] = (
-  JSON.parse(import.meta.env.VITE_APP_IMAGE_MODEL_IDS) as string[]
-)
+const imageGenModelIds: string[] = safeParseJsonArray(import.meta.env.VITE_APP_IMAGE_MODEL_IDS)
   .map((name: string) => name.trim())
   .filter((name: string) => name);
 

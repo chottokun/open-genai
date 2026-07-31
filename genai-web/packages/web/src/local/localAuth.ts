@@ -12,7 +12,9 @@
  */
 
 const TOKEN_KEY = 'open-genai-token';
-const API_ENDPOINT = import.meta.env.VITE_APP_API_ENDPOINT;
+const API_ENDPOINT =
+  (import.meta.env.VITE_APP_API_ENDPOINT as string | undefined)?.replace(/\/$/, '') ||
+  'http://localhost:8000';
 
 type JwtPayload = {
   sub?: string;
