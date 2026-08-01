@@ -45,6 +45,8 @@
       "enabled": true,
       "fullScopeAllowed": true,
       "frontchannelLogout": true,
+      "baseUrl": "http://localhost/api/auth/saml/sls",
+      "adminUrl": "http://localhost/api/auth/saml/sls",
       "redirectUris": [
         "http://localhost/api/auth/saml/acs",
         "http://localhost/*",
