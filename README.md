@@ -7,6 +7,16 @@
 
 ---
 
+## 🏛️ OpenGENAI レイヤについて
+
+本リポジトリにおける **OpenGENAI** とは、Upstream である「**源内 (GenAI)**」の優れた UI / コア機能の上に、自治体・行政・閉域網でのガバナンスおよび実務要件を満たすために構築された**拡張アーキテクチャ・機能レイヤ** (`backend/`, `shared/`, 各種 `exApp`) を指します。
+
+- **認証・認可基盤**: SAML 2.0 / OIDC 動的バインドおよび Keycloak 同梱
+- **拡張マイクロサービス (`exApp`) 群**: 監査ログ (`audit-app`)、利用者一括管理 (`usermgmt-app`)、モデルポリシー制御 (`modelpolicy-app`)、プロンプト共有 (`prompt-app`)、NGワード検知 (`ngword-app`) 等
+- **データ & ストレージガバナンス**: SeaweedFS (S3互換) への再ホストおよびハイブリッド RAG
+
+---
+
 ## 🌟 主な特徴
 
 - **認証 & SSO 統合 (SAML 2.0 / OIDC)**: Keycloak を同梱し、単一サインオン (SSO) および SAML ACS/SLS 動的バインドに対応。
