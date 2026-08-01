@@ -1233,7 +1233,7 @@ async def auth_logout(
     return RedirectResponse(return_to, status_code=303)
 
 
-@app.get("/auth/saml/sls")
+@app.api_route("/auth/saml/sls", methods=["GET", "POST"])
 async def auth_sls(request: Request) -> Response:
     """IdP からの SLO 応答/要求を処理し、サインアウト完了画面へ戻す。"""
     req = await _prepare_saml_request(request)

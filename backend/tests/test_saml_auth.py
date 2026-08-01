@@ -93,3 +93,25 @@ async def test_auth_acs_handles_saml_exception():
             mock_audit.assert_called_once()
             assert mock_audit.call_args[1]["status"] == 401
 
+
+@pytest.mark.asyncio
+async def test_auth_sls_post_and_get():
+    """/auth/saml/sls エンドポイントが GET および POST の双方を受領できることを検証"""
+    from app.main import auth_sls
+    for method in ("GET", "POST"):
+        mock_req = MagicMock(spec=Request)
+        mock_req.method = method
+        mock_req.form = AsyncMock(return_value={})
+        mock_req.headers = Headers({})
+        mock_req.query_params = QueryParams()
+        mock_req.url.scheme = "http"
+        mock_req.url.path = "/auth/saml/sls"
+
+        with patch("app.main.auth.build_saml_auth") as mock_build_saml:
+            mock_saml_inst = MagicMock()
+            mock_build_saml.return_value = mock_saml_inst
+
+            response = await auth_sls(mock_req)
+            assert response.status_code == 303
+            assert response.headers["location"].endswith("/signed-out")
+
