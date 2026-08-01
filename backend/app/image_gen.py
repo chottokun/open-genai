@@ -139,7 +139,7 @@ async def is_sd_up() -> bool:
         return False
 
 
-async def generate_image_base64(params: dict[str, Any]) -> str:
+async def generate_image_base64(params: dict[str, Any], model_id: str | None = None) -> str:
     """現在のプロバイダで画像を生成し、base64 文字列を返す。"""
     prov = get_effective_provider()
     positive, negative = _positive_negative_prompts(params.get("textPrompt") or [])
@@ -210,9 +210,10 @@ async def generate_image_base64(params: dict[str, Any]) -> str:
 
     else:
         # LiteLLM/クラウドAPI経由での画像生成
+        model_name = model_id or LITELLM_IMAGE_MODEL
         payload = {
             "prompt": positive,
-            "model": LITELLM_IMAGE_MODEL,
+            "model": model_name,
             "n": 1,
             "size": f"{size}x{size}",
             "response_format": "b64_json"

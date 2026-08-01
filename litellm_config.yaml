@@ -111,6 +111,32 @@ model_list:
     model_info:
       mode: image_generation
 
+  # ローカル独立ノードで動作するStable Diffusion 3.5
+  - model_name: local-sd3.5
+    litellm_params:
+      model: xinference/stabilityai/stable-diffusion-3.5-large
+      api_base: "http://xinference:9997/v1"
+      api_key: "anything"
+    model_info:
+      mode: image_generation
+
+  # 商用クラウドAPI (OpenAI GPT-Image-1)
+  - model_name: gpt-image-1
+    litellm_params:
+      model: openai/gpt-image-1
+      api_key: "os.environ/OPENAI_API_KEY"
+    model_info:
+      mode: image_generation
+
+  # 抽象化エイリアスモデル（自動フォールバック設定付き）
+  - model_name: standard-image-gen
+    litellm_params:
+      model: xinference/stabilityai/stable-diffusion-3.5-large
+      api_base: "http://xinference:9997/v1"
+    fallbacks: ["gpt-image-1"]
+    model_info:
+      mode: image_generation
+
 # =========================================================================
 #  フォールバック / ルーティング設定
 # =========================================================================
@@ -122,6 +148,7 @@ litellm_settings:
     - {"gemini-2.5-flash": ["gemma4"]}
     - {"gemini-3.5-flash": ["gemma4"]}
     - {"imagen-4": ["sd-local"]}
+    - {"standard-image-gen": ["gpt-image-1"]}
   drop_params: true  # プロバイダ間で非互換なパラメータを自動除去
 
   # --- ガードレール / コンテンツモデレーション設定 ---
