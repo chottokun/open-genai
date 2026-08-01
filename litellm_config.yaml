@@ -169,3 +169,4 @@ router_settings:
     "local-ollama-chat": "gemma4"
     "gpt-oss:20b": "gemma4"
     "gemma3:27b": "gemma4"
+    "local-sd": "sd-local"
