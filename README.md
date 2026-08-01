@@ -1,9 +1,9 @@
-# Open GENAI (源内 Upstream カスタマイズ版)
+# open-genai (OpenGENAI カスタマイズ版)
 
-オープンソースの生成AIプラットフォーム「**源内 (GenAI)**」をベースとし、行政・閉域（LGWAN等）環境要件、SAML 2.0 / OIDC 連携、および R-Proxy 方式 SSL/TLS 運用等に最適化・拡張を行ったカスタマイズ版リポジトリです。
+オープンソースの行政・自治体向け生成AIプラットフォーム「**OpenGENAI (源内 / GenAI)**」を利用・ベースとし、SAML 2.0 / OIDC シングルサインオン、R-Proxy 方式 SSL/TLS 運用、および閉域網向けガバナンス機能の拡張・調整を行ったリポジトリです。
 
-> 💡 **Upstream（源内 / GenAI）に関する注記 & 感謝**  
-> 本リポジトリは、オリジナルプロジェクト（[GenAI / 源内](https://github.com/hirokawaguchi/open-genai)）の優れた設計思想とコードベースに深く依存し、これを発展させたものです。素晴らしいオープンソースプロダクトを公開・共有してくださっている Upstream コミュニティおよび開発者の皆様に心より感謝申し上げます。
+> 💡 **OpenGENAI プロジェクトに関する注記 & 深甚なる感謝**  
+> 本リポジトリは、川口ひろあき氏およびコミュニティによって開発・公開されているオープンソースプロジェクト「[OpenGENAI (GenAI / 源内)](https://github.com/hirokawaguchi/open-genai)」の優れたコードベースと先進的なアーキテクチャ基盤を利用・拡張させていただいております。先進的で高品質なプロダクトをオープンソースとして共有してくださっている開発者の川口ひろあき様をはじめ、OpenGENAI コミュニティの皆様に心より深甚なる感謝を申し上げます。
 
 ---
 
@@ -106,7 +106,9 @@ bash scripts/setup-rproxy-ssl.sh your-domain.local
 
 ## 🙏 謝辞 (Acknowledgements)
 
-本プロジェクトは、オリジナルプロジェクト（[GenAI / 源内](https://github.com/hirokawaguchi/open-genai)）の素晴らしいオープンソースコードと革新的なアーキテクチャの賜物です。開発者の皆様およびオープンソースコミュニティの貢献と継続的な知識共有に心より感謝と敬意を表します。
+本リポジトリは、川口ひろあき様（[@hirokawaguchi](https://github.com/hirokawaguchi)）およびオープンソースコミュニティが公開・推進されている **[OpenGENAI (源内 / GenAI)](https://github.com/hirokawaguchi/open-genai)** プロジェクトの素晴らしくかつ先進的な基盤成果物を利用させていただいたものです。
+
+地方自治体や行政・閉域環境における生成AI活用の未来を切り拓く OpenGENAI プロジェクトの貴重な開発成果および継続的な知識共有に対し、開発者の川口ひろあき様ならびにオープンソースコミュニティの皆様に心より深甚なる謝辞と敬意を表します。
 
 ---
 
