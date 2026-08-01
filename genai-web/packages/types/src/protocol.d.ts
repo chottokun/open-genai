@@ -104,7 +104,12 @@ export type GenerateImageRequest = {
   model?: Model;
   params: GenerateImageParams;
 };
-export type GenerateImageResponse = string;
+export type GenerateImageResponse = {
+  data: {
+    b64_json?: string;
+    url?: string;
+  }[];
+};
 
 export type DeleteFileRequest = {
   fileName: string;

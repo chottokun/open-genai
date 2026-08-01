@@ -13,7 +13,7 @@ export const useGenerateImage = () => {
           maskImage: params.maskImage === '' ? undefined : params.maskImage?.split(',')[1],
         },
       });
-      return response.data;
+      return response.data.data[0]?.b64_json ?? '';
     },
   };
 };

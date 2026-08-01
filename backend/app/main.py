@@ -1704,8 +1704,8 @@ def _safe_path(key: str) -> str:
 async def generate_image(request: Request) -> Response:
     """ローカル環境用画像生成プロキシ。
     
-    フロントからのリクエストを受け取り、選択されたプロバイダ（local / litellm / local_api）で
-    画像を生成し、Base64 データを Response(text/plain) として返す。
+    フロントからのリクエストを受け取り、画像を生成して、
+    標準的な OpenAI 画像生成仕様の JSON を返す。
     """
     claims = _claims_from_request(request)
     if not _user_id(claims):
@@ -1721,13 +1721,13 @@ async def generate_image(request: Request) -> Response:
     else:
         model_id = None
     
-    from app.image_gen import generate_image_base64
+    from app.image_gen import generate_image_base64_dict
     try:
-        b64_image = await generate_image_base64(params, model_id=model_id)
+        res_data = await generate_image_base64_dict(params, model_id=model_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
         
-    return Response(content=b64_image, media_type="text/plain")
+    return JSONResponse(content=res_data)
 
 
 @app.post("/file/url")
