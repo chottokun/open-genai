@@ -2,6 +2,9 @@
 
 行政・閉域環境向けに最適化された、多機能かつ拡張性に優れたローカル・オンプレミス型 LLM / Generative AI アプリケーションプラットフォーム。
 
+> 💡 **Upstream に関する注記 & 謝辞**  
+> 本リポジトリ (Open GENAI) は、オリジナルプロジェクト（源内 / GenAI シリーズ）をベースに、自治体・閉域網要件、SAML 2.0 連携、およびリバースプロキシ化等のカスタマイズを加えたものです。素晴らしい基盤プロダクトと設計思想をオープンソースとして公開・共有してくださっている Upstream コミュニティおよび開発者の皆様に深甚なる感謝を申し上げます。
+
 ---
 
 ## 🌟 主な特徴
@@ -88,6 +91,12 @@ bash scripts/setup-rproxy-ssl.sh your-domain.local
 - **[Upstream v0.5.0 同期検証レポート](file:///home/nobuhiko/Project/open-genai/docs/upstream-sync-report-v0.5.0.md)**: 認証堅牢化、SAML ACS/SLS 改善、クエリ高速化の検証結果。
 - **[ハイブリッド RAG ガイド](file:///home/nobuhiko/Project/open-genai/docs/hybrid-rag-guide.md)**: 文書検索・SQLite チャンク取得最適化。
 - **[CHANGELOG](file:///home/nobuhiko/Project/open-genai/CHANGELOG.md)**: バージョン変更履歴。
+
+---
+
+## 🙏 謝辞 (Acknowledgements)
+
+本プロジェクトは、オリジナルプロジェクト（[GenAI / 源内](https://github.com/hirokawaguchi/open-genai)）の素晴らしいオープンソースコードと革新的なアーキテクチャの賜物です。開発者の皆様およびオープンソースコミュニティの貢献と継続的な知識共有に心より感謝と敬意を表します。
 
 ---
 
