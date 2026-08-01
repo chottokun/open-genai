@@ -46,3 +46,4 @@ deletion-report-*.txt
 !/docs/dify-knowledge.md
 !/docs/upstream-sync-report-*.md
 !/docs/ssl-rproxy-guide.md
+!/docs/wiki-comprehensive-developer-guide.md
