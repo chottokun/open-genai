@@ -27,8 +27,11 @@ LITELLM_IMAGE_API_KEY = os.environ.get("LITELLM_IMAGE_API_KEY", "not-needed")
 LOCAL_SD_MODEL_ID = "local-sd"
 
 
-def get_effective_provider() -> str:
-    prov = IMAGE_PROVIDER or "local"
+def get_effective_provider(model_id: str | None = None) -> str:
+    if model_id and model_id != LOCAL_SD_MODEL_ID:
+        prov = "litellm"
+    else:
+        prov = IMAGE_PROVIDER or "local"
     
     # 接続先が Docker 内部のクローズドなローカルアドレス（litellm 等）であれば、
     # 外部にキーが漏洩するリスクがないため allow_cloud=False でも通過させる
@@ -141,7 +144,7 @@ async def is_sd_up() -> bool:
 
 async def generate_image_base64(params: dict[str, Any], model_id: str | None = None) -> str:
     """現在のプロバイダで画像を生成し、base64 文字列を返す。"""
-    prov = get_effective_provider()
+    prov = get_effective_provider(model_id)
     positive, negative = _positive_negative_prompts(params.get("textPrompt") or [])
     if not positive:
         raise ValueError("プロンプトが空です。")

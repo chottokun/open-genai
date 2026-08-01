@@ -175,6 +175,23 @@ def test_get_effective_provider_guardrail(monkeypatch) -> None:
     assert prov == "litellm"
 
 
+def test_get_effective_provider_routing(monkeypatch) -> None:
+    # model_id が渡されたときの挙動を検証
+    monkeypatch.setattr(image_gen, "IMAGE_PROVIDER", "local")
+
+    # model_id が None や "local-sd" の場合は、IMAGE_PROVIDER がそのまま使われる
+    assert image_gen.get_effective_provider() == "local"
+    assert image_gen.get_effective_provider(None) == "local"
+    assert image_gen.get_effective_provider("local-sd") == "local"
+
+    # それ以外のモデルID（例: "local-sd3.5", "gpt-image-1"）が渡された場合、litellm に自動ルーティングされる
+    monkeypatch.setattr(image_gen, "LITELLM_IMAGE_URL", "http://litellm:4000/v1")
+    monkeypatch.setattr(image_gen, "ALLOW_CLOUD_API", False) # ローカル宛先なので litellm が維持されるはず
+    assert image_gen.get_effective_provider("local-sd3.5") == "litellm"
+    assert image_gen.get_effective_provider("gpt-image-1") == "litellm"
+    assert image_gen.get_effective_provider("standard-image-gen") == "litellm"
+
+
 @patch("httpx.AsyncClient.post")
 def test_generate_image_base64_litellm_standard_image_gen_success(mock_post, monkeypatch) -> None:
     # LITELLM_IMAGE_MODELが standard-image-gen のとき、LiteLLMに正しくそのモデル名が転送されることをテスト
