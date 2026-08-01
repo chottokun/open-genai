@@ -115,6 +115,8 @@ def reset_settings_cache() -> None:
     _settings_cache = None
 
 
+def build_saml_auth(req: dict[str, Any]) -> OneLogin_Saml2_Auth:
+    # 現在のリクエストからホスト名とプロトコルを取得し、SP設定を動的に書き換えることで、外部からのアクセス時にも正しくリダイレクトされるようにします。
     import copy
     settings = copy.deepcopy(get_saml_settings())
     
