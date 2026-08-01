@@ -213,6 +213,26 @@ export const MODEL_INFO: Record<string, ModelInfo<'base' | 'advanced'>> = {
     ],
     resolutionPresets: DEFAULT_MODEL_PRESETS,
   },
+  'local-sd3.5': {
+    supportedModes: [
+      GENERATION_MODES.TEXT_IMAGE,
+      GENERATION_MODES.IMAGE_VARIATION,
+    ],
+    resolutionPresets: STABILITY_AI_2024_MODEL_PRESETS,
+  },
+  'gpt-image-1': {
+    supportedModes: [
+      GENERATION_MODES.TEXT_IMAGE,
+    ],
+    resolutionPresets: STABILITY_AI_2024_MODEL_PRESETS,
+  },
+  'standard-image-gen': {
+    supportedModes: [
+      GENERATION_MODES.TEXT_IMAGE,
+      GENERATION_MODES.IMAGE_VARIATION,
+    ],
+    resolutionPresets: STABILITY_AI_2024_MODEL_PRESETS,
+  },
   [STABILITY_AI_MODELS.STABLE_DIFFUSION_XL]: {
     supportedModes: [
       GENERATION_MODES.TEXT_IMAGE,
