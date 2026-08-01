@@ -198,3 +198,29 @@ def test_generate_image_base64_litellm_standard_image_gen_success(mock_post, mon
 
     assert b64 == "dummy_standard_image_gen_png"
     assert captured_payload["model"] == "standard-image-gen"
+
+
+@patch("httpx.AsyncClient.post")
+def test_generate_image_base64_litellm_dynamic_model_id_success(mock_post, monkeypatch) -> None:
+    # 引数 model_id が渡されたとき、LITELLM_IMAGE_MODELよりも優先してLiteLLMに転送されることをテスト
+    mock_res = MagicMock()
+    mock_res.status_code = 200
+    mock_res.json.return_value = {"data": [{"b64_json": "dummy_dynamic_png"}]}
+
+    captured_payload = {}
+    async def mock_post_coro(url, json, headers, *args, **kwargs):
+        nonlocal captured_payload
+        captured_payload = json
+        return mock_res
+    mock_post.side_effect = mock_post_coro
+
+    monkeypatch.setattr(image_gen, "IMAGE_PROVIDER", "litellm")
+    monkeypatch.setattr(image_gen, "LITELLM_IMAGE_MODEL", "imagen-4") # デフォルト
+
+    b64 = asyncio.run(image_gen.generate_image_base64(
+        {"textPrompt": [{"text": "A cyber city", "weight": 1}]},
+        model_id="gpt-image-1" # 画面で選択されたモデルID
+    ))
+
+    assert b64 == "dummy_dynamic_png"
+    assert captured_payload["model"] == "gpt-image-1"

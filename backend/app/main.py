@@ -1708,10 +1708,17 @@ async def generate_image(request: Request) -> Response:
 
     body = await request.json()
     params = body.get("params", {})
+    model_obj = body.get("model") or {}
+    if isinstance(model_obj, dict):
+        model_id = model_obj.get("modelId")
+    elif isinstance(model_obj, str):
+        model_id = model_obj
+    else:
+        model_id = None
     
     from app.image_gen import generate_image_base64
     try:
-        b64_image = await generate_image_base64(params)
+        b64_image = await generate_image_base64(params, model_id=model_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
         
