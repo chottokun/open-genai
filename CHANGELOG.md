@@ -35,6 +35,10 @@
 - **SAML ACS / SLS 動的リダイレクトとリバースプロキシ対応 (PR #18)**
   - Nginx 等のリバースプロキシ配下で外部ホストからアクセスされた際、`X-Forwarded-Host`, `X-Forwarded-Proto`, `X-Forwarded-Port` ヘッダからリクエスト接続先を自動解決し、リダイレクトループや不一致を防止。
   - Keycloak 等からの重複 Attribute 名を許容する `allowRepeatAttributeName: True` を SAML 設定に追加。
+- **SAML SLS (Single Logout Service) の POST & GET メソッド両対応**
+  - Keycloak からの SAML SLO 応答が POST バインディング (`/api/auth/saml/sls`) で送信されてきた場合の `405 Method Not Allowed` エラーを解消し、POST/GET のどちらの方式でもログアウト処理が完結するよう改善。
+- **リバースプロキシ (R-Proxy) 方式によるワンタッチ SSL/TLS 対応**
+  - Nginx による HTTP (80) と HTTPS (443) の両対応受領、動的プロキシヘッダー転送、および自動化スクリプト (`scripts/setup-rproxy-ssl.sh`) と解説ガイド (`docs/ssl-rproxy-guide.md`) を導入。
 - **SAML 検証例外時の自動リカバリ・キャッシュ破棄 (PR #18, #21)**
   - IdP 応答の検証失敗・署名例外発生時に、古い IdP メタデータ/証明書キャッシュ (`reset_settings_cache()`) を即時破棄し、安全にログインエラー画面 (`/auth-error`) へ落とすよう強化。
 - **認証切れ/セッション破損時の壊れた JWT 自動クリア (PR #21)**
