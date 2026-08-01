@@ -18,8 +18,9 @@ def test_saml_settings_allow_repeat_attribute_name():
 
 
 @pytest.mark.asyncio
-async def test_prepare_saml_request_forwarded_headers():
+async def test_prepare_saml_request_forwarded_headers(monkeypatch):
     """X-Forwarded-* ヘッダが指定された場合に正しいポート・ホスト・プロトコルがパースされるか検証"""
+    monkeypatch.delenv("PUBLIC_URL", raising=False)
     mock_request = MagicMock(spec=Request)
     mock_request.method = "GET"
     mock_request.url.scheme = "http"
@@ -40,8 +41,9 @@ async def test_prepare_saml_request_forwarded_headers():
 
 
 @pytest.mark.asyncio
-async def test_prepare_saml_request_defaults_without_forwarded_headers():
+async def test_prepare_saml_request_defaults_without_forwarded_headers(monkeypatch):
     """X-Forwarded-* が無い場合のデフォルト動作（http 80 / https 443 判定）の検証"""
+    monkeypatch.delenv("PUBLIC_URL", raising=False)
     # 1. HTTP デフォルト
     mock_http = MagicMock(spec=Request)
     mock_http.method = "GET"

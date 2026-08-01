@@ -115,17 +115,15 @@ def reset_settings_cache() -> None:
     _settings_cache = None
 
 
-def build_saml_auth(req: dict[str, Any]) -> OneLogin_Saml2_Auth:
-    # 現在のリクエストからホスト名とプロトコルを取得し、SP設定を動的に書き換えることで、外部からのアクセス時にも正しくリダイレクトされるようにします。
     import copy
     settings = copy.deepcopy(get_saml_settings())
     
+    public_url = os.getenv("PUBLIC_URL", "")
+    proto = "https" if (req.get("https") == "on" or public_url.startswith("https://")) else "http"
+    req["https"] = "on" if proto == "https" else "off"
+    req["server_port"] = "443" if proto == "https" else str(req.get("server_port", "80"))
+    
     host = req.get("http_host", "").split(":")[0]
-    proto = "https" if req.get("https") == "on" else "http"
-    if proto == "https":
-        req["server_port"] = "443"
-    else:
-        req["server_port"] = str(req.get("server_port", "80"))
     
     if host:
         # リクエスト時の Host ヘッダで ACS / SLS の接続先を動的差し替え
