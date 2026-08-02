@@ -1,4 +1,3 @@
-import type { GenerateImageParams } from 'genai-web';
 import { useGenerateImage } from '@/features/generate-image/hooks/useGenerateImage';
 import { useGenerateImageStore } from '@/features/generate-image/stores/useGenerateImageStore';
 import type { ApiError } from '@/lib/fetcher';
@@ -17,6 +16,7 @@ type UseGenerateImageHandlerReturn = {
 
 export const useGenerateImageHandler = (
   setGenerating: (generating: boolean) => void,
+  onError?: (failedModelId: string, errorMsg: string) => void,
 ): UseGenerateImageHandlerReturn => {
   const {
     imageGenModelId,
@@ -38,6 +38,9 @@ export const useGenerateImageHandler = (
     imageStrength,
     controlStrength,
     controlMode,
+    quality,
+    style,
+    extraBody,
   } = useGenerateImageStore();
 
   const { generateImage } = useGenerateImage();
@@ -68,7 +71,16 @@ export const useGenerateImageHandler = (
         _seed = rand;
       }
 
-      let params: GenerateImageParams = {
+      let parsedExtraBody: Record<string, any> | undefined = undefined;
+      if (extraBody && extraBody.trim()) {
+        try {
+          parsedExtraBody = JSON.parse(extraBody);
+        } catch (e) {
+          console.error('extra_body JSON parsing failed:', e);
+        }
+      }
+
+      let params: any = {
         textPrompt: [
           {
             text: _prompt,
@@ -86,6 +98,9 @@ export const useGenerateImageHandler = (
         step,
         stylePreset: _stylePreset ?? stylePreset,
         taskType: generationMode === 'IMAGE_CONDITIONING' ? 'TEXT_IMAGE' : generationMode,
+        quality: quality,
+        style: style,
+        extra_body: parsedExtraBody,
       };
 
       if (generationMode === GENERATION_MODES.IMAGE_VARIATION) {
@@ -140,7 +155,11 @@ export const useGenerateImageHandler = (
           setImage(idx, res);
         })
         .catch((e: ApiError) => {
-          setImageError(idx, (e.data as { message?: string })?.message ?? e.message);
+          const errMsg = (e.data as { message?: string })?.message ?? e.message;
+          setImageError(idx, errMsg);
+          if (onError) {
+            onError(imageGenModelId, errMsg);
+          }
         });
     });
 

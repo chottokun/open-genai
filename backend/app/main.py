@@ -24,8 +24,9 @@ from typing import Any
 from urllib.parse import quote
 
 import httpx
-from fastapi import FastAPI, Header, HTTPException, Query, Request
+from fastapi import FastAPI, Header, HTTPException, Query, Request, File, Form, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from fastapi.responses import (
     FileResponse,
     JSONResponse,
@@ -981,6 +982,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from app.image_gen import STATIC_GENERATIONS_DIR
+os.makedirs(STATIC_GENERATIONS_DIR, exist_ok=True)
+app.mount("/static/generations", StaticFiles(directory=STATIC_GENERATIONS_DIR), name="static-generations")
+
 
 @app.on_event("startup")
 def _startup() -> None:
@@ -995,6 +1000,8 @@ def _startup() -> None:
         print(f"[startup] チーム RAG の分割・最新化に失敗: {e}")
     audit.start()
     objstore.start_retention_scheduler()
+    from app.image_gen import start_static_cleanup_scheduler
+    start_static_cleanup_scheduler()
     os.makedirs(FILES_DIR, exist_ok=True)
 
 
@@ -1011,7 +1018,8 @@ async def auth_middleware(request: Request, call_next):
 
     # /files/ へのリクエスト（GET/PUT）はクエリパラメータの token による署名検証を行うため、
     # 共通の Bearer ヘッダ認証からは除外する。
-    if path.startswith("/files/"):
+    # 静的画像生成ファイル (/static/generations/) へのリクエストも認証を除外。
+    if path.startswith("/files/") or path.startswith("/static/generations/"):
         return await call_next(request)
 
     authz = request.headers.get("authorization", "")
@@ -1702,10 +1710,10 @@ def _safe_path(key: str) -> str:
 
 @app.post("/image/generate")
 async def generate_image(request: Request) -> Response:
-    """ローカル環境用画像生成プロキシ。
+    """LiteLLM Proxy を用いた画像生成エンドポイント。
     
-    フロントからのリクエストを受け取り、選択されたプロバイダ（local / litellm / local_api）で
-    画像を生成し、Base64 データを Response(text/plain) として返す。
+    フロントからのリクエストを受け取り、画像を生成。
+    保存完了後、/static/generations/img_${UUIDv4}.png 形式の自前固定 URL を返却する。
     """
     claims = _claims_from_request(request)
     if not _user_id(claims):
@@ -1721,13 +1729,55 @@ async def generate_image(request: Request) -> Response:
     else:
         model_id = None
     
-    from app.image_gen import generate_image_base64
+    from app.image_gen import generate_image_base64, save_generated_image
     try:
         b64_image = await generate_image_base64(params, model_id=model_id)
+        url_path = save_generated_image(b64_image)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    return Response(content=url_path, media_type="text/plain")
+
+
+@app.post("/image/edit")
+async def edit_image(
+    request: Request,
+    image: UploadFile = File(...),
+    mask: UploadFile = File(None),
+    prompt: str = Form(...),
+    model: str = Form("standard-image-gen"),
+    n: int = Form(1),
+    size: str = Form("1024x1024"),
+    response_format: str = Form("b64_json"),
+) -> Response:
+    """LiteLLM Proxy を用いた画像編集 (Inpainting/Edits) エンドポイント。
+
+    マルチパートリクエストを受け取り、画像を編集生成。
+    保存完了後、/static/generations/img_${UUIDv4}.png 形式の自前固定 URL を返却する。
+    """
+    claims = _claims_from_request(request)
+    if not _user_id(claims):
+        raise HTTPException(status_code=401, detail="認証が必要です")
+
+    from app.image_gen import edit_image_base64, save_generated_image
+    try:
+        image_bytes = await image.read()
+        mask_bytes = await mask.read() if mask else None
+
+        b64_image = await edit_image_base64(
+            image_bytes=image_bytes,
+            mask_bytes=mask_bytes,
+            prompt=prompt,
+            model_id=model,
+            size=size,
+            n=n,
+            response_format=response_format,
+        )
+        url_path = save_generated_image(b64_image)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
         
-    return Response(content=b64_image, media_type="text/plain")
+    return Response(content=url_path, media_type="text/plain")
 
 
 @app.post("/file/url")

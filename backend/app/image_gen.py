@@ -1,48 +1,56 @@
 """源内 Web「画像を生成」ページ向けの /image/generate 実装。
 
-画像生成プロバイダ (local | litellm | local_api) に応じて、
-ローカルの SD サーバー、LiteLLM 経由のクラウドモデル、または local-sd-api を呼び分ける。
+画像生成プロバイダを LiteLLM Proxy へ全面統合・一元化。
+OpenAI 互換画像生成・編集機能をサポートし、自己署名証明書接続に対応。
 """
 
 from __future__ import annotations
 
 import os
 import base64
+import uuid
+import time
+import threading
 from typing import Any
 
 import httpx
+from openai import AsyncOpenAI
 
 # 環境変数
+IMAGE_PROVIDER = os.environ.get("IMAGE_PROVIDER", "litellm").lower()
+IMAGE_API_URL = os.environ.get("IMAGE_API_URL", "http://sd-app:8000/v1/images/generations")
+SD_API_URL = os.environ.get("SD_API_URL", "http://host.docker.internal:7860")
+SD_TIMEOUT = float(os.environ.get("SD_TIMEOUT", "600.0"))
 ALLOW_CLOUD_API = os.environ.get("ALLOW_CLOUD_API", "false").lower() == "true"
-IMAGE_PROVIDER = os.environ.get("IMAGE_PROVIDER", "local")  # local | litellm | local_api
-IMAGE_API_URL = os.environ.get("IMAGE_API_URL", "http://local-sd-api:8000/v1/images/generations")
-
-SD_API_URL = os.environ.get("SD_API_URL", "http://host.docker.internal:7860").rstrip("/")
-SD_TIMEOUT = float(os.environ.get("SD_TIMEOUT", "600"))
-
 LITELLM_IMAGE_MODEL = os.environ.get("LITELLM_IMAGE_MODEL", "imagen-4")
 LITELLM_IMAGE_URL = os.environ.get("LITELLM_IMAGE_URL", "http://litellm:4000/v1")
 LITELLM_IMAGE_API_KEY = os.environ.get("LITELLM_IMAGE_API_KEY", "not-needed")
+VERIFY_SSL = os.environ.get("VERIFY_SSL", "true").lower() == "true"
 
-LOCAL_SD_MODEL_ID = "local-sd"
+# 固定保存先の管理
+FILES_DIR = os.environ.get("FILES_DIR", "/data/files")
+STATIC_GENERATIONS_DIR = os.path.join(FILES_DIR, "generations")
+IMAGE_TTL_DAYS = int(os.environ.get("IMAGE_TTL_DAYS", "30"))
+
+_cleanup_started = False
+_cleanup_lock = threading.Lock()
 
 
 def get_effective_provider(model_id: str | None = None) -> str:
-    if model_id and model_id != LOCAL_SD_MODEL_ID:
-        prov = "litellm"
-    else:
-        prov = IMAGE_PROVIDER or "local"
-    
-    # 接続先が Docker 内部のクローズドなローカルアドレス（litellm 等）であれば、
-    # 外部にキーが漏洩するリスクがないため allow_cloud=False でも通過させる
-    is_local_target = False
-    url = LITELLM_IMAGE_URL or ""
-    if "litellm:" in url or "localhost" in url or "127.0.0.1" in url or "host.docker.internal" in url:
-        is_local_target = True
+    """現在有効な画像生成プロバイダを判定する。"""
+    if model_id and model_id != "local-sd":
+        return "litellm"
+    return IMAGE_PROVIDER
 
-    if prov == "litellm" and not ALLOW_CLOUD_API and not is_local_target:
-        return "local"
-    return prov
+
+def get_openai_client() -> AsyncOpenAI:
+    """自己署名 SSL 回避対応を施した AsyncOpenAI クライアントを生成する。"""
+    http_client = httpx.AsyncClient(verify=VERIFY_SSL)
+    return AsyncOpenAI(
+        base_url=LITELLM_IMAGE_URL,
+        api_key=LITELLM_IMAGE_API_KEY,
+        http_client=http_client,
+    )
 
 
 def _positive_negative_prompts(text_prompt: list[dict[str, Any]]) -> tuple[str, str]:
@@ -67,84 +75,46 @@ def _apply_style_preset(prompt: str, style_preset: str | None) -> str:
     return f"{prompt}, {preset} style"
 
 
-def build_a1111_payload(params: dict[str, Any]) -> dict[str, Any]:
-    """GenerateImageParams 相当を A1111 txt2img / img2img 用 payload に変換する。"""
-    positive, negative = _positive_negative_prompts(params.get("textPrompt") or [])
-    if not positive:
-        raise ValueError("プロンプトが空です。")
-
-    positive = _apply_style_preset(positive, params.get("stylePreset"))
-
-    width = int(params.get("width") or 512)
-    height = int(params.get("height") or 512)
-    steps = int(params.get("step") or 20)
-    cfg_scale = float(params.get("cfgScale") or 7)
-    seed = int(params.get("seed") if params.get("seed") is not None else -1)
-
-    payload: dict[str, Any] = {
-        "prompt": positive,
-        "negative_prompt": negative,
-        "steps": steps,
-        "width": width,
-        "height": height,
-        "cfg_scale": cfg_scale,
-        "seed": seed,
-    }
-
-    init_image = (params.get("initImage") or "").strip()
-    if init_image:
-        payload["init_images"] = [init_image]
-        payload["denoising_strength"] = float(params.get("imageStrength") or 0.35)
-
-    return payload
-
-
 async def is_sd_up() -> bool:
-    """現在のプロバイダの稼働状況を確認する。"""
+    """現在設定されている画像生成プロバイダの稼働状況を確認する。"""
     prov = get_effective_provider()
-    
-    if prov == "litellm":
-        # LiteLLM サーバーへの疎通を確認
-        try:
-            async with httpx.AsyncClient(timeout=2.0) as client:
-                res = await client.get(f"{LITELLM_IMAGE_URL.rstrip('/')}/health")
-            # LiteLLMの/healthが200を返す、あるいは疎通できればOKとする
-            if res.status_code == 200:
-                return True
-        except httpx.HTTPError:
-            pass
 
+    if prov == "local":
         try:
-            async with httpx.AsyncClient(timeout=2.0) as client:
-                # /healthがダメならモデル一覧取得などで疎通チェック
-                res = await client.get(f"{LITELLM_IMAGE_URL.rstrip('/')}/models")
-            return res.status_code == 200
-        except httpx.HTTPError:
+            async with httpx.AsyncClient(timeout=2.0, verify=VERIFY_SSL) as client:
+                res = await client.get(f"{SD_API_URL}/sdapi/v1/sd-models")
+                return res.status_code == 200
+        except Exception:
             return False
 
     if prov == "local_api":
         try:
-            from urllib.parse import urlparse
-            parsed = urlparse(IMAGE_API_URL)
-            health_url = f"{parsed.scheme}://{parsed.netloc}/health"
-            async with httpx.AsyncClient(timeout=2.0) as client:
-                res = await client.get(health_url)
-            return res.status_code == 200
+            async with httpx.AsyncClient(timeout=2.0, verify=VERIFY_SSL) as client:
+                res = await client.get(IMAGE_API_URL)
+                return res.status_code == 200
         except Exception:
             return False
 
-    # local (Stable Diffusion) の場合
+    # litellm Proxy
     try:
-        async with httpx.AsyncClient(timeout=2.0) as client:
-            res = await client.get(f"{SD_API_URL}/sdapi/v1/sd-models")
-        return res.status_code == 200
-    except httpx.HTTPError:
+        async with httpx.AsyncClient(timeout=2.0, verify=VERIFY_SSL) as client:
+            res = await client.get(f"{LITELLM_IMAGE_URL.rstrip('/')}/health")
+            if res.status_code == 200:
+                return True
+    except Exception:
+        pass
+
+    try:
+        async with httpx.AsyncClient(timeout=2.0, verify=VERIFY_SSL) as client:
+            res = await client.get(f"{LITELLM_IMAGE_URL.rstrip('/')}/models")
+            return res.status_code == 200
+    except Exception:
         return False
 
 
+
 async def generate_image_base64(params: dict[str, Any], model_id: str | None = None) -> str:
-    """現在のプロバイダで画像を生成し、base64 文字列を返す。"""
-    prov = get_effective_provider(model_id)
+    """LiteLLM 経由で画像を生成し、base64 文字列を返す。"""
     positive, negative = _positive_negative_prompts(params.get("textPrompt") or [])
     if not positive:
         raise ValueError("プロンプトが空です。")
@@ -152,110 +122,130 @@ async def generate_image_base64(params: dict[str, Any], model_id: str | None = N
     positive = _apply_style_preset(positive, params.get("stylePreset"))
     width = int(params.get("width") or 512)
     height = int(params.get("height") or 512)
-    size = max(width, height)
+    size = f"{width}x{height}"
 
-    if prov == "local":
-        payload = build_a1111_payload(params)
-        init_image = (params.get("initImage") or "").strip()
-        endpoint = "img2img" if init_image else "txt2img"
+    client = get_openai_client()
+    model_name = model_id or LITELLM_IMAGE_MODEL
 
+    kwargs = {
+        "model": model_name,
+        "prompt": positive,
+        "n": 1,
+        "size": size,
+        "response_format": "b64_json",
+    }
+
+    # 標準パラメータが指定されていれば追加
+    if "quality" in params:
+        kwargs["quality"] = params["quality"]
+    if "style" in params:
+        kwargs["style"] = params["style"]
+    if "extra_body" in params:
+        kwargs["extra_body"] = params["extra_body"]
+
+    try:
+        response = await client.images.generate(**kwargs)
+    except Exception as exc:
+        raise RuntimeError(f"画像生成サーバへの接続に失敗しました: {exc}") from exc
+
+    b64_content = response.data[0].b64_json
+    if not b64_content:
+        raise RuntimeError("画像が生成されませんでした（データが空です）。")
+    return b64_content
+
+
+async def edit_image_base64(
+    image_bytes: bytes,
+    mask_bytes: bytes | None,
+    prompt: str,
+    model_id: str | None = None,
+    size: str = "1024x1024",
+    n: int = 1,
+    response_format: str = "b64_json",
+) -> str:
+    """LiteLLM 経由で画像を編集・再生成し、base64 文字列を返す。"""
+    client = get_openai_client()
+    model_name = model_id or LITELLM_IMAGE_MODEL
+
+    kwargs = {
+        "model": model_name,
+        "image": ("image.png", image_bytes, "image/png"),
+        "prompt": prompt,
+        "n": n,
+        "size": size,
+        "response_format": response_format,
+    }
+    if mask_bytes:
+        kwargs["mask"] = ("mask.png", mask_bytes, "image/png")
+
+    try:
+        response = await client.images.edit(**kwargs)
+    except Exception as exc:
+        raise RuntimeError(f"画像編集サーバへの接続に失敗しました: {exc}") from exc
+
+    b64_content = response.data[0].b64_json
+    if not b64_content:
+        raise RuntimeError("画像が編集されませんでした（データが空です）。")
+    return b64_content
+
+
+def save_generated_image(b64_data: str) -> str:
+    """Base64 データをデコードして STATIC_GENERATIONS_DIR 配下に保存し、静的 URL パスを返す。"""
+    if not b64_data:
+        raise ValueError("画像データが空です。")
+
+    if "," in b64_data:
+        b64_data = b64_data.split(",", 1)[1]
+
+    try:
+        img_bytes = base64.b64decode(b64_data)
+    except Exception as e:
+        raise ValueError(f"Base64 デコードに失敗しました: {e}")
+
+    uuid_str = str(uuid.uuid4())
+    filename = f"img_{uuid_str}.png"
+    filepath = os.path.join(STATIC_GENERATIONS_DIR, filename)
+
+    os.makedirs(STATIC_GENERATIONS_DIR, exist_ok=True)
+    with open(filepath, "wb") as f:
+        f.write(img_bytes)
+
+    return f"/static/generations/{filename}"
+
+
+def _cleanup_loop() -> None:
+    while True:
         try:
-            async with httpx.AsyncClient(timeout=SD_TIMEOUT) as client:
-                res = await client.post(
-                    f"{SD_API_URL}/sdapi/v1/{endpoint}",
-                    json=payload,
-                )
-        except httpx.HTTPError as exc:
-            raise RuntimeError(
-                "ホストの画像生成サーバ(A1111 互換)に接続できませんでした。"
-                f"`{SD_API_URL}` で起動しているか確認してください: {exc}"
-            ) from exc
+            now = time.time()
+            if os.path.exists(STATIC_GENERATIONS_DIR):
+                for filename in os.listdir(STATIC_GENERATIONS_DIR):
+                    filepath = os.path.join(STATIC_GENERATIONS_DIR, filename)
+                    if os.path.isfile(filepath):
+                        mtime = os.path.getmtime(filepath)
+                        age_days = (now - mtime) / 86400.0
+                        if age_days > IMAGE_TTL_DAYS:
+                            try:
+                                os.remove(filepath)
+                                print(f"[image_gen] TTL expired. Removed file: {filepath}")
+                            except Exception as e:
+                                print(f"[image_gen] Failed to remove expired file {filepath}: {e}")
+        except Exception as e:
+            print(f"[image_gen] Background cleanup failed: {e}")
+        # 12時間ごとに実行
+        time.sleep(43200)
 
-        if res.status_code != 200:
-            raise RuntimeError(f"画像生成に失敗しました (status: {res.status_code})")
 
-        data = res.json()
-        images = data.get("images") or []
-        if not images:
-            raise RuntimeError("画像が生成されませんでした。")
+def start_static_cleanup_scheduler() -> None:
+    """静的画像の保持期限クリーンアップをバックグラウンドで開始する。"""
+    global _cleanup_started
+    if _cleanup_started or IMAGE_TTL_DAYS <= 0:
+        return
+    with _cleanup_lock:
+        if _cleanup_started:
+            return
+        t = threading.Thread(target=_cleanup_loop, name="image-gen-static-cleanup", daemon=True)
+        t.start()
+        _cleanup_started = True
 
-        image = images[0]
-        if image.startswith("data:"):
-            image = image.split(",", 1)[1]
-        return image
 
-    elif prov == "local_api":
-        payload = {
-            "prompt": positive,
-            "size": f"{size}x{size}",
-            "n": 1,
-            "response_format": "b64_json"
-        }
 
-        try:
-            async with httpx.AsyncClient(timeout=SD_TIMEOUT) as client:
-                res = await client.post(IMAGE_API_URL, json=payload)
-        except httpx.HTTPError as exc:
-            raise RuntimeError(f"ローカル画像生成API（local-sd-api）への接続に失敗しました: {exc}") from exc
-
-        if res.status_code != 200:
-            raise RuntimeError(f"画像生成に失敗しました (status: {res.status_code}, detail: {res.text})")
-
-        data = res.json()
-        img_data_list = data.get("data") or []
-        if not img_data_list:
-            raise RuntimeError("画像が生成されませんでした。")
-
-        b64_content = img_data_list[0].get("b64_json")
-        if not b64_content:
-            raise RuntimeError("画像のデータ処理に失敗しました。")
-        return b64_content
-
-    else:
-        # LiteLLM/クラウドAPI経由での画像生成
-        model_name = model_id or LITELLM_IMAGE_MODEL
-        payload = {
-            "prompt": positive,
-            "model": model_name,
-            "n": 1,
-            "size": f"{size}x{size}",
-            "response_format": "b64_json"
-        }
-        
-        headers = {}
-        if LITELLM_IMAGE_API_KEY and LITELLM_IMAGE_API_KEY != "not-needed":
-            headers["Authorization"] = f"Bearer {LITELLM_IMAGE_API_KEY}"
-
-        url = f"{LITELLM_IMAGE_URL.rstrip('/')}/images/generations"
-
-        try:
-            async with httpx.AsyncClient(timeout=SD_TIMEOUT) as client:
-                res = await client.post(url, json=payload, headers=headers)
-        except httpx.HTTPError as exc:
-            raise RuntimeError(f"クラウド画像生成サーバへの接続に失敗しました: {exc}") from exc
-
-        if res.status_code != 200:
-            raise RuntimeError(f"画像生成に失敗しました (status: {res.status_code}, detail: {res.text})")
-
-        data = res.json()
-        img_data_list = data.get("data") or []
-        if not img_data_list:
-            raise RuntimeError("画像が生成されませんでした。")
-
-        img_obj = img_data_list[0]
-        b64_content = img_obj.get("b64_json")
-        if not b64_content:
-            # URLからダウンロードするフォールバック
-            img_url = img_obj.get("url")
-            if img_url:
-                try:
-                    async with httpx.AsyncClient(timeout=30) as client:
-                        img_res = await client.get(img_url)
-                    if img_res.status_code == 200:
-                        b64_content = base64.b64encode(img_res.content).decode("utf-8")
-                except Exception as exc:
-                    raise RuntimeError(f"生成された画像の取得に失敗しました: {exc}") from exc
-
-        if not b64_content:
-            raise RuntimeError("画像のデータ処理に失敗しました。")
-        return b64_content
