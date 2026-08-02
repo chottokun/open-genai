@@ -315,7 +315,7 @@ Open GENAI に存在する主要な画面（UI）ごとに、どのようにモ�
 
 #### レンダリング仕様
 *   **モデル選択**: `type === 'chat'` のみ。
-*   **マルチモーダル判定（画像添付）**: 選択中モデルの `capabilities` に `vision` が含まれる場合のみ、チャット入力欄の画像添付アイコン（クリップ）を表示・有効化。
+*   **マルチモーダル判定（画像添付）**: 選択中モデル의 `capabilities` に `vision` が含まれる場合のみ、チャット入力欄の画像添付アイコン（クリップ）を表示・有効化。
 *   **ドキュメント添付**: 選択中モデルの `capabilities` に `document_input` が含まれる場合のみ表示。
 *   **ストリーミング可否**: `capabilities` に `streaming` が含まれていればストリームAPI（`/predict/stream`）を呼び出し、含まれなければ通常一括API（`/predict`）を呼び出す。
 
@@ -444,11 +444,93 @@ Mermaid.js等を駆使してダイアグラムを生成する画面では、構�
 
 ---
 
-## 6. API 送信時の `extra_body` パラメータ透過送信仕様
+## 6. UI と API の密結合分析（UI Coupling and State Coupling Analysis）
+
+既存の `genai-web` コードベースと新設する動的APIとの結合における、状態管理・ライフサイクル・フォーム検証の密結合分析、およびそのリファクタリング戦略を示す。
+
+### 6.1 状態管理（Zustand & LocalStorage）との結合
+現在、チャットおよび画像生成のモデル選択状態は、それぞれ別々のストアとフックに保存されている。
+
+1.  **チャット側 (`useSelectedModel` フック)**
+    *   **現状**: `modelId_v20260218` というキー名で `localStorage` に選択モデルを永続化。初期値やフォールバック時に `MODELS.modelIds[0]` を参照している（これは環境変数 `VITE_APP_MODEL_IDS` からのハードコード値）。
+    *   **影響と対策**: APIフェッチ前にローカルストレージから読み込まれた古い `modelId` が、現在のチームポリシーや最新のLiteLLM Proxy定義に存在しない可能性がある。そのため、動的モデル一覧（`models`）がAPIからロードされたタイミングで、**有効値（許可されたモデル）に含まれているかを検証するバリデーション層（ガードレール）の追加**が必要となる。
+2.  **画像生成側 (`useGenerateImageStore` ストア)**
+    *   **現状**: `imageGenModelId` を文字列として保持。`setImageGenModelId` アクションをトリガーとして、`getResolutionPresets(imageGenModelId)` を経由したハードコード解像度プリセットの強制上書き、および `generationMode` の利用可能モード再計算が走る。
+    *   **影響と対策**: 動的取得モデルにおいては、解像度やアスペクト比の一覧はローカルの `getResolutionPresets` からではなく、APIから受信した `supported_sizes` から動的にストアへマッピングさせるように設計を移行する必要がある。
+
+---
+
+### 6.2 画面レンダリング・コンポーネント結合
+モデルセレクタおよび詳細設定フォームは、複数のコンポーネント間に跨る共有状態（Zustand）に依存している。
+
+1.  **モデル選択dropdown (`CustomSelect`)**
+    *   チャットの `ModelSelector.tsx` や画像生成の `ImageGeneratorForm.tsx` の内部に配置されている。
+    *   これらは `allModels.map(...)` への切り替えにより、容易に動的化可能（既存コンポーネントのPropsインターフェースを破壊せず、データソースのみを差し替えるクリーンな結合が可能）。
+2.  **代替モデル切り替え（エラーリトライ・ダイアログ）**
+    *   `GenerateImagePage.tsx` に配置されている `CustomDialog`（エラーダイアログ）は、画像生成に失敗した際に「選択肢から失敗したモデルIDを排した代替モデルリスト」を表示する。
+    *   この代替リスト生成部分（`imageGenModelIds.filter(...)`）も、動的に取得・ポリシーフィルタリングされた結果リストから直接抽出するように結合を整理する。
+
+---
+
+### 6.3 Zod / React Hook Form による検証との統合
+
+複雑な画像生成パラメータやプロバイダ固有フィールド（`extra_fields`）を安全にフォーム検証するため、**Zodスキーマの動的生成パイプライン**を確立する。
+
+#### 動的 Zod スキーマ解決フロー
+```typescript
+import { z } from 'zod';
+
+/**
+ * 選択中モデルの extra_fields 定義から Zod 検証スキーマを動的に組み立てる
+ */
+export const buildDynamicSchema = (extraFields: ModelField[]) => {
+  const shape: Record<string, any> = {};
+
+  for (const field of extraFields) {
+    let validator;
+    switch (field.type) {
+      case 'number':
+        validator = z.coerce.number();
+        break;
+      case 'boolean':
+        validator = z.preprocess((val) => {
+          if (typeof val === 'string') return val === 'true';
+          return Boolean(val);
+        }, z.boolean());
+        break;
+      case 'select':
+        if (field.options && field.options.length > 0) {
+          const allowedValues = field.options.map(opt => opt.value) as [string, ...string[]];
+          validator = z.enum(allowedValues);
+        } else {
+          validator = z.string();
+        }
+        break;
+      case 'text':
+      default:
+        validator = z.string();
+        break;
+    }
+
+    // 全フィールドを任意（Optional）として扱い、未入力時はデフォルト値をフォールバック
+    shape[field.key] = validator.optional();
+  }
+
+  return z.object(shape);
+};
+```
+
+*   ** React Hook Form とのバインド**:
+    *   モデル変更イベントを感知したタイミングで `buildDynamicSchema(currentModel.extra_fields)` を実行し、動的スキーマを再生成。
+    *   それを React Hook Form の `resolver: zodResolver(dynamicSchema)` へ再注入することで、クライアントサイドでの厳格なバリデーションと動的パラメータ入力を安全に調停・密結合させる。
+
+---
+
+## 7. API 送信時の `extra_body` パラメータ透過送信仕様
 
 UI側で入力された動的パラメータは、API要求発行時に `extra_body` パラメータに梱包して送信する。
 
-### 6.1 リクエストペイロードの例 (画像生成 `POST /image/generate`)
+### 7.1 リクエストペイロードの例 (画像生成 `POST /image/generate`)
 ```json
 {
   "model": "recraft-v3",
@@ -467,7 +549,7 @@ UI側で入力された動的パラメータは、API要求発行時に `extra_b
 
 ---
 
-## 7. 設計のまとめと運用手順
+## 8. 設計のまとめと運用手順
 
 ### モデル新規追加時の運用フロー
 1.  **LiteLLM Proxy の設定変更**: `/litellm_config.yaml` に新しいモデル（例：`recraft-v3`）を追加し、その `model_info` に `extra_fields` や `supported_sizes` を定義。
