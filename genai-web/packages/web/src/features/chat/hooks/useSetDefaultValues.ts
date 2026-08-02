@@ -4,7 +4,7 @@ import { useLocation } from 'react-router';
 import { TOP_CHAT_SYSTEM_PROMPT, TOP_CHAT_SYSTEM_PROMPT_TITLE } from '@/features/landing/constants';
 import { useChat } from '@/hooks/useChat';
 import { useUsecasePath } from '@/hooks/useUsecasePath';
-import { MODELS } from '@/models';
+import { useAvailableModels } from '@/hooks/useAvailableModels';
 import { useChatStore } from '../stores/useChatStore';
 import { ChatPageQueryParams } from '../types';
 
@@ -29,7 +29,7 @@ export const useSetDefaultValues = (systemContextList: SystemContext[]) => {
     usecase,
     chatId,
   );
-  const { modelIds: availableModels } = MODELS;
+  const { modelIds: availableModels } = useAvailableModels();
   const modelId = getModelId();
 
   // state は初回のナビゲーション時のみ有効。

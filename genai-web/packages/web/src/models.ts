@@ -44,8 +44,11 @@ export const findModelByModelId = (modelId: string) => {
   return { ...model };
 };
 
-export const findModelDisplayNameByModelId = (modelId: string): string => {
-  let displayName = modelMetadata[modelId]?.displayName ?? modelId;
+export const findModelDisplayNameByModelId = (
+  modelId: string,
+  dynamicMetadata?: Record<string, { displayName?: string }>,
+): string => {
+  let displayName = dynamicMetadata?.[modelId]?.displayName ?? modelMetadata[modelId]?.displayName ?? modelId;
   if (duplicateBaseModelIds.has(modelId.replace(CRI_PREFIX_PATTERN, ''))) {
     const matched = modelId.match(CRI_PREFIX_PATTERN);
     if (matched) {

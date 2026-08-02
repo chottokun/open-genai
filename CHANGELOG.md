@@ -28,6 +28,20 @@
 
 ## [Unreleased]
 
+### 🖼️ 画像生成システムの LiteLLM Proxy への一本化
+
+- **画像生成ルーティングの統合**:
+  - `backend/app/image_gen.py` の画像生成機能を LiteLLM Proxy 経由に一本化。独自の Stable Diffusion ダイレクト呼び出しや local-sd-api ルートを廃止。
+  - `litellm_config.yaml` 内に `local-sd` を `sd-local` モデルグループとしてエイリアスマッピングし、すべての画像生成が LiteLLM ゲートウェイを一元的に通過する設計に統一。
+- **OpenAI 互換画像生成レスポンス規格への対応**:
+  - バックエンドのエンドポイント `/image/generate` から返すデータ型を、OpenAI 標準の `{ "data": [{ "b64_json": "..." }] }` に統合。
+  - フロントエンドの `useGenerateImage` フックおよび TypeScript プロトコル定義 (`protocol.d.ts`) を変更し、プレーンテキスト形式から標準 OpenAI 画像生成オブジェクトを正しくパースできるように同期。
+- **モデル選択肢の追加および動的モデル選択の実装**:
+  - `gemini-3.5-flash-lite` および `gemini-3.6-flash` の構成定義を `litellm_config.yaml`、Common モデル定義、`docker-compose.yml` に追加。
+  - フロントエンドに `/models` から使用可能モデルを取得するカスタムフック `useAvailableModels` を導入。これを使用するように各 `ModelSelector` を更新し、LiteLLM で新規追加したモデルが自動的に UI の選択肢に同期される動的モデル選択システムを確立。
+- **診断ユーティリティの作成**:
+  - 画像生成システムの環境変数・疎通状況・ルーティングロジックを検査する `scripts/diagnose_image_gen.py` を追加。
+
 ## [v0.5.0] - 2026-07-31
 
 ### 🔐 認証・セキュリティ・SAML 連携強化 (Upstream v0.5.0)

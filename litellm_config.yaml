@@ -19,6 +19,16 @@ model_list:
       model: gemini/gemini-3.5-flash
       api_key: "os.environ/GEMINI_API_KEY"
 
+  - model_name: gemini-3.5-flash-lite
+    litellm_params:
+      model: gemini/gemini-3.5-flash-lite
+      api_key: "os.environ/GEMINI_API_KEY"
+
+  - model_name: gemini-3.6-flash
+    litellm_params:
+      model: gemini/gemini-3.6-flash
+      api_key: "os.environ/GEMINI_API_KEY"
+
   # --- OpenAI ---
   # - model_name: gpt-4.5
   #   litellm_params:
@@ -147,6 +157,8 @@ litellm_settings:
     - {"gemini-2.5-pro": ["gemma4"]}
     - {"gemini-2.5-flash": ["gemma4"]}
     - {"gemini-3.5-flash": ["gemma4"]}
+    - {"gemini-3.5-flash-lite": ["gemma4"]}
+    - {"gemini-3.6-flash": ["gemma4"]}
     - {"imagen-4": ["sd-local"]}
     - {"standard-image-gen": ["gpt-image-1"]}
   drop_params: true  # プロバイダ間で非互換なパラメータを自動除去

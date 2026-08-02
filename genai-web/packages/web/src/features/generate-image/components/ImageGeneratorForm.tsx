@@ -19,7 +19,8 @@ import {
   type GenerateImageStore,
   useGenerateImageStore,
 } from '@/features/generate-image/stores/useGenerateImageStore';
-import { findModelDisplayNameByModelId, MODELS } from '@/models';
+import { useAvailableModels } from '@/hooks/useAvailableModels';
+import { findModelDisplayNameByModelId } from '@/models';
 import { isSubmitKey, submitKeyHint } from '@/utils/keyboard';
 import {
   AMAZON_ADVANCED_GENERATION_MODE,
@@ -104,7 +105,7 @@ export const ImageGeneratorForm = (props: Props) => {
 
   const colorList = colors ? colors.split(',').map((color) => color.trim()) : [];
 
-  const { imageGenModelIds } = MODELS;
+  const { imageGenModelIds } = useAvailableModels();
 
   const maskMode =
     generationMode === GENERATION_MODES.INPAINTING ||

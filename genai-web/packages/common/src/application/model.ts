@@ -510,6 +510,28 @@ export const modelMetadata: Record<string, ModelMetadata> = {
     displayName: 'Nova Sonic',
   },
 
+  // ==== Google Gemini ====
+  'gemini-2.5-pro': {
+    flags: { text: true, doc: true, image: true, video: false },
+    displayName: 'Gemini 2.5 Pro',
+  },
+  'gemini-2.5-flash': {
+    flags: { text: true, doc: true, image: true, video: false },
+    displayName: 'Gemini 2.5 Flash',
+  },
+  'gemini-3.5-flash': {
+    flags: { text: true, doc: true, image: true, video: false },
+    displayName: 'Gemini 3.5 Flash',
+  },
+  'gemini-3.5-flash-lite': {
+    flags: { text: true, doc: true, image: true, video: false },
+    displayName: 'Gemini 3.5 Flash Lite',
+  },
+  'gemini-3.6-flash': {
+    flags: { text: true, doc: true, image: true, video: false },
+    displayName: 'Gemini 3.6 Flash',
+  },
+
   // ==== Open GENAI: ローカル LLM (Ollama) ====
   // modelId は Ollama のモデル名と一致させる。バックエンドはこの id を
   // そのまま Ollama の model として利用する。

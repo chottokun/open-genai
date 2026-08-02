@@ -1,10 +1,11 @@
 import { CustomSelect } from '@/components/ui/CustomSelect';
 import { useSelectedModel } from '@/hooks/useSelectedModel';
-import { findModelDisplayNameByModelId, MODELS } from '@/models';
+import { useAvailableModels } from '@/hooks/useAvailableModels';
+import { findModelDisplayNameByModelId } from '@/models';
 
 export const ModelSelector = () => {
-  const { selectedModelId, setSelectedModelId } = useSelectedModel();
-  const { modelIds: availableModels } = MODELS;
+  const { selectedModelId, setSelectedModelId, availableModels } = useSelectedModel();
+  const { metadata } = useAvailableModels();
 
   return (
     <div className='mt-0 flex w-fit items-end justify-start'>
@@ -14,7 +15,7 @@ export const ModelSelector = () => {
         value={selectedModelId}
         onChange={setSelectedModelId}
         options={availableModels.map((m) => {
-          return { value: m, label: findModelDisplayNameByModelId(m) };
+          return { value: m, label: findModelDisplayNameByModelId(m, metadata) };
         })}
       />
     </div>

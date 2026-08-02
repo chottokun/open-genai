@@ -1439,6 +1439,49 @@ async def image_health() -> JSONResponse:
     return JSONResponse(content={"ok": ok})
 
 
+@app.get("/models")
+async def get_all_models() -> JSONResponse:
+    """LiteLLM Proxy から登録されている全モデルを動的に取得・分類して返す。"""
+    text_models = []
+    image_models = []
+    metadata = {}
+
+    litellm_models = _fetch_litellm_models_sync()
+    if litellm_models:
+        for m in litellm_models:
+            model_name = m.get("model_name")
+            if not model_name:
+                continue
+
+            m_info = m.get("model_info") or {}
+            mode = m_info.get("mode")
+            disp_name = m_info.get("displayName")
+
+            if disp_name:
+                metadata[model_name] = {"displayName": disp_name}
+
+            if mode == "image_generation":
+                if model_name not in image_models:
+                    image_models.append(model_name)
+            elif mode in ("audio_transcription", "embedding"):
+                continue
+            else:
+                if model_name not in text_models:
+                    text_models.append(model_name)
+
+    # もしLiteLLMから取得できなかった場合のフォールバック（環境変数等から解決）
+    if not text_models:
+        text_models = ["gemini-2.5-pro", "gemini-2.5-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-3.6-flash", "sakura-gpt-oss-120b", "sakura-qwen3-coder", "openai-compatible-chat", "gemma4"]
+    if not image_models:
+        image_models = ["local-sd", "local-sd3.5", "gpt-image-1", "standard-image-gen"]
+
+    return JSONResponse(content={
+        "textModels": text_models,
+        "imageModels": image_models,
+        "metadata": metadata
+    })
+
+
 @app.post("/predict")
 async def predict(request: Request) -> Response:
     body = await request.json()
