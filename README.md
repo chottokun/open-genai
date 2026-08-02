@@ -82,16 +82,16 @@ bash scripts/setup-rproxy-ssl.sh your-domain.local
 
 ## 🛠️ 主なサービス構成とポート
 
-| サービス名 | コンテナ名 | ポート (ホスト) | 説明 |
-| --- | --- | --- | --- |
-| **Nginx Proxy** | `open-genai-proxy` | 80 / 443 | 唯一の公開エントリーポイント (HTTP/HTTPS R-Proxy) |
-| **Web UI** | `open-genai-web` | 内部 5173 | フロントエンド UI (Vite / React) |
-| **Backend API** | `open-genai-backend` | 内部 8000 | Core API (FastAPI) |
-| **Keycloak** | `open-genai-keycloak` | 内部 8080 | 認証 Identity Provider (SAML / OIDC) |
-| **LiteLLM Proxy** | `open-genai-litellm` | 4000 | Multi-provider LLM プロキシ |
-| **RAG App** | `open-genai-rag-app` | 8001 | ベクトル検索・ドキュメントストア API |
-| **Whisper App** | `open-genai-whisper-app` | 8010 | 音声文字起こし AI アプリプロキシ |
-| **Qdrant** | `open-genai-qdrant` | 6333 | ベクトルデータベース |
+| サービス名 | コンテナ名 | ポート (ホスト / 内部) | パス / URL | 説明 |
+| --- | --- | --- | --- | --- |
+| **Nginx Proxy** | `open-genai-proxy` | 80 / 443 | `/` | エントリーポイント (R-Proxy / SSL終端) |
+| **Web UI** | `open-genai-web` | 内部 5173 | `/` | フロントエンド UI (Vite / React) |
+| **Backend API** | `open-genai-backend` | 内部 8000 | `/api/` | Core API (FastAPI) / 静的アセット `/static/` |
+| **Keycloak** | `open-genai-keycloak` | 内部 8080 | `/kc/` | 認証 Identity Provider (SAML / OIDC) |
+| **LiteLLM Proxy** | `open-genai-litellm` | 4000 (内部) | `/litellm/`, `/ui/` | Multi-provider LLM / 画像生成プロキシ & Admin UI |
+| **RAG App** | `open-genai-rag-app` | 8001 | `/` | ベクトル検索・ドキュメントストア API |
+| **Whisper App** | `open-genai-whisper-app` | 8010 | `/` | 音声文字起こし AI アプリプロキシ |
+| **Qdrant** | `open-genai-qdrant` | 6333 | `/` | ベクトルデータベース |
 
 ---
 

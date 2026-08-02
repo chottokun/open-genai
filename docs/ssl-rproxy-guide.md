@@ -55,6 +55,20 @@ server {
         proxy_set_header X-Forwarded-Host  $host;
         proxy_set_header X-Forwarded-Port  $server_port;
     }
+
+    location /static/ {
+        proxy_pass http://backend:8000;
+        proxy_set_header Host              $host;
+    }
+
+    location /litellm/ {
+        rewrite ^/litellm/(.*)$ /$1 break;
+        proxy_pass http://litellm:4000;
+    }
+
+    location /ui/ {
+        proxy_pass http://litellm:4000;
+    }
 }
 ```
 
