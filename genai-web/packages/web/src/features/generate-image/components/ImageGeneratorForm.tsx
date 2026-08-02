@@ -92,6 +92,12 @@ export const ImageGeneratorForm = (props: Props) => {
     resolution,
     setResolution,
     resolutionPresets,
+    quality,
+    setQuality,
+    style,
+    setStyle,
+    extraBody,
+    setExtraBody,
   } = useGenerateImageStore();
 
   const SEED_MIN = 0;
@@ -541,6 +547,52 @@ export const ImageGeneratorForm = (props: Props) => {
                 onChange={setStylePreset}
               />
             </div>
+
+            <div className='mb-2 grid grid-cols-2 gap-2'>
+              <CustomSelect
+                label='画質 (Quality)'
+                labelClassName='text-std-16B-170 mt-0!'
+                isVertical
+                isFullWidth
+                options={[
+                  { value: 'standard', label: '標準 (standard)' },
+                  { value: 'hd', label: '高画質 (hd)' },
+                ]}
+                value={quality}
+                onChange={setQuality}
+              />
+              <CustomSelect
+                label='スタイル (Style)'
+                labelClassName='text-std-16B-170 mt-0!'
+                isVertical
+                isFullWidth
+                options={[
+                  { value: 'natural', label: '自然 (natural)' },
+                  { value: 'vivid', label: '鮮やか (vivid)' },
+                ]}
+                value={style}
+                onChange={setStyle}
+              />
+            </div>
+
+            <div className='mb-4 flex flex-col gap-1.5'>
+              <Label htmlFor='extra-body-input' size='sm'>
+                拡張パラメータ (extra_body)
+              </Label>
+              <SupportText className='text-dns-14N-130!'>
+                JSON 形式でプロバイダ固有のパラメータを指定できます（例: <code>{`{"style_id": "art"}`}</code>）
+              </SupportText>
+              <AutoResizeTextarea
+                id='extra-body-input'
+                value={extraBody}
+                onChange={(e) => setExtraBody(e.target.value)}
+                maxHeight={100}
+                rows={2}
+                className='w-full font-mono text-sm py-1.5!'
+                placeholder='{"style_id": "art"}'
+              />
+            </div>
+
             <div className='grid grid-cols-1 gap-2'>
               <RangeSlider
                 className='w-full'

@@ -22,7 +22,14 @@ import { useSyncUsecaseChatUrl } from '@/hooks/useSyncUsecaseChatUrl';
 import { useUsecasePath } from '@/hooks/useUsecasePath';
 import { useLiveStatusMessage } from '@/hooks/useLiveStatusMessage';
 import { useScreen } from '@/hooks/useScreen';
-import { MODELS } from '@/models';
+import { CustomSelect } from '@/components/ui/CustomSelect';
+import { findModelDisplayNameByModelId, MODELS } from '@/models';
+import {
+  CustomDialog,
+  CustomDialogBody,
+  CustomDialogHeader,
+  CustomDialogPanel,
+} from '@/components/ui/CustomDialog';
 import { GeneratedImages } from './components/GeneratedImages';
 import { GenerateImageAssistant } from './components/GenerateImageAssistant';
 import { GenerateImageInput } from './components/GenerateImageInput';
@@ -84,8 +91,27 @@ export const GenerateImagePage = () => {
   const [isOpenMask, setIsOpenMask] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [failedModelId, setFailedModelId] = useState<string>('');
+  const [errorDetails, setErrorDetails] = useState<string>('');
+  const [selectedAlternativeModel, setSelectedAlternativeModel] = useState<string>('');
+
   const { imageGenModelIds } = MODELS;
-  const { handleGenerateImage, onClickRandomSeed } = useGenerateImageHandler(setGenerating);
+
+  const { handleGenerateImage, onClickRandomSeed } = useGenerateImageHandler(
+    setGenerating,
+    (modelId, errorMsg) => {
+      setFailedModelId(modelId);
+      setErrorDetails(errorMsg);
+      const altModels = imageGenModelIds.filter((id) => id !== modelId);
+      if (altModels.length > 0) {
+        setSelectedAlternativeModel(altModels[0]);
+      } else {
+        setSelectedAlternativeModel('');
+      }
+      setShowErrorDialog(true);
+    }
+  );
 
   const getLastAssistantMessageId = useCallback(() => {
     for (let i = rawMessages.length - 1; i >= 0; i--) {
@@ -130,6 +156,13 @@ export const GenerateImagePage = () => {
       navigate,
     ],
   );
+
+  const handleRetry = useCallback(async () => {
+    if (!selectedAlternativeModel) return;
+    setImageGenModelId(selectedAlternativeModel);
+    setShowErrorDialog(false);
+    await generateAndPersist(prompt, negativePrompt);
+  }, [selectedAlternativeModel, prompt, negativePrompt, setImageGenModelId, generateAndPersist]);
 
   const [width, height] = resolution.label.split('x').map((v) => Number(v));
 
@@ -391,6 +424,62 @@ export const GenerateImagePage = () => {
         onChangeInitImage={onChangeInitImageBase64}
         onChangeMaskImage={onChangeMaskImageBase64}
       />
+
+      <CustomDialog isOpen={showErrorDialog} onClose={() => setShowErrorDialog(false)}>
+        <CustomDialogPanel>
+          <CustomDialogHeader hasClose onClose={() => setShowErrorDialog(false)}>
+            画像生成エラー
+          </CustomDialogHeader>
+          <CustomDialogBody>
+            <p className='text-std-16N-170 mb-4 text-red-600 font-semibold'>
+              モデル「{findModelDisplayNameByModelId(failedModelId)}」での画像生成に失敗しました。
+            </p>
+            {errorDetails && (
+              <div className='p-3 bg-red-50 border border-red-200 rounded-8 text-std-14N-130 mb-6 max-h-40 overflow-y-auto whitespace-pre-wrap'>
+                {errorDetails}
+              </div>
+            )}
+            <p className='text-std-16N-170 mb-2'>
+              自動での別モデルへの切り替えは行いません。代替モデルで再試行しますか？
+            </p>
+            {imageGenModelIds.filter((id) => id !== failedModelId).length > 0 ? (
+              <div className='mb-6'>
+                <CustomSelect
+                  label='代替モデルの選択'
+                  isVertical
+                  isFullWidth
+                  value={selectedAlternativeModel}
+                  onChange={setSelectedAlternativeModel}
+                  options={imageGenModelIds
+                    .filter((id) => id !== failedModelId)
+                    .map((m) => {
+                      return { value: m, label: findModelDisplayNameByModelId(m) };
+                    })}
+                />
+              </div>
+            ) : (
+              <p className='text-std-14N-130 text-solid-gray-536 mb-6'>
+                選択可能な代替モデルがありません。
+              </p>
+            )}
+            <div className='flex justify-end gap-x-4'>
+              <Button
+                variant='outline'
+                onClick={() => setShowErrorDialog(false)}
+              >
+                キャンセル
+              </Button>
+              <Button
+                variant='solid-fill'
+                onClick={handleRetry}
+                disabled={!selectedAlternativeModel}
+              >
+                代替モデルで再試行
+              </Button>
+            </div>
+          </CustomDialogBody>
+        </CustomDialogPanel>
+      </CustomDialog>
     </>
   );
 };

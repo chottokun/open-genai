@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import os
+import base64
 import asyncio
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 import pytest
 from conftest import load_service_module
 
@@ -10,234 +11,146 @@ from conftest import load_service_module
 image_gen = load_service_module("backend/app/image_gen.py")
 
 
-def test_build_a1111_payload_text_to_image() -> None:
-    payload = image_gen.build_a1111_payload(
-        {
-            "textPrompt": [
-                {"text": "a cat", "weight": 1},
-                {"text": "blurry", "weight": -1},
-            ],
-            "width": 512,
-            "height": 768,
-            "step": 25,
-            "cfgScale": 8,
-            "seed": 42,
-            "stylePreset": "anime",
-        }
+def test_positive_negative_prompts() -> None:
+    positive, negative = image_gen._positive_negative_prompts(
+        [
+            {"text": "a cute kitten", "weight": 1},
+            {"text": "blurry, low quality", "weight": -1},
+        ]
     )
-    assert payload["prompt"] == "a cat, anime style"
-    assert payload["negative_prompt"] == "blurry"
-    assert payload["width"] == 512
-    assert payload["height"] == 768
-    assert payload["steps"] == 25
-    assert payload["cfg_scale"] == 8
-    assert payload["seed"] == 42
-    assert "init_images" not in payload
+    assert positive == "a cute kitten"
+    assert negative == "blurry, low quality"
 
 
-def test_build_a1111_payload_image_to_image() -> None:
-    payload = image_gen.build_a1111_payload(
-        {
-            "textPrompt": [{"text": "a dog", "weight": 1}],
-            "width": 512,
-            "height": 512,
-            "step": 20,
-            "cfgScale": 7,
-            "seed": 1,
-            "initImage": "abc123",
-            "imageStrength": 0.4,
-        }
-    )
-    assert payload["init_images"] == ["abc123"]
-    assert payload["denoising_strength"] == 0.4
+def test_apply_style_preset() -> None:
+    p = image_gen._apply_style_preset("a castle", "anime")
+    assert p == "a castle, anime style"
+
+    p2 = image_gen._apply_style_preset("a castle", None)
+    assert p2 == "a castle"
 
 
-def test_build_a1111_payload_requires_prompt() -> None:
-    try:
-        image_gen.build_a1111_payload({"textPrompt": []})
-    except ValueError as exc:
-        assert "プロンプト" in str(exc)
-    else:
-        raise AssertionError("expected ValueError")
-
-
-@patch("httpx.AsyncClient.get")
-def test_is_sd_up_local_success(mock_get, monkeypatch) -> None:
+@pytest.mark.asyncio
+async def test_is_sd_up_success(monkeypatch) -> None:
     mock_res = MagicMock()
     mock_res.status_code = 200
-    async def mock_get_coro(*args, **kwargs):
-        return mock_res
-    mock_get.side_effect = mock_get_coro
 
-    monkeypatch.setattr(image_gen, "IMAGE_PROVIDER", "local")
-    up = asyncio.run(image_gen.is_sd_up())
+    class MockClient:
+        async def __aenter__(self):
+            return self
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+        async def get(self, *args, **kwargs):
+            return mock_res
+
+    monkeypatch.setattr("httpx.AsyncClient", lambda *args, **kwargs: MockClient())
+
+    up = await image_gen.is_sd_up()
     assert up is True
 
 
-@patch("httpx.AsyncClient.get")
-def test_is_sd_up_local_failure(mock_get, monkeypatch) -> None:
-    async def mock_get_coro(*args, **kwargs):
-        import httpx
-        raise httpx.ConnectError("Connection refused")
-    mock_get.side_effect = mock_get_coro
+@pytest.mark.asyncio
+async def test_is_sd_up_failure(monkeypatch) -> None:
+    class MockClient:
+        async def __aenter__(self):
+            return self
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+        async def get(self, *args, **kwargs):
+            import httpx
+            raise httpx.ConnectError("Connection refused")
 
-    monkeypatch.setattr(image_gen, "IMAGE_PROVIDER", "local")
-    up = asyncio.run(image_gen.is_sd_up())
+    monkeypatch.setattr("httpx.AsyncClient", lambda *args, **kwargs: MockClient())
+
+    up = await image_gen.is_sd_up()
     assert up is False
 
 
-@patch("httpx.AsyncClient.get")
-def test_is_sd_up_litellm_success(mock_get, monkeypatch) -> None:
-    mock_res = MagicMock()
-    mock_res.status_code = 200
-    async def mock_get_coro(*args, **kwargs):
-        return mock_res
-    mock_get.side_effect = mock_get_coro
+@pytest.mark.asyncio
+async def test_generate_image_base64_success(monkeypatch) -> None:
+    mock_client = MagicMock()
+    mock_images = MagicMock()
+    mock_response = MagicMock()
+    mock_data = MagicMock()
+    mock_data.b64_json = "dummy_base64_image_data"
+    mock_response.data = [mock_data]
 
-    monkeypatch.setattr(image_gen, "IMAGE_PROVIDER", "litellm")
-    up = asyncio.run(image_gen.is_sd_up())
-    assert up is True
+    mock_images.generate = AsyncMock(return_value=mock_response)
+    mock_client.images = mock_images
 
+    monkeypatch.setattr(image_gen, "get_openai_client", lambda: mock_client)
 
-@patch("httpx.AsyncClient.get")
-def test_is_sd_up_local_api_success(mock_get, monkeypatch) -> None:
-    mock_res = MagicMock()
-    mock_res.status_code = 200
-    async def mock_get_coro(*args, **kwargs):
-        return mock_res
-    mock_get.side_effect = mock_get_coro
+    params = {
+        "textPrompt": [{"text": "a cute shiba inu", "weight": 1}],
+        "quality": "hd",
+        "style": "vivid",
+        "extra_body": {"style_id": "recraft-v3-art"},
+    }
 
-    monkeypatch.setattr(image_gen, "IMAGE_PROVIDER", "local_api")
-    up = asyncio.run(image_gen.is_sd_up())
-    assert up is True
+    b64 = await image_gen.generate_image_base64(params, model_id="recraft-v3")
+    assert b64 == "dummy_base64_image_data"
 
-
-@patch("httpx.AsyncClient.post")
-def test_generate_image_base64_local_success(mock_post, monkeypatch) -> None:
-    mock_res = MagicMock()
-    mock_res.status_code = 200
-    mock_res.json.return_value = {"images": ["data:image/png;base64,dummy_local_png"]}
-    async def mock_post_coro(*args, **kwargs):
-        return mock_res
-    mock_post.side_effect = mock_post_coro
-
-    monkeypatch.setattr(image_gen, "IMAGE_PROVIDER", "local")
-    b64 = asyncio.run(image_gen.generate_image_base64(
-        {"textPrompt": [{"text": "a cat", "weight": 1}]}
-    ))
-    assert b64 == "dummy_local_png"
+    # 呼び出しパラメータの検証
+    mock_images.generate.assert_called_once()
+    called_kwargs = mock_images.generate.call_args[1]
+    assert called_kwargs["model"] == "recraft-v3"
+    assert called_kwargs["prompt"] == "a cute shiba inu"
+    assert called_kwargs["quality"] == "hd"
+    assert called_kwargs["style"] == "vivid"
+    assert called_kwargs["extra_body"] == {"style_id": "recraft-v3-art"}
 
 
-@patch("httpx.AsyncClient.post")
-def test_generate_image_base64_local_api_success(mock_post, monkeypatch) -> None:
-    mock_res = MagicMock()
-    mock_res.status_code = 200
-    mock_res.json.return_value = {"data": [{"b64_json": "dummy_local_api_png"}]}
-    async def mock_post_coro(*args, **kwargs):
-        return mock_res
-    mock_post.side_effect = mock_post_coro
+@pytest.mark.asyncio
+async def test_edit_image_base64_success(monkeypatch) -> None:
+    mock_client = MagicMock()
+    mock_images = MagicMock()
+    mock_response = MagicMock()
+    mock_data = MagicMock()
+    mock_data.b64_json = "dummy_edited_base64"
+    mock_response.data = [mock_data]
 
-    monkeypatch.setattr(image_gen, "IMAGE_PROVIDER", "local_api")
-    b64 = asyncio.run(image_gen.generate_image_base64(
-        {"textPrompt": [{"text": "a cat", "weight": 1}]}
-    ))
-    assert b64 == "dummy_local_api_png"
+    mock_images.edit = AsyncMock(return_value=mock_response)
+    mock_client.images = mock_images
 
+    monkeypatch.setattr(image_gen, "get_openai_client", lambda: mock_client)
 
-@patch("httpx.AsyncClient.post")
-def test_generate_image_base64_litellm_success(mock_post, monkeypatch) -> None:
-    mock_res = MagicMock()
-    mock_res.status_code = 200
-    mock_res.json.return_value = {"data": [{"b64_json": "dummy_litellm_png"}]}
-    async def mock_post_coro(*args, **kwargs):
-        return mock_res
-    mock_post.side_effect = mock_post_coro
+    b64 = await image_gen.edit_image_base64(
+        image_bytes=b"img_bytes",
+        mask_bytes=b"mask_bytes",
+        prompt="inpainting cat",
+        model_id="gpt-image-1"
+    )
+    assert b64 == "dummy_edited_base64"
 
-    monkeypatch.setattr(image_gen, "IMAGE_PROVIDER", "litellm")
-    b64 = asyncio.run(image_gen.generate_image_base64(
-        {"textPrompt": [{"text": "a cat", "weight": 1}]}
-    ))
-    assert b64 == "dummy_litellm_png"
+    mock_images.edit.assert_called_once()
+    called_kwargs = mock_images.edit.call_args[1]
+    assert called_kwargs["model"] == "gpt-image-1"
+    assert called_kwargs["image"] == ("image.png", b"img_bytes", "image/png")
+    assert called_kwargs["mask"] == ("mask.png", b"mask_bytes", "image/png")
+    assert called_kwargs["prompt"] == "inpainting cat"
 
 
-def test_get_effective_provider_guardrail(monkeypatch) -> None:
-    monkeypatch.setattr(image_gen, "ALLOW_CLOUD_API", False)
-    monkeypatch.setattr(image_gen, "IMAGE_PROVIDER", "litellm")
+def test_save_generated_image(tmp_path, monkeypatch) -> None:
+    # 一時保存先を設定
+    test_dir = str(tmp_path / "generations")
+    os.makedirs(test_dir, exist_ok=True)
 
-    # 宛先がローカルではない（外部クラウド）場合は local にフォールバック
-    monkeypatch.setattr(image_gen, "LITELLM_IMAGE_URL", "https://api.openai.com/v1")
-    prov = image_gen.get_effective_provider()
-    assert prov == "local"
+    monkeypatch.setattr(image_gen, "STATIC_GENERATIONS_DIR", test_dir)
 
-    # 宛先がローカル（docker内部やlocalhost等）の場合は litellm のまま
-    monkeypatch.setattr(image_gen, "LITELLM_IMAGE_URL", "http://litellm:4000/v1")
-    prov = image_gen.get_effective_provider()
-    assert prov == "litellm"
+    dummy_b64 = base64.b64encode(b"fake-png-data").decode("utf-8")
 
+    # 保存実行
+    url_path = image_gen.save_generated_image(dummy_b64)
+    assert url_path.startswith("/static/generations/img_")
+    assert url_path.endswith(".png")
 
-def test_get_effective_provider_routing(monkeypatch) -> None:
-    # model_id が渡されたときの挙動を検証
-    monkeypatch.setattr(image_gen, "IMAGE_PROVIDER", "local")
+    filename = os.path.basename(url_path)
+    saved_file = os.path.join(test_dir, filename)
+    assert os.path.isfile(saved_file)
 
-    # model_id が None や "local-sd" の場合は、IMAGE_PROVIDER がそのまま使われる
-    assert image_gen.get_effective_provider() == "local"
-    assert image_gen.get_effective_provider(None) == "local"
-    assert image_gen.get_effective_provider("local-sd") == "local"
-
-    # それ以外のモデルID（例: "local-sd3.5", "gpt-image-1"）が渡された場合、litellm に自動ルーティングされる
-    monkeypatch.setattr(image_gen, "LITELLM_IMAGE_URL", "http://litellm:4000/v1")
-    monkeypatch.setattr(image_gen, "ALLOW_CLOUD_API", False) # ローカル宛先なので litellm が維持されるはず
-    assert image_gen.get_effective_provider("local-sd3.5") == "litellm"
-    assert image_gen.get_effective_provider("gpt-image-1") == "litellm"
-    assert image_gen.get_effective_provider("standard-image-gen") == "litellm"
+    with open(saved_file, "rb") as f:
+        assert f.read() == b"fake-png-data"
 
 
-@patch("httpx.AsyncClient.post")
-def test_generate_image_base64_litellm_standard_image_gen_success(mock_post, monkeypatch) -> None:
-    # LITELLM_IMAGE_MODELが standard-image-gen のとき、LiteLLMに正しくそのモデル名が転送されることをテスト
-    mock_res = MagicMock()
-    mock_res.status_code = 200
-    mock_res.json.return_value = {"data": [{"b64_json": "dummy_standard_image_gen_png"}]}
-
-    captured_payload = {}
-    async def mock_post_coro(url, json, headers, *args, **kwargs):
-        nonlocal captured_payload
-        captured_payload = json
-        return mock_res
-    mock_post.side_effect = mock_post_coro
-
-    monkeypatch.setattr(image_gen, "IMAGE_PROVIDER", "litellm")
-    monkeypatch.setattr(image_gen, "LITELLM_IMAGE_MODEL", "standard-image-gen")
-
-    b64 = asyncio.run(image_gen.generate_image_base64(
-        {"textPrompt": [{"text": "A majestic dragon", "weight": 1}]}
-    ))
-
-    assert b64 == "dummy_standard_image_gen_png"
-    assert captured_payload["model"] == "standard-image-gen"
-
-
-@patch("httpx.AsyncClient.post")
-def test_generate_image_base64_litellm_dynamic_model_id_success(mock_post, monkeypatch) -> None:
-    # 引数 model_id が渡されたとき、LITELLM_IMAGE_MODELよりも優先してLiteLLMに転送されることをテスト
-    mock_res = MagicMock()
-    mock_res.status_code = 200
-    mock_res.json.return_value = {"data": [{"b64_json": "dummy_dynamic_png"}]}
-
-    captured_payload = {}
-    async def mock_post_coro(url, json, headers, *args, **kwargs):
-        nonlocal captured_payload
-        captured_payload = json
-        return mock_res
-    mock_post.side_effect = mock_post_coro
-
-    monkeypatch.setattr(image_gen, "IMAGE_PROVIDER", "litellm")
-    monkeypatch.setattr(image_gen, "LITELLM_IMAGE_MODEL", "imagen-4") # デフォルト
-
-    b64 = asyncio.run(image_gen.generate_image_base64(
-        {"textPrompt": [{"text": "A cyber city", "weight": 1}]},
-        model_id="gpt-image-1" # 画面で選択されたモデルID
-    ))
-
-    assert b64 == "dummy_dynamic_png"
-    assert captured_payload["model"] == "gpt-image-1"
+def test_get_effective_provider() -> None:
+    assert image_gen.get_effective_provider() == "litellm"

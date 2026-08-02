@@ -28,6 +28,26 @@
 
 ## [Unreleased]
 
+### 🎨 LiteLLM Proxy 全面統合および OpenAI 互換画像生成・編集 UI / バックエンドの実装
+
+- **画像生成・編集機能の LiteLLM Proxy への全面一元化**
+  - 旧 A1111 直結や `local_api` などの個別プロバイダー接続ロジックを完全廃止し、標準の `openai` SDK を介して LiteLLM Proxy（LLM Router）へ通信を統合。
+- **OpenAI 互換画像生成および編集（Inpainting/Edits）機能のバックエンド実装**
+  - `/image/generate` エンドポイントを刷新し、標準画像生成および `extra_body` によるプロバイダー固有パラメータの透過伝送をサポート。
+  - `multipart/form-data` に対応した `/image/edit` エンドポイントを新規実装し、`/v1/images/edits` 規格での画像編集（Inpainting/Outpainting）を実現。
+- **UUID 命名および画像 TTL 自動削除管理パイプラインの導入**
+  - 生成・編集された画像を `img_${UUIDv4}.png` として固定保存先（`STATIC_GENERATIONS_DIR`）に物理保存。
+  - UI へは `/static/generations/img_${UUIDv4}.png` の固定自前 URL を返却し、ブラウザキャッシュ不一致を防止。
+  - 環境変数 `IMAGE_TTL_DAYS` に基づいて期限切れ画像をバックグラウンドで自動物理削除する定期クリーンアップデーモンスレッドを追加。
+- **自己署名証明書接続および SSL 回避設定の対応**
+  - `VERIFY_SSL` 環境変数の導入により、自己署名証明書を用いる R-Proxy 前段環境における HTTPS 通信の SSL 認証エラーを回避するオプションを追加。
+- **フロントエンド専用画像生成・編集操作 UI の強化**
+  - 画質（Quality: `standard`, `hd`）およびスタイル（Style: `natural`, `vivid`）選択コントロール、および JSON 形式での `extra_body`（拡張パラメータ）入力フォームを追加。
+  - 編集キャンバスによる Inpainting 編集時の `multipart/form-data` 形式での自動送信フック（`useGenerateImage`）を構築。
+  - LiteLLM からエラー（429 や 500系等）を返された際、勝手に別モデルに自動フォールバックさせず、元の入力状態やマスク設定を保持したまま代替ローカルモデルを指定して明示的に再試行を促すエラーリトライダイアログを実装。
+- **利用可能モデルのローカルモデル優先・絞り込み**
+  - アカウントを持たない商業外部 API モデルを排し、`local-sd`, `local-sd3.5`, `standard-image-gen`, `imagen-4` などの自前ローカル/セルフホスト構成モデルのみをフロントエンドモデル選択肢に動的に絞り込み。
+
 ### 🛠️ 開発・運用向けツール・診断機能の強化
 
 - **自動画像生成ボトルネック・コンポーネント疎通診断ツール (`scripts/diagnose_image_gen.py`) の新規追加**

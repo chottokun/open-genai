@@ -403,6 +403,10 @@ export const modelMetadata: Record<string, ModelMetadata> = {
     flags: MODEL_FEATURE.IMAGE_GEN,
     displayName: '標準画像生成モデル (標準)',
   },
+  'imagen-4': {
+    flags: MODEL_FEATURE.IMAGE_GEN,
+    displayName: 'Google Imagen 4',
+  },
 
   // Stability AI Image Gen
   'stability.stable-diffusion-xl-v1': {
