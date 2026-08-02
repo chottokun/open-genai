@@ -47,3 +47,4 @@ deletion-report-*.txt
 !/docs/upstream-sync-report-*.md
 !/docs/ssl-rproxy-guide.md
 !/docs/litellm-image-gen-architecture.md
+!/docs/litellm-dynamic-model-ui-architecture.md
