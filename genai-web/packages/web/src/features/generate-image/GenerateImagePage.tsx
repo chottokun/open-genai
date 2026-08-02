@@ -465,12 +465,14 @@ export const GenerateImagePage = () => {
             <div className='flex justify-end gap-x-4'>
               <Button
                 variant='outline'
+                size='md'
                 onClick={() => setShowErrorDialog(false)}
               >
                 キャンセル
               </Button>
               <Button
                 variant='solid-fill'
+                size='md'
                 onClick={handleRetry}
                 disabled={!selectedAlternativeModel}
               >

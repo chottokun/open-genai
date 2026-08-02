@@ -152,5 +152,47 @@ def test_save_generated_image(tmp_path, monkeypatch) -> None:
         assert f.read() == b"fake-png-data"
 
 
-def test_get_effective_provider() -> None:
+def test_get_effective_provider(monkeypatch) -> None:
+    monkeypatch.setattr(image_gen, "IMAGE_PROVIDER", "litellm")
     assert image_gen.get_effective_provider() == "litellm"
+
+    monkeypatch.setattr(image_gen, "IMAGE_PROVIDER", "local")
+    assert image_gen.get_effective_provider() == "local"
+
+    monkeypatch.setattr(image_gen, "IMAGE_PROVIDER", "local_api")
+    assert image_gen.get_effective_provider() == "local_api"
+
+
+@pytest.mark.asyncio
+async def test_is_sd_up_provider_routing(monkeypatch) -> None:
+    mock_res = MagicMock()
+    mock_res.status_code = 200
+
+    captured_urls = []
+
+    class MockClient:
+        async def __aenter__(self):
+            return self
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+        async def get(self, url, *args, **kwargs):
+            captured_urls.append(url)
+            return mock_res
+
+    monkeypatch.setattr("httpx.AsyncClient", lambda *args, **kwargs: MockClient())
+
+    # litellm の場合
+    monkeypatch.setattr(image_gen, "IMAGE_PROVIDER", "litellm")
+    monkeypatch.setattr(image_gen, "LITELLM_IMAGE_URL", "http://litellm:4000/v1")
+    up = await image_gen.is_sd_up()
+    assert up is True
+    assert "http://litellm:4000/v1/health" in captured_urls[0]
+
+    # local の場合
+    captured_urls.clear()
+    monkeypatch.setattr(image_gen, "IMAGE_PROVIDER", "local")
+    monkeypatch.setattr(image_gen, "SD_API_URL", "http://localhost:7860")
+    up = await image_gen.is_sd_up()
+    assert up is True
+    assert "http://localhost:7860/sdapi/v1/sd-models" in captured_urls[0]
+

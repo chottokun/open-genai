@@ -1,4 +1,3 @@
-import type { GenerateImageParams } from 'genai-web';
 import { useGenerateImage } from '@/features/generate-image/hooks/useGenerateImage';
 import { useGenerateImageStore } from '@/features/generate-image/stores/useGenerateImageStore';
 import type { ApiError } from '@/lib/fetcher';

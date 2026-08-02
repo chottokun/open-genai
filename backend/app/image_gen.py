@@ -17,6 +17,10 @@ import httpx
 from openai import AsyncOpenAI
 
 # 環境変数
+IMAGE_PROVIDER = os.environ.get("IMAGE_PROVIDER", "litellm").lower()
+IMAGE_API_URL = os.environ.get("IMAGE_API_URL", "http://sd-app:8000/v1/images/generations")
+SD_API_URL = os.environ.get("SD_API_URL", "http://host.docker.internal:7860")
+SD_TIMEOUT = float(os.environ.get("SD_TIMEOUT", "600.0"))
 ALLOW_CLOUD_API = os.environ.get("ALLOW_CLOUD_API", "false").lower() == "true"
 LITELLM_IMAGE_MODEL = os.environ.get("LITELLM_IMAGE_MODEL", "imagen-4")
 LITELLM_IMAGE_URL = os.environ.get("LITELLM_IMAGE_URL", "http://litellm:4000/v1")
@@ -30,6 +34,13 @@ IMAGE_TTL_DAYS = int(os.environ.get("IMAGE_TTL_DAYS", "30"))
 
 _cleanup_started = False
 _cleanup_lock = threading.Lock()
+
+
+def get_effective_provider(model_id: str | None = None) -> str:
+    """現在有効な画像生成プロバイダを判定する。"""
+    if model_id and model_id != "local-sd":
+        return "litellm"
+    return IMAGE_PROVIDER
 
 
 def get_openai_client() -> AsyncOpenAI:
@@ -65,7 +76,26 @@ def _apply_style_preset(prompt: str, style_preset: str | None) -> str:
 
 
 async def is_sd_up() -> bool:
-    """LiteLLM Proxy の稼働状況を確認する。"""
+    """現在設定されている画像生成プロバイダの稼働状況を確認する。"""
+    prov = get_effective_provider()
+
+    if prov == "local":
+        try:
+            async with httpx.AsyncClient(timeout=2.0, verify=VERIFY_SSL) as client:
+                res = await client.get(f"{SD_API_URL}/sdapi/v1/sd-models")
+                return res.status_code == 200
+        except Exception:
+            return False
+
+    if prov == "local_api":
+        try:
+            async with httpx.AsyncClient(timeout=2.0, verify=VERIFY_SSL) as client:
+                res = await client.get(IMAGE_API_URL)
+                return res.status_code == 200
+        except Exception:
+            return False
+
+    # litellm Proxy
     try:
         async with httpx.AsyncClient(timeout=2.0, verify=VERIFY_SSL) as client:
             res = await client.get(f"{LITELLM_IMAGE_URL.rstrip('/')}/health")
@@ -80,6 +110,7 @@ async def is_sd_up() -> bool:
             return res.status_code == 200
     except Exception:
         return False
+
 
 
 async def generate_image_base64(params: dict[str, Any], model_id: str | None = None) -> str:
@@ -217,10 +248,4 @@ def start_static_cleanup_scheduler() -> None:
         _cleanup_started = True
 
 
-# 以下は既存のテスト互換性のためのプレースホルダ、あるいは完全に新規構成へのマッピング
-IMAGE_PROVIDER = "litellm"
-IMAGE_API_URL = ""
-SD_API_URL = ""
-SD_TIMEOUT = 600.0
-def get_effective_provider(model_id: str | None = None) -> str:
-    return "litellm"
+
