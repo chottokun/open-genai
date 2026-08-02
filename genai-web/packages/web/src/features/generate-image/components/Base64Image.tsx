@@ -81,9 +81,11 @@ export const Base64Image = (props: Props) => {
     onClick?.();
   };
 
-  const src = imageBase64?.startsWith('data')
+  const src = (imageBase64?.startsWith('/static/') || imageBase64?.startsWith('http'))
     ? imageBase64
-    : `data:${format};base64,${imageBase64}`;
+    : (imageBase64?.startsWith('data')
+      ? imageBase64
+      : `data:${format};base64,${imageBase64}`);
 
   return clickable ? (
     <button

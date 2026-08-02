@@ -42,6 +42,9 @@ type GenerateImageState = {
   imageSample: number;
   image: ImageResult[];
   chatContent: string;
+  quality: string;
+  style: string;
+  extraBody: string;
 };
 
 type GenerateImageActions = {
@@ -66,6 +69,9 @@ type GenerateImageActions = {
   setImageError: (index: number, errorMessage: string) => void;
   clearImage: () => void;
   setChatContent: (chatContent: string) => void;
+  setQuality: (quality: string) => void;
+  setStyle: (style: string) => void;
+  setExtraBody: (extraBody: string) => void;
   clear: () => void;
 };
 
@@ -103,6 +109,9 @@ const createInitialState = (): GenerateImageState => ({
     error: false,
   }),
   chatContent: '',
+  quality: 'standard',
+  style: 'natural',
+  extraBody: '',
 });
 
 export const useGenerateImageStore = create<GenerateImageStore>((set, get) => {
@@ -179,6 +188,9 @@ export const useGenerateImageStore = create<GenerateImageStore>((set, get) => {
       }),
     clearImage: () => set({ image: [...initialState.image] }),
     setChatContent: (chatContent) => set({ chatContent }),
+    setQuality: (quality) => set({ quality }),
+    setStyle: (style) => set({ style }),
+    setExtraBody: (extraBody) => set({ extraBody }),
     clear: () => set(createInitialState()),
   };
 });
