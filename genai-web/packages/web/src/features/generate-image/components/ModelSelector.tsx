@@ -1,17 +1,17 @@
 import { CustomSelect } from '@/components/ui/CustomSelect';
-import { useSelectedModel } from '@/hooks/useSelectedModel';
 import { findModelDisplayNameByModelId, MODELS } from '@/models';
+import { useGenerateImageStore } from '../stores/useGenerateImageStore';
 
 export const ModelSelector = () => {
-  const { selectedModelId, setSelectedModelId } = useSelectedModel();
-  const { modelIds } = MODELS;
+  const { imageGenModelId, setImageGenModelId } = useGenerateImageStore();
+  const { imageGenModelIds } = MODELS;
 
   return (
     <CustomSelect
       label='AIモデル：'
-      value={selectedModelId}
-      onChange={setSelectedModelId}
-      options={modelIds.map((m) => ({
+      value={imageGenModelId}
+      onChange={setImageGenModelId}
+      options={imageGenModelIds.map((m) => ({
         value: m,
         label: findModelDisplayNameByModelId(m),
       }))}

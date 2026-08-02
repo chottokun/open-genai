@@ -1,4 +1,5 @@
 import os
+import sys
 import tempfile
 import base64
 import httpx
@@ -24,6 +25,9 @@ if not USE_PROXY:
     try:
         from diffusers import DiffusionPipeline
         import torch
+        if DEVICE == "cuda" and not torch.cuda.is_available():
+            print("WARNING: CUDA is requested but torch.cuda.is_available() is False. Falling back to CPU.", file=sys.stderr)
+            DEVICE = "cpu"
         torch_dtype = torch.float16 if DEVICE == "cuda" else torch.float32
         pipe = DiffusionPipeline.from_pretrained(
             MODEL_NAME,

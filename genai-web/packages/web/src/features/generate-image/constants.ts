@@ -233,6 +233,12 @@ export const MODEL_INFO: Record<string, ModelInfo<'base' | 'advanced'>> = {
     ],
     resolutionPresets: STABILITY_AI_2024_MODEL_PRESETS,
   },
+  'imagen-4': {
+    supportedModes: [
+      GENERATION_MODES.TEXT_IMAGE,
+    ],
+    resolutionPresets: STABILITY_AI_2024_MODEL_PRESETS,
+  },
   [STABILITY_AI_MODELS.STABLE_DIFFUSION_XL]: {
     supportedModes: [
       GENERATION_MODES.TEXT_IMAGE,
