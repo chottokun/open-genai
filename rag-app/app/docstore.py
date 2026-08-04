@@ -215,12 +215,23 @@ def upsert_document(
 
 
 def _normalize_doc_row(r: sqlite3.Row | dict[str, Any]) -> dict[str, Any]:
+    try:
+        from . import textnorm
+    except ImportError:
+        try:
+            from app import textnorm
+        except ImportError:
+            import textnorm
+
     d = dict(r)
     d["tags"] = _parse_tags(d.get("tags"))
     d["truncated"] = bool(d.get("truncated"))
     d["index_kind"] = (d.get("index_kind") or "tree").strip().lower()
     if d["index_kind"] not in ("tree", "fulltext"):
         d["index_kind"] = "tree"
+    d["source"] = textnorm.normalize_source(d.get("source") or "") or (
+        d.get("source") or ""
+    )
     return d
 
 
@@ -261,14 +272,28 @@ def get_doc(doc_id: str, scope: str | None = None) -> dict[str, Any] | None:
 
 
 def get_doc_by_source(scope: str, source: str) -> dict[str, Any] | None:
-    with _connect() as conn:
-        r = conn.execute(
-            "SELECT * FROM docs WHERE scope = ? AND source = ?",
-            (scope, source),
-        ).fetchone()
-    if not r:
+    try:
+        from . import textnorm
+    except ImportError:
+        try:
+            from app import textnorm
+        except ImportError:
+            import textnorm
+
+    src = textnorm.normalize_source(source)
+    if not src:
         return None
-    return _normalize_doc_row(r)
+    with _connect() as conn:
+        # SQLite では NFC/NFD 拡張がないため、
+        # 同一スコープ内の文書を全引きして Python 側で NFC 正規化比較する
+        rows = conn.execute(
+            "SELECT * FROM docs WHERE scope = ?",
+            (scope,),
+        ).fetchall()
+    for row in rows:
+        if textnorm.normalize_source(row["source"]) == src:
+            return _normalize_doc_row(row)
+    return None
 
 
 def get_toc(doc_id: str) -> list[dict[str, Any]]:
