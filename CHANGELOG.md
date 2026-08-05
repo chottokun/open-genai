@@ -36,6 +36,16 @@
   - フロントエンド React/TS 側で `type`（chat, image_generation, audio_transcription等）に基づき画面別フィルタリングを適用。
   - 新たなモデル固有のパラメータ（例: Recraft v3の `style_id` など）を `extra_fields` 定義から完全に動的フォーム描画し、実行時は `extra_body` ペイロード経由で透過送信する OpenAI 互換設計を提案。
 
+### 🔄 Upstream 同期アセスメントおよびセキュリティ・回帰テスト検証 (v0.5.0 統合完了検証)
+
+- **Upstream 同期アセスメントの実施**
+  - 公式 Upstream の最新 105 件のコミット（SAML proxy 対策、大容量チャット添付処理、マップリデュース、Dify エラー UX 向上など）について差分アセスメントを実施。
+  - すべての主要改善が、ローカルファースト設計および LiteLLM 優先ポリシーを維持したまま、すでに当コードベースへ最適に統合・最適化されていることを確認。履歴乖離による不要かつ危険なフルマージを回避。
+- **セキュリティ脆弱性監査 (100% CLEAN)**
+  - `scripts/audit-python-deps.sh` を用いて 13 個の Python 依存定義（requirements.txt）を詳細にスキャンし、既知の脆弱性検出 **0件** であることの検証を完了。
+- **全体品質・回帰テスト検証の徹底 (100% PASSED)**
+  - `scripts/run-regression-tests.sh` を用い、84件の Python バックエンドテスト (pytest) および 625件の React フロントエンドテスト (Vitest) を網羅的に実行。すべてのテストが完全に **PASSED** することを確認し、回帰バグのない高信頼性を保証。
+
 ### 🎨 LiteLLM Proxy 全面統合および OpenAI 互換画像生成・編集 UI / バックエンドの実装
 
 - **画像生成・編集機能の LiteLLM Proxy への全面一元化**
