@@ -48,3 +48,26 @@ def test_get_doc_by_source_accepts_nfc_when_stored_nfd(
     assert found is not None
     assert found["doc_id"] == "doc-1"
     assert found["source"] == nfc
+
+
+def test_normalize_source_edge_cases() -> None:
+    """空文字列、絵文字、混在テキストなどの批判的エッジケースを検証する。"""
+    # 空文字
+    assert textnorm.normalize_source("") == ""
+
+    # 絵文字・サロゲートペア
+    emoji_str = "テスト👨‍👩‍👧‍👦.pdf"
+    assert textnorm.normalize_source(emoji_str) == unicodedata.normalize("NFC", emoji_str)
+
+    # NFD 形式の濁点・半濁点混在
+    nfd_mixed = "か" + "\u3099" + "き" + "\u3099" + "く" + "\u3099"  # がぎぐ NFD
+    assert textnorm.normalize_source(nfd_mixed) == "がぎぐ"
+
+
+def test_source_match_forms_uniqueness() -> None:
+    """ASCIIのみのファイル名などで NFC と NFD が同一の場合に重複が除去されることを検証する。"""
+    ascii_name = "test_document_123.pdf"
+    forms = textnorm.source_match_forms(ascii_name)
+    assert len(forms) == 1
+    assert forms[0] == ascii_name
+
