@@ -72,3 +72,18 @@ def test_extract_doc_pages_blank_pdf_raises() -> None:
     payload = base64.b64encode(buf.getvalue()).decode("ascii")
     with pytest.raises(docextract.DocExtractError):
         docextract.extract_doc_pages("doc.pdf", "application/pdf", payload)
+
+
+def test_extract_doc_text_full_limits_to_cap(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(docextract, "MAX_CHAT_DOC_CHARS", 15)
+    payload = base64.b64encode("0123456789abcdefghijklmnopqrstuvwxyz".encode()).decode("ascii")
+    result = docextract.extract_doc_text_full("long.txt", "text/plain", payload)
+    assert result is not None
+    assert "long.txt は 15 文字を超えたため以降を省略しました" in result
+
+
+def test_decode_text_bytes_auto_detects_shift_jis() -> None:
+    text_ja = "これは日本語のテキストです。Shift-JISでエンコードされています。"
+    sjis_bytes = text_ja.encode("shift_jis")
+    decoded = docextract.decode_text_bytes(sjis_bytes)
+    assert decoded == text_ja
