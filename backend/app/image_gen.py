@@ -27,8 +27,9 @@ LITELLM_IMAGE_URL = os.environ.get("LITELLM_IMAGE_URL", "http://litellm:4000/v1"
 LITELLM_IMAGE_API_KEY = os.environ.get("LITELLM_IMAGE_API_KEY", "not-needed")
 VERIFY_SSL = os.environ.get("VERIFY_SSL", "true").lower() == "true"
 
-# 固定保存先の管理
-FILES_DIR = os.environ.get("FILES_DIR", "/data/files")
+# 固定保存先の管理（/data 権限がないローカル環境用フォールバック付与）
+default_files_dir = "/data/files" if os.path.exists("/data") and os.access("/data", os.W_OK) else os.path.expanduser("~/.cache/open-genai/files")
+FILES_DIR = os.environ.get("FILES_DIR", default_files_dir)
 STATIC_GENERATIONS_DIR = os.path.join(FILES_DIR, "generations")
 IMAGE_TTL_DAYS = int(os.environ.get("IMAGE_TTL_DAYS", "30"))
 
