@@ -24,6 +24,7 @@ venv/
 # --- Node ---
 **/node_modules/
 genai-web/packages/web/dist/
+genai-web/packages/web/dist_old/
 
 # --- デジタル庁オリジナルの 源内 AI アプリ（未改変・別途 clone のため除外） ---
 /genai-ai-api/
