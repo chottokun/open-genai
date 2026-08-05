@@ -2,20 +2,12 @@
 
 from __future__ import annotations
 
-import sys
 import unicodedata
-from pathlib import Path
-
-# rag-app / rag-app/app パスを通す
-RAG_APP_DIR = Path(__file__).resolve().parents[1] / "rag-app"
-sys.path.insert(0, str(RAG_APP_DIR))
-sys.path.insert(0, str(RAG_APP_DIR / "app"))
-
+from shared import textnorm
 from conftest import load_service_module
 
 
 def test_normalize_source_nfc_for_mac_filename() -> None:
-    textnorm = load_service_module("rag-app/app/textnorm.py")
     nfc = "20260803_三重県市町村総合事務組合_トレンド研修資料.pdf"
     nfd = unicodedata.normalize("NFD", nfc)
     assert nfc != nfd
@@ -24,7 +16,6 @@ def test_normalize_source_nfc_for_mac_filename() -> None:
 
 
 def test_source_match_forms_includes_both() -> None:
-    textnorm = load_service_module("rag-app/app/textnorm.py")
     nfc = "トレンド.pdf"
     nfd = unicodedata.normalize("NFD", nfc)
     forms = textnorm.source_match_forms(nfc)

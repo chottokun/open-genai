@@ -471,13 +471,7 @@ async def retrieve_full(
     if doc_id:
         docs = [d for d in docs if d.get("doc_id") == doc_id]
     elif source:
-        try:
-            from . import textnorm
-        except ImportError:
-            try:
-                from app import textnorm
-            except ImportError:
-                import textnorm
+        from shared import textnorm
 
         ns = textnorm.normalize_source(source)
         docs = [
@@ -520,13 +514,7 @@ def _resolve_source_filter(
     scope: str, doc_id: str | None, source: str | None
 ) -> tuple[str | None, str | None, dict[str, Any] | None]:
     """doc_id / source を正規化し、対象文書（あれば）を返す。"""
-    try:
-        from . import textnorm
-    except ImportError:
-        try:
-            from app import textnorm
-        except ImportError:
-            import textnorm
+    from shared import textnorm
 
     did = (doc_id or "").strip() or None
     src = textnorm.normalize_source(source) or None

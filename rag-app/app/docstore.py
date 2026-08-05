@@ -215,13 +215,7 @@ def upsert_document(
 
 
 def _normalize_doc_row(r: sqlite3.Row | dict[str, Any]) -> dict[str, Any]:
-    try:
-        from . import textnorm
-    except ImportError:
-        try:
-            from app import textnorm
-        except ImportError:
-            import textnorm
+    from shared import textnorm
 
     d = dict(r)
     d["tags"] = _parse_tags(d.get("tags"))
@@ -272,13 +266,7 @@ def get_doc(doc_id: str, scope: str | None = None) -> dict[str, Any] | None:
 
 
 def get_doc_by_source(scope: str, source: str) -> dict[str, Any] | None:
-    try:
-        from . import textnorm
-    except ImportError:
-        try:
-            from app import textnorm
-        except ImportError:
-            import textnorm
+    from shared import textnorm
 
     src = textnorm.normalize_source(source)
     if not src:
