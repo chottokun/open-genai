@@ -45,6 +45,7 @@ deletion-report-*.txt
 !/docs/knowledge-mcp.md
 !/docs/dify-knowledge.md
 !/docs/upstream-sync-report-*.md
+!/docs/upstream-sync-report-v0.5.0-possibility-study.md
 !/docs/ssl-rproxy-guide.md
 !/docs/litellm-image-gen-architecture.md
 !/docs/litellm-dynamic-model-ui-architecture.md

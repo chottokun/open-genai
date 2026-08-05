@@ -1,54 +1,35 @@
-"""添付ドキュメントのテキスト抽出（backend / rag-app 共通モジュール）。
-
-ローカル LLM は PDF/Word/Excel 等を直接読めないため、テキストへ抽出して
-プロンプトや RAG の知識ベースに流し込むための共通関数を提供する。
-
-依存: pypdf / python-docx / openpyxl（各サービスの requirements に含める）。
-"""
-
-from __future__ import annotations
-
 import base64
+import hashlib
 import io
 import os
 from typing import Any
 
-# 抽出テキストの最大長（コンテキスト肥大を防ぐ）。ベクトル RAG / チャット添付向け。
+# 抽出テキストの最大長（コンテキスト肥大を防ぐ）。ベクトル RAG / 簡易登録向け。
 # 構造化索引では使わず、extract_doc_pages() を用いること。
 MAX_DOC_CHARS = int(os.environ.get("MAX_DOC_CHARS", "30000"))
+
+# チャット添付の全文抽出（その場マップリデュース）用のハード上限。
+# 30k で黙って切らず、これを超えた場合のみ明示注記を付けて先頭を保持する。
+MAX_CHAT_DOC_CHARS = int(os.environ.get("MAX_CHAT_DOC_CHARS", "500000"))
 
 # 構造化取込のハード上限（黙って切らずエラーにする）
 MAX_DOC_PAGES = int(os.environ.get("MAX_DOC_PAGES", "200"))
 MAX_DOC_BYTES = int(os.environ.get("MAX_DOC_BYTES", str(20 * 1024 * 1024)))
-# 非 PDF を合成ページに分割するときの目安文字数
-SYNTHETIC_PAGE_CHARS = int(os.environ.get("SYNTHETIC_PAGE_CHARS", "3000"))
+
+# 非 PDF のとき何文字ごとに合成ページを作るか（RAG-app / tree-ingest 等向け）
+SYNTHETIC_PAGE_CHARS = 2000
 
 
 class DocExtractError(Exception):
-    """構造化取込で上限超過など、黙って切り捨てできない失敗。"""
-
-# UI の accept などに使える対応拡張子
-SUPPORTED_DOC_EXTS = (
-    ".pdf",
-    ".docx",
-    ".xlsx",
-    ".txt",
-    ".md",
-    ".csv",
-    ".tsv",
-    ".html",
-    ".htm",
-    ".json",
-    ".log",
-)
+    """テキスト抽出に起因する業務例外。"""
 
 
 def strip_base64_prefix(data: str) -> str:
-    """`data:application/pdf;base64,xxxx` のような prefix を除去する。"""
-    if data.startswith("data:"):
-        comma = data.find(",")
-        if comma != -1:
-            return data[comma + 1 :]
+    """data:URI プレフィックス(data:*;base64,)があれば取り除く。"""
+    if data and data.startswith("data:"):
+        parts = data.split(";base64,", 1)
+        if len(parts) == 2:
+            return parts[1]
     return data
 
 
@@ -56,17 +37,160 @@ def b64_to_bytes(data: str) -> bytes:
     return base64.b64decode(strip_base64_prefix(data))
 
 
-def extract_doc_text(name: str, media_type: str, b64: str) -> str | None:
-    """添付ドキュメント(PDF/Word/Excel/テキスト)からテキストを抽出する。
+def _score_decoded_text(text: str) -> float:
+    """文字コード候補の尤もらしさ。日本語文書向けに CJK を加点する。"""
+    if not text:
+        return -1.0
+    sample = text if len(text) <= 8000 else text[:8000]
+    cjk = 0
+    replacement = 0
+    controls = 0
+    for ch in sample:
+        o = ord(ch)
+        if ch == "\ufffd":
+            replacement += 1
+        elif (
+            0x3040 <= o <= 0x30FF  # ひらがな・カタカナ
+            or 0x4E00 <= o <= 0x9FFF  # CJK
+            or 0xFF66 <= o <= 0xFF9D  # 半角カナ
+            or 0x3000 <= o <= 0x303F  # 句読点など
+        ):
+            cjk += 1
+        elif o < 32 and ch not in "\t\n\r":
+            controls += 1
+    # 置換文字・制御文字は強く減点。同点なら呼び出し側で utf-8 を優先する。
+    return float(cjk * 3 - replacement * 50 - controls * 5)
 
-    対応外（レガシー .doc/.xls 等）は None を返す。
+
+def decode_text_bytes(raw: bytes) -> str:
+    """テキストバイト列を UTF-8 / CP932 等から自動判定してデコードする。
+
+    役所・業務系の .txt は Shift_JIS (CP932) が多く、UTF-8 固定だと文字化けする。
+    BOM があればそれに従う。UTF-8 として厳密に読めればそれを優先し、
+    失敗した場合のみ CP932 / EUC-JP 等をスコア比較する。
+    """
+    if not raw:
+        return ""
+    if raw.startswith(b"\xef\xbb\xbf"):
+        return raw.decode("utf-8-sig")
+    if raw.startswith(b"\xff\xfe"):
+        return raw.decode("utf-16-le")
+    if raw.startswith(b"\xfe\xff"):
+        return raw.decode("utf-16-be")
+
+    try:
+        return raw.decode("utf-8")
+    except UnicodeDecodeError:
+        pass
+
+    best_text: str | None = None
+    best_score = float("-inf")
+    for enc in ("cp932", "euc_jp", "iso-2022-jp"):
+        try:
+            text = raw.decode(enc)
+        except UnicodeDecodeError:
+            continue
+        score = _score_decoded_text(text)
+        if best_text is None or score > best_score:
+            best_score = score
+            best_text = text
+
+    if best_text is not None:
+        return best_text
+
+    return raw.decode("utf-8", "replace")
+
+
+def _docx_extract_text(raw: bytes) -> str:
+    """docx から本文段落・表・ヘッダー/フッターを本文順に抽出する。
+
+    python-docx の `document.paragraphs` は本文段落しか返さないため、表
+    （テーブル）やテキストボックスに内容を持つ「様式」テンプレでは抽出漏れが
+    起きる。ここでは本文ブロックを段落/表の順に走査し、表はセル単位（ネスト表も
+    再帰）で拾う。ヘッダー/フッターも補足し、段落・表で何も取れないときのみ
+    テキストボックス等を w:t 走査でフォールバック回収する。
+    """
+    import docx
+    from docx.document import Document as _DocumentClass
+    from docx.oxml.ns import qn
+    from docx.oxml.table import CT_Tbl
+    from docx.oxml.text.paragraph import CT_P
+    from docx.table import Table, _Cell
+    from docx.text.paragraph import Paragraph
+
+    d = docx.Document(io.BytesIO(raw))
+
+    def iter_block_items(parent: Any):
+        if isinstance(parent, _DocumentClass):
+            parent_elm = parent.element.body
+        elif isinstance(parent, _Cell):
+            parent_elm = parent._tc
+        else:
+            return
+        for child in parent_elm.iterchildren():
+            if isinstance(child, CT_P):
+                yield Paragraph(child, parent)
+            elif isinstance(child, CT_Tbl):
+                yield Table(child, parent)
+
+    def block_lines(container: Any) -> list[str]:
+        lines: list[str] = []
+        for block in iter_block_items(container):
+            if isinstance(block, Paragraph):
+                if block.text and block.text.strip():
+                    lines.append(block.text)
+            else:  # Table
+                for row in block.rows:
+                    cells: list[str] = []
+                    prev: str | None = None
+                    for cell in row.cells:
+                        # 横結合セルは同一セルが繰り返されるため直前と同じ内容は畳む
+                        val = " ".join(block_lines(cell)).strip()
+                        if val and val != prev:
+                            cells.append(val)
+                        prev = val
+                    line = "\t".join(cells)
+                    if line.strip():
+                        lines.append(line)
+        return lines
+
+    lines = block_lines(d)
+
+    # ヘッダー / フッター（様式ではラベルが入ることがある）
+    for section in d.sections:
+        for hf in (section.header, section.footer):
+            try:
+                for p in hf.paragraphs:
+                    if p.text and p.text.strip():
+                        lines.append(p.text)
+            except Exception:  # noqa: BLE001
+                pass
+
+    text = "\n".join(lines).strip()
+
+    # 段落・表で何も取れない場合はテキストボックス等を w:t 走査でフォールバック
+    if not text:
+        parts = [t.text for t in d.element.iter(qn("w:t")) if t.text]
+        text = "".join(parts).strip()
+    return text
+
+
+def _extract_raw_text(
+    name: str, media_type: str, b64: str
+) -> tuple[str | None, str | None]:
+    """フォーマット判定して生テキストを抽出する（切り捨てなし）。
+
+    戻り値 `(text, error)`:
+    - 対応外（レガシー .doc/.xls 等）・base64 復号失敗 → `(None, None)`
+    - 抽出中の例外 → `(None, "…失敗しました")`（呼び出し側でそのまま返せる文言）
+    - 成功 → `(text, None)`
     """
     ext = name.lower().rsplit(".", 1)[-1] if "." in name else ""
     mt = media_type or ""
     try:
         raw = b64_to_bytes(b64)
     except Exception:  # noqa: BLE001
-        return None
+        return None, None
 
     try:
         if ext == "pdf" or mt == "application/pdf":
@@ -75,10 +199,7 @@ def extract_doc_text(name: str, media_type: str, b64: str) -> str | None:
             reader = PdfReader(io.BytesIO(raw))
             text = "\n".join((p.extract_text() or "") for p in reader.pages)
         elif ext == "docx" or "wordprocessingml" in mt:
-            import docx
-
-            d = docx.Document(io.BytesIO(raw))
-            text = "\n".join(p.text for p in d.paragraphs)
+            text = _docx_extract_text(raw)
         elif ext == "xlsx" or "spreadsheetml" in mt:
             import openpyxl
 
@@ -98,17 +219,59 @@ def extract_doc_text(name: str, media_type: str, b64: str) -> str | None:
             "json",
             "log",
         ) or mt.startswith("text/"):
-            text = raw.decode("utf-8", "ignore")
+            text = decode_text_bytes(raw)
         else:
-            return None
+            return None, None
     except Exception as e:  # noqa: BLE001
-        return f"(添付ファイル {name} のテキスト抽出に失敗しました: {e})"
+        return None, f"(添付ファイル {name} のテキスト抽出に失敗しました: {e})"
 
-    text = (text or "").strip()
+    return (text or ""), None
+
+
+def extract_doc_text(name: str, media_type: str, b64: str) -> str | None:
+    """添付ドキュメント(PDF/Word/Excel/テキスト)からテキストを抽出する。
+
+    ベクトル RAG 簡易登録など従来経路向け。`MAX_DOC_CHARS` で切り捨てる。
+    対応外（レガシー .doc/.xls 等）は None を返す。
+    """
+    text, error = _extract_raw_text(name, media_type, b64)
+    if error is not None:
+        return error
+    if text is None:
+        return None
+    text = text.strip()
     if not text:
         return f"(添付ファイル {name} からテキストを抽出できませんでした)"
     if len(text) > MAX_DOC_CHARS:
         text = text[:MAX_DOC_CHARS] + "\n…(以下省略)"
+    return text
+
+
+def extract_doc_text_full(
+    name: str, media_type: str, b64: str, *, max_chars: int | None = None
+) -> str | None:
+    """チャット添付向けの全文抽出（30k のサイレント切り捨てを行わない）。
+
+    その場マップリデュースで扱うため、`MAX_DOC_CHARS` は適用しない。
+    安全弁として `MAX_CHAT_DOC_CHARS`（既定 500,000）を超えた場合のみ、
+    黙って捨てずに明示注記を付けて先頭を保持する。
+    対応外（レガシー .doc/.xls 等）は None を返す。
+    """
+    text, error = _extract_raw_text(name, media_type, b64)
+    if error is not None:
+        return error
+    if text is None:
+        return None
+    text = text.strip()
+    if not text:
+        return f"(添付ファイル {name} からテキストを抽出できませんでした)"
+    cap = MAX_CHAT_DOC_CHARS if max_chars is None else max_chars
+    if cap and cap > 0 and len(text) > cap:
+        text = (
+            text[:cap]
+            + f"\n\n…（{name} は {cap} 文字を超えたため以降を省略しました。"
+            "全文を対象にするにはナレッジ登録をご利用ください）"
+        )
     return text
 
 
@@ -172,10 +335,7 @@ def extract_doc_pages(name: str, media_type: str, b64: str) -> list[dict[str, An
 
         # 非 PDF は MAX_DOC_CHARS を通さず全文抽出し、合成ページに分割する
         if ext == "docx" or "wordprocessingml" in mt:
-            import docx
-
-            d = docx.Document(io.BytesIO(raw))
-            text = "\n".join(p.text for p in d.paragraphs).strip()
+            text = _docx_extract_text(raw).strip()
         elif ext == "xlsx" or "spreadsheetml" in mt:
             import openpyxl
 
@@ -195,7 +355,7 @@ def extract_doc_pages(name: str, media_type: str, b64: str) -> list[dict[str, An
             "json",
             "log",
         ) or mt.startswith("text/"):
-            text = raw.decode("utf-8", "ignore").strip()
+            text = decode_text_bytes(raw).strip()
         else:
             return []
 

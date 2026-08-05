@@ -16,7 +16,7 @@ from typing import Any, AsyncIterator
 
 import httpx
 
-from shared.docextract import extract_doc_text
+from shared.docextract import extract_doc_text, extract_doc_text_full
 
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://host.docker.internal:11434")
 # OpenAI 互換のベース URL（未指定/空なら Ollama の /v1 を使う）
@@ -77,7 +77,7 @@ def _extract_doc_texts(message: dict[str, Any]) -> list[tuple[str, str]]:
         if not data:
             continue
         name = extra.get("name", "file")
-        text = extract_doc_text(name, source.get("mediaType", ""), data)
+        text = extract_doc_text_full(name, source.get("mediaType", ""), data)
         if text:
             out.append((name, text))
     return out
