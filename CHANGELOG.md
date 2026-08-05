@@ -28,6 +28,14 @@
 
 ## [Unreleased]
 
+### 🌐 LiteLLM Proxy からのモデル動的取得・UIカテゴリ分離・動的パラメータ描画アーキテクチャ設計仕様
+
+- **モデルメタデータ動的取得とUIの自動レンダリング仕様策定 (`docs/litellm-dynamic-model-ui-architecture.md`)**
+  - LiteLLM Proxy の `/v1/model/info` エンドポイントから得られる各モデルの `model_info`（モード、表示名、サポートアスペクト比、独自追加パラメータ等）をバックエンド FastAPI（`GET /api/v1/models`）でサニタイズ。
+  - ユーザー認可（JWT）と所属チーム別「モデル利用ポリシー」の検証を行い、許可されたモデル情報だけをクリーンに返却。
+  - フロントエンド React/TS 側で `type`（chat, image_generation, audio_transcription等）に基づき画面別フィルタリングを適用。
+  - 新たなモデル固有のパラメータ（例: Recraft v3の `style_id` など）を `extra_fields` 定義から完全に動的フォーム描画し、実行時は `extra_body` ペイロード経由で透過送信する OpenAI 互換設計を提案。
+
 ### 🎨 LiteLLM Proxy 全面統合および OpenAI 互換画像生成・編集 UI / バックエンドの実装
 
 - **画像生成・編集機能の LiteLLM Proxy への全面一元化**
