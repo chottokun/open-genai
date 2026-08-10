@@ -11,7 +11,9 @@
 | [v0.3.0](https://github.com/hirokawaguchi/open-genai/releases/tag/v0.3.0) | `daac82e` 以降 | 画像生成の源内一本化・アプリピン留め・LGWAN 成果物キャリア配信 |
 | [v0.3.1](https://github.com/hirokawaguchi/open-genai/releases/tag/v0.3.1) | `e047dae` 以降 | 起動手順の修正・CI 修正・添付拡張子判定の修正 |
 | [v0.3.2](https://github.com/hirokawaguchi/open-genai/releases/tag/v0.3.2) | `1a9eb42` 以降 | 出典表示・ローカルDify成果物取得・Enter送信など |
-| [v0.4.0](https://github.com/hirokawaguchi/open-genai/releases/tag/v0.4.0) | （本リリース） | 構造化 RAG・ナレッジ MCP・Dify 連携事例・マイナンバー検査 |
+| [v0.4.0](https://github.com/hirokawaguchi/open-genai/releases/tag/v0.4.0) | `96f3484` | 構造化 RAG・ナレッジ MCP・Dify 連携事例・マイナンバー検査 |
+| [v0.5.0](https://github.com/hirokawaguchi/open-genai/releases/tag/v0.5.0) | `9e4015f` | 本番静的ビルド/デプロイ整備・複数LLM/埋め込み/画像モデルの差し替え・SAML/認証堅牢化 |
+| [v0.6.0](https://github.com/hirokawaguchi/open-genai/releases/tag/v0.6.0) | `340e88e` | 添付・ナレッジの個人情報検知、ナレッジ専用ページ、チャット大容量添付、Dify エラー分類、OSS ガバナンス整備 |
 
 ## 設計思想の転換（0.1 → 0.2）
 
@@ -27,6 +29,11 @@
 ---
 
 ## [Unreleased]
+
+### 🛡️ セキュリティ更新と脆弱性解消 (v0.6.1-patch)
+
+- **pypdf を 6.15.0 へアップグレード (Upstream 同期)**
+  - `backend/requirements.txt`, `rag-app/requirements.txt`, `tests/requirements.txt` の `pypdf` を `6.15.0` に更新し、既知の CVE 脆弱性 (CVE-2026-71852, CVE-2026-71870) を完全に解消。
 
 ### 🌐 LiteLLM Proxy からのモデル動的取得・UIカテゴリ分離・動的パラメータ描画アーキテクチャ設計仕様
 
@@ -303,7 +310,9 @@
 
 ---
 
-[Unreleased]: https://github.com/hirokawaguchi/open-genai/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/hirokawaguchi/open-genai/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/hirokawaguchi/open-genai/compare/v0.5.0...v0.6.0
+[0.5.0]: https://github.com/hirokawaguchi/open-genai/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/hirokawaguchi/open-genai/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/hirokawaguchi/open-genai/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/hirokawaguchi/open-genai/compare/v0.3.0...v0.3.1
