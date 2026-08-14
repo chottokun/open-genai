@@ -30,10 +30,15 @@
 
 ## [Unreleased]
 
-### 🛡️ セキュリティ更新と脆弱性解消 (v0.6.1-patch)
+### 🔄 Upstream 同期アセスメントおよびセキュリティ・回帰テスト検証 (v0.6.1-patch)
 
-- **pypdf を 6.15.0 へアップグレード (Upstream 同期)**
+- **Upstream v0.6.0/v0.6.1 同期アセスメントの実施**
+  - 公式 Upstream (`https://github.com/hirokawaguchi/open-genai`) の `v0.6.0` 差分（日程調整 ExApp `chosei-app` の新規追加、Dify チャット ストリーミング対応等）について詳細な技術評価・互換性検証を実施。
+  - これらの新規機能は、自治体閉域網（LGWAN）等の完全分離ネットワーク運用におけるセキュリティ境界を侵害するリスク（デュアルイングレス、未認証エンドポイントの外部露出等）や、既存の安定した大容量 Map-Reduce 圧縮・Dify エラー正規化等のローカル高度カスタマイズとの競合を引き起こすため、**意図的にマージしない（取り込み見送り）**ことが安全かつ最適であると判定。
+  - セキュリティ境界（JWT 認証境界・一元管理された LiteLLM Proxy Hub 優先ポリシー）を完璧に保護するため、既存のセキュアなコードベースの状態を最優先で温存。
+- **pypdf を 6.15.0 へアップグレード (Upstream 脆弱性修正同期)**
   - `backend/requirements.txt`, `rag-app/requirements.txt`, `tests/requirements.txt` の `pypdf` を `6.15.0` に更新し、既知の CVE 脆弱性 (CVE-2026-71852, CVE-2026-71870) を完全に解消。
+  - バージョン確認、テキスト付きPDFの抽出、docextract統合、および壊れた入力に対する堅牢性（14パターンの異常データケース）を検証する網羅的な実働検証テスト (`tests/test_pypdf_upgrade_validation.py`) を追加し、パッチの有効性を検証。
 
 ### 🌐 LiteLLM Proxy からのモデル動的取得・UIカテゴリ分離・動的パラメータ描画アーキテクチャ設計仕様
 
