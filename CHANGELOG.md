@@ -30,6 +30,17 @@
 
 ## [Unreleased]
 
+### 🔍 Upstream 同期アセスメント・v0.6.0 評価・検証完了
+
+- **Upstream v0.6.0 / 最新差分評価とセキュリティ整合性**
+  - Upstream (`hirokawaguchi/open-genai`) の最新コミット (`4de36bf`, `a835b07`, `5cf5be2`) および `v0.6.0` 差分のアセスメントを実施。
+  - `pypdf 6.15.0` 更新や `fileApi.ts` の `getS3Uri` 復元が適用済みであることを確認。
+  - Upstream の新機能（外部公開設計の `chosei-app`、NDJSON ストリーミング等）は、地方自治体・閉域網のセキュリティ境界保護および LiteLLM 代理店一元管理ポリシーに従い、新規マージ・チェリーピック見送りが最適であることを検証。
+- **全依存パッケージセキュリティ監査 (100% CLEAN)**
+  - `scripts/audit-python-deps.sh` を用いて 13 個の Python 依存環境をスキャンし、脆弱性 0 件であることを確認。
+- **全体品質・回帰テスト検証 (100% PASSED)**
+  - `scripts/run-regression-tests.sh`（pytest 109件成功, 4件スキップ）および全フロントエンドテスト（`npm run web:test` 631件 Vitest 成功）を通過し、デグレードフリーであることを実証。
+
 ### 🛡️ セキュリティ更新と脆弱性解消 (v0.6.1-patch)
 
 - **pypdf を 6.15.0 へアップグレード (Upstream 同期)**
