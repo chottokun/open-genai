@@ -30,6 +30,16 @@
 
 ## [Unreleased]
 
+### 🔄 Upstream v0.7.0 互換性評価とセキュリティ・回帰テスト検証 (2026-08)
+
+- **Upstream v0.7.0 リリース（「提案実装」）のアセスメント実施**
+  - 公式 Upstream の最新 `v0.7.0` 差分（`doccheck-app`, `chosei-app`, Dify チャットストリーミング中継等）について包括的な技術・セキュリティ評価を実施。
+  - LGWAN 閉域網セキュリティ境界の保護（外部未認証イングレス拒否）および LiteLLM Proxy Gateway 一元管理ポリシー維持のため、新機能の直接マージ・取り込みは見送る判断をドキュメント化 (`docs/upstream-sync-report-v0.7.0.md`)。
+- **全依存関係セキュリティスキャン 100% CLEAN**
+  - `scripts/audit-python-deps.sh` を用いた 13 個の `requirements.txt` 全体に対する `pip-audit` 判定で、検出脆弱性 **0 件** を確認。
+- **全テストスイート 100% PASSED (回帰バグゼロ確認)**
+  - Python バックエンド 109 件の pytest および React フロントエンド 631 件の Vitest テストがすべてクリア（PASSED）することを確認。
+
 ### 🛡️ セキュリティ更新と脆弱性解消 (v0.6.1-patch)
 
 - **pypdf を 6.15.0 へアップグレード (Upstream 同期)**
