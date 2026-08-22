@@ -30,6 +30,18 @@
 
 ## [Unreleased]
 
+### 🔄 Upstream v0.7.0 同期・閉域評価とセキュリティ検証完了 (v0.7.0-eval)
+
+- **Upstream v0.7.0 差分評価およびアーキテクチャアセスメントの実施**
+  - 公式 Upstream の `v0.7.0` (122コミット) に対する技術アセスメントを実施。
+  - 未認証の公開用イングレス設定を含む `doccheck-app` (書類読取とチェック) および `chosei-app` (日程調整) や、中間ストリーミング中継 `dify-chat-stream` について、当プロジェクトの閉域網 (LGWAN) セキュリティ境界および LiteLLM Proxy Hub 一元管理ポリシーと対立するため、直接マージ不要と判断。
+  - 依存ライブラリ更新 (`pypdf 6.15.0`) は当コードベースに適用・実働検証済みであることを再確認。
+- **セキュリティ依存関係監査 (100% CLEAN)**
+  - 全 13 個の Python `requirements.txt` に対する `scripts/audit-python-deps.sh` スキャンを実施し、既知の脆弱性 0 件であることを確認。
+- **バックエンド・フロントエンド回帰テスト検証 (100% PASSED)**
+  - `scripts/run-regression-tests.sh --web-all` を実行し、109件の Python pytest スイートおよび 631件の Vitest フロントエンドテストスイートがすべて通過することを確認。
+  - 詳細検証報告を `docs/upstream-sync-report-v0.7.0.md` に集約。
+
 ### 🛡️ セキュリティ更新と脆弱性解消 (v0.6.1-patch)
 
 - **pypdf を 6.15.0 へアップグレード (Upstream 同期)**
