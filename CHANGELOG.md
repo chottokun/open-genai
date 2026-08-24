@@ -30,6 +30,13 @@
 
 ## [Unreleased]
 
+### 🔄 Upstream v0.7.0 同期アセスメントおよびセキュリティ・品質検証の徹底
+
+- **Upstream v0.7.0 (テーマ「提案実装」) の評価と統合方針決定 (`docs/upstream-sync-report-v0.7.0.md`)**
+  - Upstream リポジトリの最新リリース `v0.7.0` (コミット `1d4d597`) までの全変更（書類読取・チェック `doccheck-app`, 日程調整 `chosei-app`, Dify チャットストリーミング `dify-chat-stream` 等）を詳細評価。
+  - 未認証アクセスを前提とする公開エンドポイントや個別プロキシ設計（`doccheck.public.conf`, `chosei.public.conf`）は、当開発ブランチの「地方自治体・閉域網 (LGWAN) 完結運用」および「LiteLLM Proxy Hub 一元管理ポリシー」に反するためマージ見振りを決定。
+  - Upstream 側で更新された `pypdf 6.15.0` 等のセキュリティ対策は当コードベースにおいても先行適用・実働検証済みであり、脆弱性 0 件および回帰テスト 100% 通過（109 pytest, 12 Vitest）の堅牢な品質を維持。
+
 ### 🛡️ セキュリティ更新と脆弱性解消 (v0.6.1-patch)
 
 - **pypdf を 6.15.0 へアップグレード (Upstream 同期)**
