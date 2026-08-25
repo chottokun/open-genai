@@ -37,7 +37,20 @@ from fastapi.responses import (
 
 from shared import ssrfguard
 
-from . import audit, auth, image_store, intauth, llm, ngwords, objstore, policy, storage, teams_store
+from . import (
+    audit,
+    auth,
+    filesig,
+    image_store,
+    intauth,
+    llm,
+    ngwords,
+    objstore,
+    policy,
+    security_warn,
+    storage,
+    teams_store,
+)
 
 # ファイル添付の保存先と、ブラウザから見たバックエンドの公開 URL
 FILES_DIR = os.environ.get("FILES_DIR", "/data/files")
@@ -989,6 +1002,7 @@ app.mount("/static/generations", StaticFiles(directory=STATIC_GENERATIONS_DIR), 
 
 @app.on_event("startup")
 def _startup() -> None:
+    security_warn.warn_insecure_defaults()
     storage.init_db()
     teams_store.init_db(seed_exapps=EXAPP_SEEDS)
     for ex_app_id in RETIRED_SEED_EXAPP_IDS:
@@ -1780,6 +1794,34 @@ async def edit_image(
     return Response(content=url_path, media_type="text/plain")
 
 
+def _require_file_access(
+    request: Request, key: str, method: str, token: str | None = None
+) -> JSONResponse | None:
+    exp = request.query_params.get("exp")
+    sig = request.query_params.get("sig")
+    if exp and sig:
+        if filesig.verify(method, key, exp, sig):
+            return None
+        return JSONResponse(
+            status_code=403,
+            content={"error": "invalid or missing file signature"},
+        )
+    if token:
+        try:
+            payload = auth.verify_token(token)
+            expected_sub = "file_upload" if method.upper() == "PUT" else "file_access"
+            if payload.get("sub") == expected_sub and payload.get("path") == key:
+                return None
+            return JSONResponse(status_code=403, content={"error": "invalid token"})
+        except Exception:
+            return JSONResponse(
+                status_code=401, content={"error": "expired or invalid token"}
+            )
+    return JSONResponse(
+        status_code=401, content={"error": "missing token or file signature"}
+    )
+
+
 @app.post("/file/url")
 async def get_upload_url(request: Request) -> str:
     """アップロード先 URL を発行する（源内 Web の署名付き URL 取得を代替）。"""
@@ -1792,10 +1834,10 @@ async def get_upload_url(request: Request) -> str:
     # ファイル名はそのまま使うとパス衝突するため UUID ディレクトリに格納する
     safe_name = os.path.basename(filename)
     key = f"{uuid.uuid4()}/{safe_name}"
-    
-    # 有効期限 1時間 (3600秒) のアップロード専用ワンタイムトークンを生成
+
     token = auth.mint_file_token(key, sub="file_upload", ttl_seconds=3600)
-    return f"{PUBLIC_BASE_URL}/files/{key}?token={token}"
+    signed_url = filesig.build_signed_url(PUBLIC_BASE_URL, key, "PUT", ttl=3600)
+    return f"{signed_url}&token={token}"
 
 
 @app.get("/file/url")
@@ -1810,22 +1852,16 @@ async def get_download_url(
     if not _user_id(claims):
         return _forbidden("認証が必要です")
 
-    # ダウンロード用トークン (有効期限15分 = 900秒)
     token = auth.mint_file_token(filePrefix, sub="file_access", ttl_seconds=900)
-    return f"{PUBLIC_BASE_URL}/files/{filePrefix}?token={token}"
+    signed_url = filesig.build_signed_url(PUBLIC_BASE_URL, filePrefix, "GET", ttl=900)
+    return f"{signed_url}&token={token}"
 
 
 @app.put("/files/{key:path}")
 async def put_file(key: str, request: Request, token: str = Query(None)) -> dict[str, Any]:
-    if not token:
-        return JSONResponse(status_code=401, content={"error": "missing token"})
-
-    try:
-        payload = auth.verify_token(token)
-        if payload.get("sub") != "file_upload" or payload.get("path") != key:
-            return JSONResponse(status_code=403, content={"error": "invalid token"})
-    except Exception:
-        return JSONResponse(status_code=401, content={"error": "expired or invalid token"})
+    denied = _require_file_access(request, key, "PUT", token)
+    if denied:
+        return denied
 
     full = _safe_path(key)
     os.makedirs(os.path.dirname(full), exist_ok=True)
@@ -1836,21 +1872,25 @@ async def put_file(key: str, request: Request, token: str = Query(None)) -> dict
 
 
 @app.get("/files/{key:path}")
-async def get_file(key: str, token: str = Query(None)) -> FileResponse:
-    if not token:
-        return JSONResponse(status_code=401, content={"error": "missing token"})
-
-    try:
-        payload = auth.verify_token(token)
-        if payload.get("sub") != "file_access" or payload.get("path") != key:
-            return JSONResponse(status_code=403, content={"error": "invalid token"})
-    except Exception:
-        return JSONResponse(status_code=401, content={"error": "expired or invalid token"})
+async def get_file(key: str, request: Request, token: str = Query(None)) -> FileResponse:
+    denied = _require_file_access(request, key, "GET", token)
+    if denied:
+        return denied
 
     full = _safe_path(key)
     if not os.path.isfile(full):
         return JSONResponse(status_code=404, content={"message": "file not found"})
     return FileResponse(full)
+
+
+@app.delete("/files/{key:path}")
+async def delete_file_public(key: str, request: Request, token: str = Query(None)) -> dict[str, Any]:
+    """添付ファイル削除（署名付きクエリまたはトークン必須。Authorization 不要）。"""
+    denied = _require_file_access(request, key, "DELETE", token)
+    if denied:
+        return denied
+    _delete_stored_file(key)
+    return {}
 
 
 @app.delete("/file/{file_name:path}")
