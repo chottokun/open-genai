@@ -41,6 +41,8 @@
   - 本番環境配下で `/api/docs`, `/api/openapi.json` へのアクセスを 404 遮断し、Keycloak 管理画面 `/kc/admin` を `kc-admin-allow.conf` による IP 制限で保護。
 - **Upstream 評価レポートの作成 (`docs/upstream-sync-report-v0.7.0.md`)**
   - Upstream `v0.7.0` (doccheck-app, chosei-app, dify-chat-stream等) の技術評価および当開発ブランチ設計方針（閉域セキュリティ・LiteLLM一元化）に基づく評価結果を文書化。
+- **Dify フォーム／様式 Excel 文書生成・セル書き戻し機能の統合 (`395f36a`)**
+  - `dify-app/app/excel_map.py` による Excel セル値抽出・注入・書き戻しロジックおよび `ExAppArtifactDownloads.tsx` での成果物ダウンロードボタンに対応。
 
 ### 🛡️ セキュリティ更新と脆弱性解消 (v0.6.1-patch)
 

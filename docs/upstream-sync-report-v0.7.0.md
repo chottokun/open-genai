@@ -33,6 +33,9 @@ Upstream は `v0.7.0` リリースにおいて、以下の主要機能および�
 2. **Web クライアントおよびリポジトリ設定のバグ修正**:
    - `genai-web/packages/web/src/lib/fileApi.ts`: `getS3Uri` エクスポートの復元。
    - `.gitignore`: 秘密情報を含みうる `.env.bak` / `*.env.bak` の追跡除外設定。
+3. **Dify フォーム／様式 Excel 文書生成・セル書き戻し機能 (`395f36a`)**:
+   - `dify-app/app/excel_map.py`: 業務フォーム/様式 Excel のセル（例: `B2`, `C5`）から値を抽出し Dify ワークフローの開始変数へ注入。生成結果を Excel のセルへ書き戻し成果物としてダウンロード配信可能にするロジックを統合。
+   - `genai-web/packages/web/src/features/exapp/components/ExAppArtifactDownloads.tsx`: base64 形式の Excel / 文書成果物ダウンロードボタン UI を追加。
 
 ### 2.2 非採用（取り込み見送り）と判断された項目
 

@@ -43,8 +43,13 @@ def _load():
         fastapi.Request = object  # type: ignore[attr-defined]
         responses = types.ModuleType("fastapi.responses")
         responses.JSONResponse = dict  # type: ignore[attr-defined]
+        responses.StreamingResponse = object  # type: ignore[attr-defined]
         sys.modules["fastapi"] = fastapi
         sys.modules["fastapi.responses"] = responses
+
+    app_dir = str(MAIN.parent)
+    if app_dir not in sys.path:
+        sys.path.insert(0, app_dir)
     if "httpx" not in sys.modules:
         import types
 

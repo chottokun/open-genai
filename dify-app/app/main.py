@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import base64
 import json
+import logging
 import mimetypes
 import os
 import re
@@ -34,6 +35,46 @@ from typing import Any
 import httpx
 from fastapi import FastAPI, Header, Request
 from fastapi.responses import JSONResponse
+try:
+    from fastapi.responses import StreamingResponse
+except ImportError:
+    from starlette.responses import StreamingResponse
+
+import sys
+from pathlib import Path
+
+_app_dir = str(Path(__file__).resolve().parent)
+if _app_dir not in sys.path:
+    sys.path.insert(0, _app_dir)
+
+try:
+    from .errors import (
+        AppInvokeError,
+        classify_provider_error,
+        error_body,
+        error_response,
+    )
+    from .excel_map import (
+        apply_excel_map,
+        build_filled_excel_artifact,
+        is_xlsx_fill_mode,
+        resolve_excel_write_values,
+    )
+except ImportError:  # pragma: no cover
+    from errors import (
+        AppInvokeError,
+        classify_provider_error,
+        error_body,
+        error_response,
+    )
+    from excel_map import (
+        apply_excel_map,
+        build_filled_excel_artifact,
+        is_xlsx_fill_mode,
+        resolve_excel_write_values,
+    )
+
+logger = logging.getLogger(__name__)
 
 API_KEY = os.environ.get("RAG_API_KEY", "local-rag-key")
 
@@ -326,6 +367,32 @@ def _files_to_artifacts(base: str, files: list[dict[str, Any]]) -> list[dict[str
             }
         )
     return arts
+
+
+def _maybe_filled_excel_artifact(
+    *,
+    cfg: dict[str, Any],
+    template: Any,
+    workflow_outputs: Any = None,
+    answer_text: str = "",
+    inputs: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    """output_mode=xlsx_fill のとき、様式へ書き戻した xlsx artifact を返す。"""
+    if template is None or not is_xlsx_fill_mode(cfg):
+        return None
+    values = resolve_excel_write_values(
+        cfg=cfg,
+        workflow_outputs=workflow_outputs,
+        answer_text=answer_text,
+        inputs=inputs,
+    )
+    if not values:
+        return None
+    try:
+        return build_filled_excel_artifact(template, cfg, values)
+    except Exception:  # noqa: BLE001
+        logger.exception("dify-app excel write-back failed")
+        return None
 
 
 # フロントの出典アコーディオン用（rag-app と同一定義）
@@ -712,6 +779,52 @@ async def _detect_file_input(base: str, api_key: str) -> tuple[str | None, bool]
     return None, False
 
 
+def _config_flag(cfg: dict[str, Any], key: str) -> bool | None:
+    """config の真偽フラグを解釈する。未設定は None（bool / 文字列表記の両対応）。"""
+    if key not in cfg:
+        return None
+    val = cfg.get(key)
+    if isinstance(val, bool):
+        return val
+    if isinstance(val, str):
+        s = val.strip().lower()
+        if s in ("true", "1", "yes", "on"):
+            return True
+        if s in ("false", "0", "no", "off"):
+            return False
+    return None
+
+
+def _file_attach_supported(params: dict[str, Any], cfg: dict[str, Any]) -> bool:
+    """このアプリがファイル添付を受け付けられるかを判定する。
+
+    優先順:
+      1. config.file_attach が明示指定されていればそれに従う（false は強制 OFF）
+      2. config.file_var が設定されていれば True
+      3. Dify /parameters の user_input_form に file / file-list があれば True
+      4. Dify /parameters の file_upload.enabled が True なら True（sys.files 経路）
+    それ以外・判定不能は False（fail-closed）。
+    """
+    explicit = _config_flag(cfg, "file_attach")
+    if explicit is not None:
+        return explicit
+    if cfg.get("file_var"):
+        return True
+    if not isinstance(params, dict):
+        return False
+    for item in params.get("user_input_form", []) or []:
+        if not isinstance(item, dict):
+            continue
+        for spec in item.values():
+            if isinstance(spec, dict) and spec.get("type") in ("file", "file-list"):
+                return True
+    file_upload = params.get("file_upload")
+    if isinstance(file_upload, dict) and file_upload.get("enabled") is True:
+        return True
+    return False
+
+
+
 # ---------------------------------------------------------------------------
 # Dify 呼び出し（streaming で受信して集約）
 # ---------------------------------------------------------------------------
@@ -721,8 +834,8 @@ async def _run_workflow(
     inputs: dict[str, Any],
     user: str,
     response_field: str | None,
-) -> tuple[str, list[dict[str, Any]], list[dict[str, Any]]]:
-    """戻り値: (表示テキスト, ファイルobjs, citation artifacts)。"""
+) -> tuple[str, list[dict[str, Any]], list[dict[str, Any]], Any]:
+    """戻り値: (表示テキスト, ファイルobjs, citation artifacts, raw outputs)。"""
     payload = {"inputs": inputs, "response_mode": "streaming", "user": user}
     text_parts: list[str] = []
     final_outputs: Any = None
@@ -740,10 +853,10 @@ async def _run_workflow(
         ) as res:
             if res.status_code != 200:
                 body = (await res.aread()).decode("utf-8", "replace")
-                return (
-                    f"Dify ワークフローの呼び出しに失敗しました (status: {res.status_code}).\n\n```\n{body[:1000]}\n```",
-                    [],
-                    [],
+                raise classify_provider_error(
+                    body,
+                    default_code="CONNECTION",
+                    http_status=res.status_code,
                 )
             async for line in res.aiter_lines():
                 line = line.strip()
@@ -768,14 +881,14 @@ async def _run_workflow(
                     error = obj.get("message") or data.get("message") or "unknown error"
 
     if error:
-        return (f"Dify ワークフローでエラーが発生しました: {error}", [], [])
+        raise classify_provider_error(error, default_code="WORKFLOW_ERROR")
     if final_outputs is not None:
         text = _outputs_to_text(final_outputs, response_field)
         files = _extract_dify_files(final_outputs)
         citations = _citation_artifacts_from_workflow_outputs(final_outputs)
-        return (text, files, citations)
+        return (text, files, citations, final_outputs)
     # workflow_finished が無い場合はストリームされたテキストを返す
-    return ("".join(text_parts), [], [])
+    return ("".join(text_parts), [], [], None)
 
 
 async def _run_chat(
@@ -786,10 +899,15 @@ async def _run_chat(
     user: str,
     conversation_id: str,
     files: list[dict[str, Any]],
+    session_id: str = "",
 ) -> tuple[str, str, list[dict[str, Any]], list[dict[str, Any]]]:
     """チャットフローを実行する。
 
     戻り値: (answer, conversation_id, file_objs, citation_artifacts)
+
+    `session_id` が渡された場合、新規会話IDが判明した時点で session→conversation
+    を即保存する（生成途中でタイムアウトしても会話継続を失わないため。呼び出し側
+    は完了後にも保存するが冪等）。
     """
     payload: dict[str, Any] = {
         "query": query,
@@ -807,6 +925,7 @@ async def _run_chat(
     retriever_resources: list[Any] = []
     tool_citations: list[dict[str, Any]] = []
     new_conv_id = conversation_id
+    conv_saved = False
     error: str | None = None
 
     async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
@@ -821,11 +940,10 @@ async def _run_chat(
         ) as res:
             if res.status_code != 200:
                 body = (await res.aread()).decode("utf-8", "replace")
-                return (
-                    f"Dify チャットフローの呼び出しに失敗しました (status: {res.status_code}).\n\n```\n{body[:1000]}\n```",
-                    new_conv_id,
-                    [],
-                    [],
+                raise classify_provider_error(
+                    body,
+                    default_code="CONNECTION",
+                    http_status=res.status_code,
                 )
             async for line in res.aiter_lines():
                 line = line.strip()
@@ -840,6 +958,14 @@ async def _run_chat(
                     continue
                 if obj.get("conversation_id"):
                     new_conv_id = obj["conversation_id"]
+                    # 新規会話が採番された時点で即保存（done を待たずに継続性を確保）。
+                    if (
+                        not conv_saved
+                        and session_id
+                        and new_conv_id != conversation_id
+                    ):
+                        conv_saved = True
+                        _save_conversation_id(session_id, new_conv_id)
                 event = obj.get("event")
                 if event in ("message", "agent_message"):
                     answer_parts.append(obj.get("answer", ""))
@@ -880,12 +1006,7 @@ async def _run_chat(
                     error = obj.get("message") or "unknown error"
 
     if error:
-        return (
-            f"Dify チャットフローでエラーが発生しました: {error}",
-            new_conv_id,
-            [],
-            [],
-        )
+        raise classify_provider_error(error, default_code="WORKFLOW_ERROR")
     answer = "".join(answer_parts)
     # 生成ファイルは backend で再ホストするため、参照(file_obj)を返す
     out_files = _extract_dify_files(file_objs)
@@ -895,8 +1016,163 @@ async def _run_chat(
     return (answer, new_conv_id, out_files, citations)
 
 
-# 源内フォームには出さず、invoke 時に自動注入する Dify 入力変数
+async def _run_chat_stream(
+    base: str,
+    api_key: str,
+    query: str,
+    inputs: dict[str, Any],
+    user: str,
+    conversation_id: str,
+    files: list[dict[str, Any]],
+):
+    """チャットフローを streaming 実行し、回答の断片を逐次 yield する。
+
+    yield するイベント（dict）:
+      {"type": "conversation", "conversation_id": str}  会話ID判明時（早期・1回）
+      {"type": "delta", "text": "..."}                 回答トークンの断片
+      {"type": "done", "answer": str, "conversation_id": str,
+       "files": [...], "citations": [...]}             完了（全文と成果物）
+
+    provider 由来のエラーは `_run_chat` と同様に AppInvokeError を raise する。
+    集計ロジックは `_run_chat` と同一で、違いは `message`/`agent_message`
+    到着時に断片を即 yield する点、及び会話IDが判明した時点で `conversation`
+    を先に yield する点（生成途中でタイムアウトしても会話継続を失わないため）。
+    """
+    payload: dict[str, Any] = {
+        "query": query,
+        "inputs": inputs,
+        "response_mode": "streaming",
+        "user": user,
+    }
+    if conversation_id:
+        payload["conversation_id"] = conversation_id
+    if files:
+        payload["files"] = files
+
+    answer_parts: list[str] = []
+    file_objs: list[dict[str, Any]] = []
+    retriever_resources: list[Any] = []
+    tool_citations: list[dict[str, Any]] = []
+    new_conv_id = conversation_id
+    conv_emitted = False
+    error: str | None = None
+
+    async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
+        async with client.stream(
+            "POST",
+            f"{base}/chat-messages",
+            json=payload,
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+        ) as res:
+            if res.status_code != 200:
+                body = (await res.aread()).decode("utf-8", "replace")
+                raise classify_provider_error(
+                    body,
+                    default_code="CONNECTION",
+                    http_status=res.status_code,
+                )
+            async for line in res.aiter_lines():
+                line = line.strip()
+                if not line.startswith("data:"):
+                    continue
+                payload_str = line[len("data:") :].strip()
+                if not payload_str or payload_str == "[DONE]":
+                    continue
+                try:
+                    obj = json.loads(payload_str)
+                except json.JSONDecodeError:
+                    continue
+                if obj.get("conversation_id"):
+                    new_conv_id = obj["conversation_id"]
+                    # 新規会話が採番された時点で早期通知。生成途中でタイムアウト
+                    # しても、次回リクエストで会話を継続できるよう即保存させる。
+                    if not conv_emitted and new_conv_id != conversation_id:
+                        conv_emitted = True
+                        yield {"type": "conversation", "conversation_id": new_conv_id}
+                event = obj.get("event")
+                if event in ("message", "agent_message"):
+                    chunk = obj.get("answer", "")
+                    if chunk:
+                        answer_parts.append(chunk)
+                        yield {"type": "delta", "text": chunk}
+                elif event == "message_file":
+                    file_objs.append(obj)
+                elif event == "agent_thought":
+                    obs = obj.get("observation")
+                    if obs:
+                        _scavenge_citations(obs, tool_citations)
+                elif event == "agent_log":
+                    _scavenge_citations(obj.get("data"), tool_citations)
+                elif event == "node_finished":
+                    data = obj.get("data") or {}
+                    hits = _extract_knowledge_results(data)
+                    if hits:
+                        retriever_resources.extend(hits)
+                    if isinstance(data, dict):
+                        _scavenge_citations(data.get("outputs"), tool_citations)
+                        _scavenge_citations(data.get("process_data"), tool_citations)
+                elif event == "message_end":
+                    for f in obj.get("files") or []:
+                        if isinstance(f, dict):
+                            file_objs.append(f)
+                    meta = obj.get("metadata") or {}
+                    resources = meta.get("retriever_resources") or []
+                    if isinstance(resources, list) and resources:
+                        retriever_resources = list(resources)
+                elif event == "error":
+                    error = obj.get("message") or "unknown error"
+
+    if error:
+        raise classify_provider_error(error, default_code="WORKFLOW_ERROR")
+    answer = "".join(answer_parts)
+    out_files = _extract_dify_files(file_objs)
+    citations = _citations_to_artifacts(retriever_resources)
+    _merge_citation_arts(citations, tool_citations)
+    citations = _filter_citations_cited_in_answer(answer, citations)
+    yield {
+        "type": "done",
+        "answer": answer,
+        "conversation_id": new_conv_id,
+        "files": out_files,
+        "citations": citations,
+    }
+
+
+# 源内フォームには出さず、invoke 時に自動注入する Dify 入力変数（常時）
 _HIDDEN_FORM_VARS = frozenset({"top_k", "scope", "rag_scope"})
+
+
+def _cfg_hide_inputs(cfg: dict[str, Any]) -> set[str]:
+    """config.hide_inputs / hidden_inputs で追加指定された非表示変数。"""
+    hidden = set(_HIDDEN_FORM_VARS)
+    for key in ("hide_inputs", "hidden_inputs"):
+        raw = cfg.get(key)
+        if isinstance(raw, str) and raw.strip():
+            hidden.add(raw.strip())
+        elif isinstance(raw, (list, tuple)):
+            for item in raw:
+                if item is not None and str(item).strip():
+                    hidden.add(str(item).strip())
+    return hidden
+
+
+def _cfg_default_inputs(cfg: dict[str, Any]) -> dict[str, str]:
+    """config.default_inputs と個別キー(default_depth 等)から既定値辞書を作る。"""
+    out: dict[str, str] = {}
+    raw = cfg.get("default_inputs")
+    if isinstance(raw, dict):
+        for k, v in raw.items():
+            if k is None or v is None or v == "":
+                continue
+            out[str(k)] = str(v)
+    if "depth" not in out and cfg.get("default_depth") not in (None, ""):
+        out["depth"] = str(cfg.get("default_depth"))
+    if "top_k" not in out and cfg.get("default_top_k") not in (None, ""):
+        out["top_k"] = str(cfg.get("default_top_k"))
+    return out
 
 
 def _inject_hidden_inputs(
@@ -905,7 +1181,7 @@ def _inject_hidden_inputs(
     scope: str | None,
     cfg: dict[str, Any],
 ) -> dict[str, Any]:
-    """非表示項目へ適切な値を入れる（チーム scope・参照件数）。"""
+    """非表示項目へ適切な値を入れる（チーム scope・参照件数・hide_inputs の既定値）。"""
     out = dict(inputs)
     team_scope = (scope or "").strip()
     if team_scope:
@@ -916,13 +1192,24 @@ def _inject_hidden_inputs(
             out["scope"] = default_scope
     if not str(out.get("top_k") or "").strip():
         out["top_k"] = str(cfg.get("default_top_k") or "8")
+
+    defaults = _cfg_default_inputs(cfg)
+    # hide_inputs に depth があり既定未指定なら 3（DeepResearch 等）
+    if "depth" in _cfg_hide_inputs(cfg) and "depth" not in defaults:
+        defaults["depth"] = "3"
+    for key, value in defaults.items():
+        if not str(out.get(key) or "").strip():
+            out[key] = value
     return out
 
 
 # ---------------------------------------------------------------------------
 # Dify の入力スキーマ(/parameters) を 源内のフォーム定義(placeholder) に変換
 # ---------------------------------------------------------------------------
-def _convert_user_input_form(form: list[Any]) -> dict[str, Any]:
+def _convert_user_input_form(
+    form: list[Any],
+    cfg: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Dify の user_input_form を 源内 の placeholder(uiJson) 形式へ変換する。
 
     Dify のコンポーネント型 → 源内の type:
@@ -930,7 +1217,14 @@ def _convert_user_input_form(form: list[Any]) -> dict[str, Any]:
       select -> select(items), file / file-list -> file
 
     top_k / scope は源内では非表示（実行時に自動注入）。
+    config.hide_inputs に列挙した変数は type=hidden + 既定値で渡し、画面には出さない。
     """
+    cfg = cfg or {}
+    hidden = _cfg_hide_inputs(cfg)
+    defaults = _cfg_default_inputs(cfg)
+    if "depth" in hidden and "depth" not in defaults:
+        defaults["depth"] = "3"
+
     ui: dict[str, Any] = {}
     for item in form or []:
         if not isinstance(item, dict):
@@ -941,7 +1235,16 @@ def _convert_user_input_form(form: list[Any]) -> dict[str, Any]:
             variable = spec.get("variable")
             if not variable:
                 continue
+            # 常時非表示（scope 等）はスキーマから除外し、invoke 側で注入
             if variable in _HIDDEN_FORM_VARS:
+                continue
+            if variable in hidden:
+                default = defaults.get(variable)
+                if default in (None, ""):
+                    default = spec.get("default")
+                if default in (None, ""):
+                    continue
+                ui[variable] = {"type": "hidden", "default_value": str(default)}
                 continue
             field: dict[str, Any] = {
                 "title": spec.get("label") or variable,
@@ -987,11 +1290,18 @@ async def schema(
     x_api_key: str | None = Header(default=None),
     x_app_config: str | None = Header(default=None),
 ) -> Any:
-    """Dify の /parameters を取得し、源内のフォーム定義(placeholder) に変換して返す。"""
+    """Dify の /parameters を取得し、源内のフォーム定義(placeholder) に変換して返す。
+
+    併せて、このアプリがファイル添付を受け付けられるか（features.file_attach）を返す。
+    取得失敗時も config の明示指定（file_attach / file_var）は尊重し、それ以外は False。
+    """
     cfg = _parse_config(x_app_config)
     base = (cfg.get("dify_base_url") or DEFAULT_DIFY_BASE_URL).rstrip("/")
     if not base:
-        return {"placeholder": {}}
+        return {
+            "placeholder": {},
+            "features": {"file_attach": _file_attach_supported({}, cfg)},
+        }
     try:
         async with httpx.AsyncClient(timeout=15) as client:
             res = await client.get(
@@ -999,11 +1309,21 @@ async def schema(
                 headers={"Authorization": f"Bearer {x_api_key or ''}"},
             )
         if res.status_code != 200:
-            return {"placeholder": {}}
-        form = res.json().get("user_input_form", [])
+            return {
+                "placeholder": {},
+                "features": {"file_attach": _file_attach_supported({}, cfg)},
+            }
+        params = res.json()
     except (httpx.HTTPError, ValueError):
-        return {"placeholder": {}}
-    return {"placeholder": _convert_user_input_form(form)}
+        return {
+            "placeholder": {},
+            "features": {"file_attach": _file_attach_supported({}, cfg)},
+        }
+    form = params.get("user_input_form", []) if isinstance(params, dict) else []
+    return {
+        "placeholder": _convert_user_input_form(form, cfg=cfg),
+        "features": {"file_attach": _file_attach_supported(params, cfg)},
+    }
 
 
 @app.post("/invoke")
@@ -1025,14 +1345,9 @@ async def invoke(
     cfg = _parse_config(x_app_config)
     base = (cfg.get("dify_base_url") or DEFAULT_DIFY_BASE_URL).rstrip("/")
     if not base:
-        return {
-            "outputs": (
-                "Dify の接続先(dify_base_url)が設定されていません。"
-                "AI アプリの「設定(config)」に "
-                '`{"dify_base_url": "https://<dify>/v1", "dify_app_type": "chat"}` '
-                "の形式で指定してください。"
-            )
-        }
+        return error_response(
+            AppInvokeError("CONNECTION", detail="dify_base_url is not configured")
+        )
 
     app_type = (cfg.get("dify_app_type") or "chat").strip().lower()
     query_fields = _normalize_field_names(cfg.get("query_field")) or ["query"]
@@ -1051,6 +1366,16 @@ async def invoke(
         cfg=cfg,
     )
 
+    # 様式 Excel → 開始変数注入／書き戻し用テンプレ保持（opt-in。未設定は無変更）
+    excel_template = None
+    try:
+        inputs, _, excel_template = apply_excel_map(inputs, cfg)
+    except ValueError as e:
+        return error_response(AppInvokeError("INVALID_INPUT", detail=str(e)))
+    except Exception as e:  # noqa: BLE001
+        logger.exception("dify-app excel_map failed")
+        return error_response(AppInvokeError("INVALID_INPUT", detail=str(e)))
+
     # ファイルを Dify にアップロードして参照オブジェクト化
     file_refs_by_key: dict[str, list[dict[str, Any]]] = {}
     all_file_refs: list[dict[str, Any]] = []
@@ -1065,9 +1390,9 @@ async def invoke(
                     file_refs_by_key.setdefault(key, []).append(ref)
                     all_file_refs.append(ref)
         except httpx.HTTPError as e:
-            return {"outputs": f"Dify へのファイルアップロードに失敗しました: {e}"}
+            return error_response(AppInvokeError("UPLOAD_FAILED", detail=str(e)))
         except Exception as e:  # noqa: BLE001
-            return {"outputs": f"ファイルの処理に失敗しました: {e}"}
+            return error_response(AppInvokeError("UPLOAD_FAILED", detail=str(e)))
 
     try:
         # ファイル入力変数の解決（chat / workflow 共通。源内側に変数名を固定しない）:
@@ -1093,11 +1418,20 @@ async def invoke(
                     # フォールバック: 源内フォームのキー名を Dify 変数名として割り当て
                     for key, refs in file_refs_by_key.items():
                         dify_inputs[key] = refs if len(refs) > 1 else refs[0]
-            outputs, out_files, citations = await _run_workflow(
+            outputs, out_files, citations, raw_outputs = await _run_workflow(
                 base, api_key, dify_inputs, user, response_field
             )
             resp: dict[str, Any] = {"outputs": outputs}
             arts = _files_to_artifacts(base, out_files) + citations
+            filled = _maybe_filled_excel_artifact(
+                cfg=cfg,
+                template=excel_template,
+                workflow_outputs=raw_outputs,
+                answer_text=outputs if isinstance(outputs, str) else "",
+                inputs=inputs,
+            )
+            if filled:
+                arts = [filled, *arts]
             if arts:
                 resp["artifacts"] = arts
             return resp
@@ -1105,7 +1439,9 @@ async def invoke(
         # ---- チャットフロー ----
         query = str(inputs.get(query_field) or inputs.get("question") or "").strip()
         if not query:
-            return {"outputs": "メッセージ(query)が空です。入力してください。"}
+            return error_response(
+                AppInvokeError("INVALID_INPUT", detail="empty query")
+            )
         dify_inputs = _coerce_dify_input_values(
             _strip_meta(inputs, query_field, "question")
         )
@@ -1118,16 +1454,183 @@ async def invoke(
                 dify_inputs[file_var] = all_file_refs if is_list else all_file_refs[0]
                 chat_files = []
         answer, new_conv_id, out_files, citations = await _run_chat(
-            base, api_key, query, dify_inputs, user, conversation_id, chat_files
+            base,
+            api_key,
+            query,
+            dify_inputs,
+            user,
+            conversation_id,
+            chat_files,
+            session_id=x_session_id or "",
         )
         if new_conv_id and x_session_id:
             _save_conversation_id(x_session_id, new_conv_id)
         resp = {"outputs": answer}
         arts = _files_to_artifacts(base, out_files) + citations
+        filled = _maybe_filled_excel_artifact(
+            cfg=cfg,
+            template=excel_template,
+            answer_text=answer,
+            inputs=inputs,
+        )
+        if filled:
+            arts = [filled, *arts]
         if arts:
             resp["artifacts"] = arts
         return resp
+    except AppInvokeError as e:
+        return error_response(e)
     except httpx.HTTPError as e:
-        return {"outputs": f"Dify への接続でエラーが発生しました: {e}"}
+        return error_response(AppInvokeError("CONNECTION", detail=str(e)))
     except Exception as e:  # noqa: BLE001
-        return {"outputs": f"処理中にエラーが発生しました: {e}"}
+        logger.exception("dify-app invoke unexpected error")
+        return error_response(AppInvokeError("WORKFLOW_ERROR", detail=str(e)))
+
+
+@app.post("/invoke/stream")
+async def invoke_stream(
+    request: Request,
+    x_api_key: str | None = Header(default=None),
+    x_app_config: str | None = Header(default=None),
+    x_session_id: str | None = Header(default=None),
+    x_user_id: str | None = Header(default=None),
+    x_scope: str | None = Header(default=None),
+) -> Any:
+    """チャットフローを NDJSON でストリーミングする（chat 種別専用）。
+
+    出力は 1 行 1 JSON（application/x-ndjson）:
+      {"event":"delta","text":"..."}                  回答の断片
+      {"event":"done","outputs":"...","artifacts":[...]}  完了
+      {"event":"error","error":"...","error_code":"..."}  失敗
+
+    workflow 種別は同期の /invoke を使う（このエンドポイントは 400 を返す）。
+    ファイルアップロード・入力解決など、ストリーム開始前に失敗し得る処理は
+    事前に実行し、失敗時は非ストリームの JSON エラーで返す。
+    """
+    err = _check_key(x_api_key)
+    if err:
+        return err
+
+    cfg = _parse_config(x_app_config)
+    base = (cfg.get("dify_base_url") or DEFAULT_DIFY_BASE_URL).rstrip("/")
+    if not base:
+        return error_response(
+            AppInvokeError("CONNECTION", detail="dify_base_url is not configured")
+        )
+
+    app_type = (cfg.get("dify_app_type") or "chat").strip().lower()
+    if app_type != "chat":
+        # ストリーミングは対話型のみ。workflow は同期 /invoke を使う。
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": "このアプリはストリーミングに対応していません。",
+                "error_code": "INVALID_INPUT",
+            },
+        )
+
+    query_fields = _normalize_field_names(cfg.get("query_field")) or ["query"]
+    query_field = query_fields[0]
+    api_key = x_api_key or ""
+    user = x_user_id or "open-genai"
+
+    body = await request.json()
+    inputs = _inject_hidden_inputs(
+        body.get("inputs", body) or {},
+        scope=x_scope,
+        cfg=cfg,
+    )
+
+    # 様式 Excel → 開始変数注入／書き戻し用テンプレ保持（opt-in。未設定は無変更）
+    excel_template = None
+    try:
+        inputs, _, excel_template = apply_excel_map(inputs, cfg)
+    except ValueError as e:
+        return error_response(AppInvokeError("INVALID_INPUT", detail=str(e)))
+    except Exception as e:  # noqa: BLE001
+        logger.exception("dify-app excel_map failed")
+        return error_response(AppInvokeError("INVALID_INPUT", detail=str(e)))
+
+    # ファイルを Dify にアップロードして参照オブジェクト化（ストリーム開始前）
+    file_refs_by_key: dict[str, list[dict[str, Any]]] = {}
+    all_file_refs: list[dict[str, Any]] = []
+    files_meta = _iter_input_files(inputs)
+    if files_meta:
+        try:
+            async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
+                for key, filename, content_b64 in files_meta:
+                    ref = await _upload_file(
+                        client, base, api_key, filename, content_b64, user
+                    )
+                    file_refs_by_key.setdefault(key, []).append(ref)
+                    all_file_refs.append(ref)
+        except httpx.HTTPError as e:
+            return error_response(AppInvokeError("UPLOAD_FAILED", detail=str(e)))
+        except Exception as e:  # noqa: BLE001
+            return error_response(AppInvokeError("UPLOAD_FAILED", detail=str(e)))
+
+    query = str(inputs.get(query_field) or inputs.get("question") or "").strip()
+    if not query:
+        return error_response(AppInvokeError("INVALID_INPUT", detail="empty query"))
+
+    dify_inputs = _coerce_dify_input_values(
+        _strip_meta(inputs, query_field, "question")
+    )
+    conversation_id = _get_conversation_id(x_session_id or "")
+    chat_files = all_file_refs
+    if all_file_refs:
+        if cfg.get("file_var"):
+            file_var, is_list = cfg.get("file_var"), True
+        else:
+            file_var, is_list = await _detect_file_input(base, api_key)
+        if file_var:
+            dify_inputs[file_var] = all_file_refs if is_list else all_file_refs[0]
+            chat_files = []
+
+    async def _ndjson():
+        def _line(obj: dict[str, Any]) -> str:
+            return json.dumps(obj, ensure_ascii=False) + "\n"
+
+        try:
+            async for ev in _run_chat_stream(
+                base, api_key, query, dify_inputs, user, conversation_id, chat_files
+            ):
+                if ev["type"] == "delta":
+                    yield _line({"event": "delta", "text": ev["text"]})
+                elif ev["type"] == "conversation":
+                    # 会話ID判明時に即保存（done を待たずに継続性を確保）。
+                    # このイベントは dify-app 内部で消費し、下流には流さない。
+                    if ev["conversation_id"] and x_session_id:
+                        _save_conversation_id(x_session_id, ev["conversation_id"])
+                elif ev["type"] == "done":
+                    if ev["conversation_id"] and x_session_id:
+                        _save_conversation_id(x_session_id, ev["conversation_id"])
+                    arts = _files_to_artifacts(base, ev["files"]) + ev["citations"]
+                    filled = _maybe_filled_excel_artifact(
+                        cfg=cfg,
+                        template=excel_template,
+                        answer_text=ev.get("answer") or "",
+                        inputs=inputs,
+                    )
+                    if filled:
+                        arts = [filled, *arts]
+                    done: dict[str, Any] = {"event": "done", "outputs": ev["answer"]}
+                    if arts:
+                        done["artifacts"] = arts
+                    yield _line(done)
+        except AppInvokeError as e:
+            yield _line({"event": "error", **error_body(e)})
+        except httpx.HTTPError as e:
+            yield _line(
+                {"event": "error", **error_body(AppInvokeError("CONNECTION", detail=str(e)))}
+            )
+        except Exception as e:  # noqa: BLE001
+            logger.exception("dify-app invoke_stream unexpected error")
+            yield _line(
+                {
+                    "event": "error",
+                    **error_body(AppInvokeError("WORKFLOW_ERROR", detail=str(e))),
+                }
+            )
+
+    return StreamingResponse(_ndjson(), media_type="application/x-ndjson")
