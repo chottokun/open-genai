@@ -30,6 +30,16 @@
 
 ## [Unreleased]
 
+### 🔄 Upstream v0.7.0 同期状態・セキュリティ監査・全面テスト検証完了
+
+- **Upstream 同期アセスメントおよび最新状態の維持**
+  - Upstream（`https://github.com/hirokawaguchi/open-genai`）の最新リリース v0.7.0 (`1d4d597`) に至る全コミットとの差分・整合性を評価。新規 upstream コミットが存在しないことを確認。
+  - セキュリティパッチ（`pypdf` 6.15.0 アップグレード、HMAC署名付きファイル配信URL、起動時セキュリティ警告チェック、Excel フォームマップ書き戻し機能）がすべて統合・適用済みであることを確認。
+- **セキュリティ脆弱性監査 (100% CLEAN)**
+  - `scripts/audit-python-deps.sh` により全13個の Python サービス requirements.txt をスキャンし、既知の脆弱性が **0件** であることを検証完了。
+- **総合回帰テスト検証の達成 (100% PASSED)**
+  - バックエンド `pytest` テスト（109 passed, 4 skipped）および `genai-web` フロントエンド `vitest` テスト（631 passed）の全てをパスし、最高度のセキュリティと回帰のないコード品質を確認。
+
 ### 🛡️ セキュリティ更新と脆弱性解消 (v0.6.1-patch)
 
 - **pypdf を 6.15.0 へアップグレード (Upstream 同期)**
