@@ -30,6 +30,18 @@
 
 ## [Unreleased]
 
+### 🔄 Upstream v0.7.0 同期・LGWAN セキュリティ強化 (v0.7.0 同期)
+
+- **添付ファイル URL HMAC 署名対応 (`filesig.py`)**
+  - `/files/{key}` 添付ファイルアクセスに短命 HMAC 署名クエリ (`exp`, `sig`) を導入し、URL の列挙や無認可アクセスのリスクを遮断。
+- **起動時既定秘密情報スキャン警告 (`security_warn.py`)**
+  - `APP_JWT_SECRET` や `INTERNAL_SIGNING_SECRET` 等の秘密情報が既定値のままの場合、起動時に設定ガイド付きの警告を出力する機能を追加。
+- **Nginx プロキシレート制限および OpenAPI ドキュメント遮断**
+  - Nginx 入口において `api_files`, `api_auth`, `kc_login` へのレート制限ゾーン (`limit_req_zone`) を定義。
+  - 本番環境配下で `/api/docs`, `/api/openapi.json` へのアクセスを 404 遮断し、Keycloak 管理画面 `/kc/admin` を `kc-admin-allow.conf` による IP 制限で保護。
+- **Upstream 評価レポートの作成 (`docs/upstream-sync-report-v0.7.0.md`)**
+  - Upstream `v0.7.0` (doccheck-app, chosei-app, dify-chat-stream等) の技術評価および当開発ブランチ設計方針（閉域セキュリティ・LiteLLM一元化）に基づく評価結果を文書化。
+
 ### 🛡️ セキュリティ更新と脆弱性解消 (v0.6.1-patch)
 
 - **pypdf を 6.15.0 へアップグレード (Upstream 同期)**
