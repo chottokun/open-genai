@@ -87,3 +87,9 @@ def test_decode_text_bytes_auto_detects_shift_jis() -> None:
     sjis_bytes = text_ja.encode("shift_jis")
     decoded = docextract.decode_text_bytes(sjis_bytes)
     assert decoded == text_ja
+
+
+def test_supported_doc_exts_includes_pptx_and_xls() -> None:
+    assert ".pptx" in docextract.SUPPORTED_DOC_EXTS
+    assert ".xls" in docextract.SUPPORTED_DOC_EXTS
+    assert ".doc" in docextract.SUPPORTED_DOC_EXTS

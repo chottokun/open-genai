@@ -30,6 +30,15 @@
 
 ## [Unreleased]
 
+### 🔄 Upstream v0.8.0 評価および選択的機能統合 (v0.8.0-eval)
+
+- **Dify チャットのストリーミング中自動スクロール滑らか化 (`2e18c02`)**
+  - `genai-web/.../ExAppChat.tsx` において、`requestAnimationFrame` を用いて逐次トークン描画時の `scrollIntoView` を 1 フレームに間引き、ストリーミング中のスクロールのカクつきを解消。ユーザーによる上方向への読み返し検出・自動追尾一時停止機能を追加。
+- **添付ドキュメントのテキスト抽出拡張 (`shared/docextract.py`)**
+  - PowerPoint (.pptx)、旧形式 Excel (.xls)、旧形式 Word/PowerPoint (.doc/.ppt OLE 抽出) のテキスト抽出サポートを `shared/docextract.py` に追加。`backend/requirements.txt` および `rag-app/requirements.txt` に依存ライブラリ (`python-pptx`, `xlrd`, `olefile`) を追加し、単体テスト (`tests/test_docextract.py`) を拡充。
+- **Upstream v0.8.0 評価レポートの作成 (`docs/upstream-sync-report-v0.8.0.md`)**
+  - 提案実装第2弾 `patchform-app`（オンラインフォーム・未認証ゲスト受付機能）については LGWAN 閉域セキュリティ原則（unauthenticated guest 境界衝突）のため導入を見送り、詳細な技術評価レポートを明記。
+
 ### 🛡️ セキュリティ更新と脆弱性解消 (v0.6.1-patch)
 
 - **pypdf を 6.15.0 へアップグレード (Upstream 同期)**

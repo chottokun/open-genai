@@ -1,5 +1,15 @@
+"""添付ドキュメントのテキスト抽出（backend / rag-app 共通モジュール）。
+
+ローカル LLM は PDF/Word/Excel 等を直接読めないため、テキストへ抽出して
+プロンプトや RAG の知識ベースに流し込むための共通関数を提供する。
+
+依存: pypdf / python-docx / openpyxl / python-pptx / xlrd / olefile
+（各サービスの requirements に含める）。
+"""
+
+from __future__ import annotations
+
 import base64
-import hashlib
 import io
 import os
 from typing import Any
@@ -15,21 +25,39 @@ MAX_CHAT_DOC_CHARS = int(os.environ.get("MAX_CHAT_DOC_CHARS", "500000"))
 # 構造化取込のハード上限（黙って切らずエラーにする）
 MAX_DOC_PAGES = int(os.environ.get("MAX_DOC_PAGES", "200"))
 MAX_DOC_BYTES = int(os.environ.get("MAX_DOC_BYTES", str(20 * 1024 * 1024)))
-
-# 非 PDF のとき何文字ごとに合成ページを作るか（RAG-app / tree-ingest 等向け）
-SYNTHETIC_PAGE_CHARS = 2000
+# 非 PDF を合成ページに分割するときの目安文字数
+SYNTHETIC_PAGE_CHARS = int(os.environ.get("SYNTHETIC_PAGE_CHARS", "3000"))
 
 
 class DocExtractError(Exception):
-    """テキスト抽出に起因する業務例外。"""
+    """構造化取込で上限超過など、黙って切り捨てできない失敗。"""
+
+# UI の accept などに使える対応拡張子
+SUPPORTED_DOC_EXTS = (
+    ".pdf",
+    ".docx",
+    ".doc",
+    ".xlsx",
+    ".xls",
+    ".pptx",
+    ".ppt",
+    ".txt",
+    ".md",
+    ".csv",
+    ".tsv",
+    ".html",
+    ".htm",
+    ".json",
+    ".log",
+)
 
 
 def strip_base64_prefix(data: str) -> str:
-    """data:URI プレフィックス(data:*;base64,)があれば取り除く。"""
-    if data and data.startswith("data:"):
-        parts = data.split(";base64,", 1)
-        if len(parts) == 2:
-            return parts[1]
+    """`data:application/pdf;base64,xxxx` のような prefix を除去する。"""
+    if data.startswith("data:"):
+        comma = data.find(",")
+        if comma != -1:
+            return data[comma + 1 :]
     return data
 
 
@@ -175,13 +203,106 @@ def _docx_extract_text(raw: bytes) -> str:
     return text
 
 
+def _xlsx_text(raw: bytes) -> str:
+    import openpyxl
+
+    wb = openpyxl.load_workbook(io.BytesIO(raw), read_only=True, data_only=True)
+    lines: list[str] = []
+    for ws in wb.worksheets:
+        for row in ws.iter_rows(values_only=True):
+            lines.append("\t".join("" if c is None else str(c) for c in row))
+    return "\n".join(lines)
+
+
+def _xls_text(raw: bytes) -> str:
+    import xlrd
+
+    book = xlrd.open_workbook(file_contents=raw)
+    lines: list[str] = []
+    for sheet in book.sheets():
+        for r in range(sheet.nrows):
+            lines.append("\t".join("" if c is None else str(c) for c in sheet.row_values(r)))
+    return "\n".join(lines)
+
+
+def _pptx_text(raw: bytes) -> str:
+    from pptx import Presentation
+
+    prs = Presentation(io.BytesIO(raw))
+    parts: list[str] = []
+    for i, slide in enumerate(prs.slides, 1):
+        texts: list[str] = []
+        for shape in slide.shapes:
+            if getattr(shape, "has_text_frame", False):
+                text = (shape.text or "").strip()
+                if text:
+                    texts.append(text)
+        if texts:
+            parts.append(f"# スライド {i}\n" + "\n".join(texts))
+    return "\n\n".join(parts)
+
+
+def _ole_text(raw: bytes) -> str:
+    import olefile
+
+    bio = io.BytesIO(raw)
+    if not olefile.isOleFile(bio):
+        return ""
+    ole = olefile.OleFileIO(bio)
+    chunks: list[str] = []
+    try:
+        for entry in ole.listdir():
+            try:
+                data = ole.openstream(entry).read()
+            except Exception:  # noqa: BLE001
+                continue
+            for enc in ("utf-16le", "cp932", "utf-8"):
+                try:
+                    text = data.decode(enc, errors="ignore")
+                except Exception:  # noqa: BLE001
+                    continue
+                cleaned = "".join(ch if ch.isprintable() or ch in "\n\t　" else " " for ch in text)
+                cleaned = "\n".join(ln.strip() for ln in cleaned.splitlines() if ln.strip())
+                if _score_decoded_text(cleaned) > 8:
+                    chunks.append(cleaned)
+                    break
+    finally:
+        ole.close()
+    return "\n\n".join(chunks)
+
+
+_TEXT_EXTS = ("txt", "md", "csv", "tsv", "html", "htm", "json", "log")
+
+
+def _document_text(ext: str, mt: str, raw: bytes) -> str | None:
+    if ext == "docx" or "wordprocessingml" in mt:
+        return _docx_extract_text(raw)
+    if ext == "xlsx" or "spreadsheetml" in mt:
+        return _xlsx_text(raw)
+    if ext == "pptx" or "presentationml" in mt:
+        return _pptx_text(raw)
+    if ext == "xls" or mt in ("application/vnd.ms-excel", "application/excel"):
+        try:
+            return _xls_text(raw)
+        except Exception:  # noqa: BLE001
+            return _ole_text(raw)
+    if ext in ("doc", "ppt") or mt in (
+        "application/msword",
+        "application/vnd.ms-powerpoint",
+    ):
+        return _ole_text(raw)
+    if ext in _TEXT_EXTS or mt.startswith("text/"):
+        return decode_text_bytes(raw)
+    return None
+
+
 def _extract_raw_text(
     name: str, media_type: str, b64: str
 ) -> tuple[str | None, str | None]:
     """フォーマット判定して生テキストを抽出する（切り捨てなし）。
 
     戻り値 `(text, error)`:
-    - 対応外（レガシー .doc/.xls 等）・base64 復号失敗 → `(None, None)`
+    - 対応外・base64 復号失敗 → `(None, None)`
     - 抽出中の例外 → `(None, "…失敗しました")`（呼び出し側でそのまま返せる文言）
     - 成功 → `(text, None)`
     """
@@ -198,30 +319,10 @@ def _extract_raw_text(
 
             reader = PdfReader(io.BytesIO(raw))
             text = "\n".join((p.extract_text() or "") for p in reader.pages)
-        elif ext == "docx" or "wordprocessingml" in mt:
-            text = _docx_extract_text(raw)
-        elif ext == "xlsx" or "spreadsheetml" in mt:
-            import openpyxl
-
-            wb = openpyxl.load_workbook(io.BytesIO(raw), read_only=True, data_only=True)
-            lines: list[str] = []
-            for ws in wb.worksheets:
-                for row in ws.iter_rows(values_only=True):
-                    lines.append("\t".join("" if c is None else str(c) for c in row))
-            text = "\n".join(lines)
-        elif ext in (
-            "txt",
-            "md",
-            "csv",
-            "tsv",
-            "html",
-            "htm",
-            "json",
-            "log",
-        ) or mt.startswith("text/"):
-            text = decode_text_bytes(raw)
         else:
-            return None, None
+            text = _document_text(ext, mt, raw)
+            if text is None:
+                return None, None
     except Exception as e:  # noqa: BLE001
         return None, f"(添付ファイル {name} のテキスト抽出に失敗しました: {e})"
 
@@ -334,31 +435,10 @@ def extract_doc_pages(name: str, media_type: str, b64: str) -> list[dict[str, An
             return pages
 
         # 非 PDF は MAX_DOC_CHARS を通さず全文抽出し、合成ページに分割する
-        if ext == "docx" or "wordprocessingml" in mt:
-            text = _docx_extract_text(raw).strip()
-        elif ext == "xlsx" or "spreadsheetml" in mt:
-            import openpyxl
-
-            wb = openpyxl.load_workbook(io.BytesIO(raw), read_only=True, data_only=True)
-            lines: list[str] = []
-            for ws in wb.worksheets:
-                for row in ws.iter_rows(values_only=True):
-                    lines.append("\t".join("" if c is None else str(c) for c in row))
-            text = "\n".join(lines).strip()
-        elif ext in (
-            "txt",
-            "md",
-            "csv",
-            "tsv",
-            "html",
-            "htm",
-            "json",
-            "log",
-        ) or mt.startswith("text/"):
-            text = decode_text_bytes(raw).strip()
-        else:
+        extracted = _document_text(ext, mt, raw)
+        if extracted is None:
             return []
-
+        text = extracted.strip()
         if not text:
             raise DocExtractError(
                 f"添付ファイル {name} からテキストを抽出できませんでした"
