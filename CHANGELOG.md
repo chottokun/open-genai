@@ -30,6 +30,13 @@
 
 ## [Unreleased]
 
+### 🔄 Upstream v0.8.0 差分評価および微修正のチェリーピック適用 (2026-08-31)
+
+- **Upstream v0.8.0 差分アセスメントの実施 (`docs/upstream-sync-report-v0.8.0-eval-20260831.md`)**
+  - 公式 Upstream の最新コミット（`5de2e5a` まで）を評価。
+  - Difyアプリ `/apps` におけるフッター表示が `scrollIntoView` の自動スクロールと干渉してカクつく問題を解決するコミット `ca367b7` を選択的パッチ適用。
+  - LiteLLM Gateway プロキシ一元管理ポリシーにそぐわない Anthropic 直接呼び出し追加 (`85fddcb`) や、本環境未搭載アプリ `patchform` 関連コミット (`423ab58`, `0b9b121`) のフルマージは見送り、安全な機能性・セキュリティ境界を維持。
+
 ### 🛡️ セキュリティ更新と脆弱性解消 (v0.6.1-patch)
 
 - **pypdf を 6.15.0 へアップグレード (Upstream 同期)**
