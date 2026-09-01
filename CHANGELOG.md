@@ -30,6 +30,14 @@
 
 ## [Unreleased]
 
+### 🔄 Upstream 最新動向・同期評価アセスメント (v0.8.0 / コミット 5de2e5a 評価完了)
+
+- **Upstream 最新変更群（v0.8.0 / コミット `5de2e5a`）の比較評価レポート追加**
+  - Upstream (`https://github.com/hirokawaguchi/open-genai.git`) の最新更新群について詳細評価を実施し、`docs/upstream-sync-report-v0.8.0-eval-20260901.md` にドキュメント化。
+  - 有用な機能修正（Dify UI ストリーミングの rAF 間引き・自動スクロール最適化、依存関係 `cryptography` 50.0.1 及び `pypdf` 6.15.0 セキュリティ更新、ドキュメント抽出拡張）はローカルへ適用済み・検証済みであることを確認。
+  - 当プロジェクトの基本方針（LGWAN閉域網のセキュリティ境界保護、全モデル通信・画像生成の LiteLLM プロキシ統合ハブ一元管理）に違反する `patchform-app`（未認証公開申請フォーム）、`doccheck-app`、並びに backend からの LLM プロバイダ直接通信は排斥・見送りを確定。
+  - 全 13 ファイルの Python 依存環境に対する脆弱性監査（`pip-audit`）で脆弱性 0 件、並びに全テスト（backend Pytest 109件、frontend Vitest）100% PASS を達成。
+
 ### 🛡️ セキュリティ更新と脆弱性解消 (v0.6.1-patch)
 
 - **pypdf を 6.15.0 へアップグレード (Upstream 同期)**
