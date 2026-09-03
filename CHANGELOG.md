@@ -30,6 +30,13 @@
 
 ## [Unreleased]
 
+### 🔄 Upstream 同期アセスメントおよび最新コミット統合検証 (v0.8.0 追従)
+
+- **Upstream コミット同期状況の検証評価 (`docs/upstream-sync-report-v0.8.0-eval-20260903.md`)**
+  - Upstream (`https://github.com/hirokawaguchi/open-genai`) の `v0.8.0` 以降のコミット群（コミット `7a73260` まで）について完全な差分評価を実施。
+  - チャット復旧堅牢化（`resolveSelectedModelId`）、HTTP/LAN互換コピー（`copyToClipboard`）、Qwen思考オフ・構造化出力制御、管理アプリ共通ヘッダー（`ManagedAppHeader`）および過去会話削除機能等、主要な改善が全てすでに完全統合・検証済みであることを確認。
+  - LiteLLM プロキシ集約（方針B）と LGWAN 閉域網セキュリティ境界に準拠していることを再確認。
+
 ### 🛡️ セキュリティ更新と脆弱性解消 (v0.6.1-patch)
 
 - **pypdf を 6.15.0 へアップグレード (Upstream 同期)**
