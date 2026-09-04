@@ -30,6 +30,16 @@
 
 ## [Unreleased]
 
+### 🔄 Upstream 同期アセスメントおよび依存脆弱性・全体テスト検証 (2026-09-04)
+
+- **Upstream 同期状況および評価の完了 (`docs/upstream-sync-report-v0.8.0-eval-20260904.md`)**
+  - Upstream リポジトリ (`https://github.com/hirokawaguchi/open-genai`) の最新コミット `7a73260` (PR #52: Whisper GPU 接続口とサイト overlay ドキュメント) までの状態をフェッチし評価を実施。
+  - 新規のマージ用差分コミットが存在しないことを確認し、新規コードの追加マージは不要と判定。
+- **セキュリティ依存関係監査 (`pip-audit`) の実行検証**
+  - 全 13 個の Python 依存ファイル (`requirements.txt`) をスキャンし、先日の `pypdf==6.15.0` アップグレード適用状況と安定性を確認。
+- **全体回帰テスト実行検証 (100% PASSED)**
+  - `scripts/run-regression-tests.sh --web-all` により、全 109 件の Python バックエンドテスト (pytest) および 631 件の React フロントエンドテスト (Vitest) を網羅的に実行し、全テストの成功を確認。
+
 ### 🛡️ セキュリティ更新と脆弱性解消 (v0.6.1-patch)
 
 - **pypdf を 6.15.0 へアップグレード (Upstream 同期)**
