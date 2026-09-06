@@ -30,10 +30,16 @@
 
 ## [Unreleased]
 
-### 🛡️ セキュリティ更新と脆弱性解消 (v0.6.1-patch)
+### 🛡️ セキュリティ更新と脆弱性解消 (v0.9.0-patch)
 
-- **pypdf を 6.15.0 へアップグレード (Upstream 同期)**
-  - `backend/requirements.txt`, `rag-app/requirements.txt`, `tests/requirements.txt` の `pypdf` を `6.15.0` に更新し、既知の CVE 脆弱性 (CVE-2026-71852, CVE-2026-71870) を完全に解消。
+- **pypdf を 6.16.2 へアップグレード (Upstream 同期 v0.9.0)**
+  - `backend/requirements.txt`, `rag-app/requirements.txt`, `tests/requirements.txt` の `pypdf` を `6.16.2` に更新し、既知の CVE 脆弱性 (CVE-2026-84309, CVE-2026-84310, CVE-2026-84311) を完全に解消。
+
+### 🌐 フロントエンドモデル選択の一元解決と堅牢化 (Upstream 同期 v0.9.0)
+
+- **モデル ID 解決とローカルストレージ整合処理の導入 (`useSelectedModel` / `models.ts`)**
+  - 環境変数で指定されたモデル一覧のパース処理 (`parseEnvStringList`) を強化し、引用符なし配列などの揺らぎに対応。
+  - `resolveSelectedModelId` 処理を追加し、ビルドや設定変更等で有効モデル一覧が更新された際に、`localStorage` の無効な旧モデル ID を自動的に有効先頭モデル ID へ安全に補正・書き戻しを行うよう改善。
 
 ### 🌐 LiteLLM Proxy からのモデル動的取得・UIカテゴリ分離・動的パラメータ描画アーキテクチャ設計仕様
 
