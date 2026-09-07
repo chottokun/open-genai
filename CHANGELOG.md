@@ -30,6 +30,16 @@
 
 ## [Unreleased]
 
+### 🔄 Upstream 同期・アセスメントおよび機能選択統合 (v0.9.0 評価 2026-09-08)
+
+- **pypdf を 6.16.2 へアップグレード (CVE 対策)**
+  - `backend/requirements.txt`, `rag-app/requirements.txt`, `tests/requirements.txt` の `pypdf` を `6.16.2` に更新し、CVE-2026-84309, CVE-2026-84310, CVE-2026-84311 を完全解消。
+- **LLM 応答からの思考過程 (reasoning) 非表示処理 (`b42e2a7`)**
+  - `backend/app/llm.py` に `_assistant_visible_text` を導入し、gpt-oss や DeepSeek / Qwen / vLLM 等が出力する `reasoning` / `reasoning_content` を画面応答テキストから除外。
+  - `tests/test_llm_reasoning.py` を追加し単体テストで正常動作を検証。
+- **Upstream 最新アセスメントレポート (`docs/upstream-sync-report-v0.9.0-eval-20260908.md`) の作成**
+  - Upstream の v0.9.0 以降のコミット群（`2f1dc29`〜`77b0064`）を網羅評価し、政策適合性・セキュリティ・品質の検証結果を記載。
+
 ### 🛡️ セキュリティ更新と脆弱性解消 (v0.6.1-patch)
 
 - **pypdf を 6.15.0 へアップグレード (Upstream 同期)**
