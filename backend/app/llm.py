@@ -46,6 +46,30 @@ def resolve_model(model: dict[str, Any] | None) -> str:
     return _resolve_model(model)
 
 
+def _content_text(content: Any) -> str:
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        text_parts = []
+        for part in content:
+            if isinstance(part, dict) and part.get("type") == "text":
+                text_parts.append(str(part.get("text") or ""))
+            elif isinstance(part, str):
+                text_parts.append(part)
+        return "".join(text_parts)
+    return str(content or "")
+
+
+def _assistant_visible_text(part: dict[str, Any]) -> str:
+    """ユーザ向け本文。reasoning / reasoning_content は出さない。"""
+    content = part.get("content")
+    if isinstance(content, str) and content:
+        return content
+    if content is not None and not isinstance(content, str):
+        return _content_text(content)
+    return ""
+
+
 def _data_url(media_type: str, data: str) -> str:
     """base64(prefix有無どちらでも)を data URL に正規化する。"""
     if data.startswith("data:"):
@@ -131,7 +155,8 @@ async def chat_once(
         res.raise_for_status()
         data = res.json()
     choices = data.get("choices") or [{}]
-    return (choices[0].get("message") or {}).get("content", "") or ""
+    message = choices[0].get("message") or {}
+    return _assistant_visible_text(message)
 
 
 async def chat_stream(
@@ -177,7 +202,7 @@ async def chat_stream(
                         continue
                     choice = (chunk.get("choices") or [{}])[0]
                     delta = choice.get("delta") or {}
-                    text = delta.get("content") or ""
+                    text = _assistant_visible_text(delta)
                     if text:
                         yield json.dumps({"text": text}, ensure_ascii=False) + "\n"
                     if choice.get("finish_reason"):
