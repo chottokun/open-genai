@@ -30,10 +30,14 @@
 
 ## [Unreleased]
 
-### 🛡️ セキュリティ更新と脆弱性解消 (v0.6.1-patch)
+### 🛡️ セキュリティ更新と Upstream コミット統合 (2026-09-09)
 
-- **pypdf を 6.15.0 へアップグレード (Upstream 同期)**
-  - `backend/requirements.txt`, `rag-app/requirements.txt`, `tests/requirements.txt` の `pypdf` を `6.15.0` に更新し、既知の CVE 脆弱性 (CVE-2026-71852, CVE-2026-71870) を完全に解消。
+- **pypdf を 6.16.2 へアップグレード (Upstream 追従)**
+  - `backend/requirements.txt`, `rag-app/requirements.txt`, `tests/requirements.txt` の `pypdf` を `6.16.2` に更新し、既知の CVE 脆弱性 (CVE-2026-84309, CVE-2026-84310, CVE-2026-84311) を完全に解消。
+- **LLM 応答での reasoning / 思考過程テキストの抑制 (Upstream b42e2a7)**
+  - `backend/app/llm.py` 内のヘルパー関数 `_assistant_visible_text` を導入し、`gpt-oss` や DeepSeek R1 等の推論過程 (`reasoning`, `reasoning_content`) をユーザ向け画面出力から除外する修正を統合。テスト `tests/test_llm_reasoning.py` を追加。
+- **Upstream 評価・セキュリティ監査レポート (`docs/upstream-sync-report-v0.9.0-eval-20260909.md`) の作成**
+  - コミット `31978fb` までのフォーク元更新に対する方針 B（選択的取り込みと自治体閉域セキュリティ境界の維持）に基づくアセスメントを記録。
 
 ### 🌐 LiteLLM Proxy からのモデル動的取得・UIカテゴリ分離・動的パラメータ描画アーキテクチャ設計仕様
 
