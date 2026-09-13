@@ -30,6 +30,13 @@
 
 ## [Unreleased]
 
+### 🛡️ セキュリティ更新と脆弱性解消 (Upstream v0.9.0/v0.9.1 同期)
+
+- **pypdf を 6.16.2 へアップグレード (Upstream 同期 & 既知 CVE 解消)**
+  - `backend/requirements.txt`, `rag-app/requirements.txt`, `tests/requirements.txt` の `pypdf` を `6.16.2` に更新し、既知の CVE 脆弱性 (CVE-2026-84309, CVE-2026-84310, CVE-2026-84311) を完全に解消。
+- **Upstream コミット評価・分析レポートの作成 (`docs/upstream-sync-report-v0.9.0-eval-20260911.md`)**
+  - Upstream の最新コミット群（`v0.9.0` 以降 `36f3ae2` まで）に対するアセスメントを実施し、方針Bに基づく選択的統合とセキュリティ監査結果を明記。
+
 ### 🛡️ セキュリティ更新と脆弱性解消 (v0.6.1-patch)
 
 - **pypdf を 6.15.0 へアップグレード (Upstream 同期)**
