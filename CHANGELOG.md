@@ -30,6 +30,13 @@
 
 ## [Unreleased]
 
+### 🔄 Upstream 同期評価・最新差分アセスメント (2026-09-14)
+
+- **Upstream 最新コミット評価および検証レポート作成 (`docs/upstream-sync-report-eval-20260914.md`)**
+  - Upstream (`hirokawaguchi/open-genai` `main`) のコミット `36f3ae2` 以降の最新コミット (`7823567`, `428bae4`, `778570e`, `87dd5fc`) を評価。
+  - 新規オプショナルマイクロサービス (`notebook-app`, `ssh-app`) について、自治体 LGWAN 閉域網セキュリティ境界ポリシーとの照合を行い、コアアクセス権限の安全確保のため本ブランチでは取り込みを保留・見送り。
+  - セキュリティ依存関係スキャン（`scripts/audit-python-deps.sh`）および全リグレッションテスト（`scripts/run-regression-tests.sh`）を完遂し、コードベースが高品質かつ完全に安全であることを実証。
+
 ### 🛡️ セキュリティ更新と脆弱性解消 (v0.6.1-patch)
 
 - **pypdf を 6.15.0 へアップグレード (Upstream 同期)**
