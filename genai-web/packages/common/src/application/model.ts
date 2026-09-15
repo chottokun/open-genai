@@ -547,6 +547,11 @@ export const modelMetadata: Record<string, ModelMetadata> = {
     flags: MODEL_FEATURE.TEXT_DOC,
     displayName: 'gpt-oss 20B (ローカル)',
   },
+  'gemma-4-26B-A4B-it-Q4_K_M.gguf': {
+    // Gemma 4 はマルチモーダル。画像 + ドキュメント添付に対応。
+    flags: MODEL_FEATURE.TEXT_DOC_IMAGE,
+    displayName: 'Gemma 4 26B A4B (ローカル・画像対応)',
+  },
 };
 
 export const BEDROCK_TEXT_MODELS = Object.keys(modelMetadata).filter(

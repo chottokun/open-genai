@@ -30,6 +30,14 @@
 
 ## [Unreleased]
 
+### 🔄 Upstream 同期アセスメントおよび機能改善・セキュリティ堅牢化 (2026-09-15)
+
+- **Upstream 最新コミット (v0.10.0 / commit 8483c15) の評価とパッチ統合**
+  - 未登録ローカルモデル ID でのチャット添付（`useFileUploadable.ts`）でテキスト/ドキュメント添付を有効化するフォールバック処理を統合。
+  - Keycloak 初期データおよび CSV ユーザ一括登録 (`kcadmin.py`) での日本語姓名順（`lastName` ＝ 姓, `firstName` ＝ 名）を正しく統一。
+- **依存関係セキュリティ更新 (100% CLEAN)**
+  - `pypdf` を `6.16.2`、`accelerate` を `1.15.0` へアップデートし、`scripts/audit-python-deps.sh` で脆弱性 **0件** を達成。
+
 ### 🛡️ セキュリティ更新と脆弱性解消 (v0.6.1-patch)
 
 - **pypdf を 6.15.0 へアップグレード (Upstream 同期)**
