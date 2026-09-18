@@ -30,10 +30,15 @@
 
 ## [Unreleased]
 
-### 🛡️ セキュリティ更新と脆弱性解消 (v0.6.1-patch)
+### 🛡️ セキュリティ更新と Upstream v0.10.0 同期評価・依存関係強化
 
-- **pypdf を 6.15.0 へアップグレード (Upstream 同期)**
-  - `backend/requirements.txt`, `rag-app/requirements.txt`, `tests/requirements.txt` の `pypdf` を `6.15.0` に更新し、既知の CVE 脆弱性 (CVE-2026-71852, CVE-2026-71870) を完全に解消。
+- **pypdf を 6.16.2 へアップグレード (Upstream/CI 同期)**
+  - `backend/requirements.txt`, `rag-app/requirements.txt`, `tests/requirements.txt` の `pypdf` を `6.16.2` に更新し、既知の CVE 脆弱性 (CVE-2026-84309, CVE-2026-84310, CVE-2026-84311) を完全に解消。
+- **accelerate を 1.15.0 へアップグレード**
+  - `local-sd-api/requirements.txt` の `accelerate` を `1.15.0` に更新し、PYSEC-2026-3804 脆弱性を解消。
+- **Upstream v0.10.0 (`3a8fefc`) / `fix/chat-upload-and-name-order` (`8483c15`) 評価完了**
+  - Upstream 最新の未登録モデルチャット添付修復・Keycloak 日本語姓名順整合・サイレント JWT 再発行・送信キー設定などを選択的取り込み (方針B)。
+  - `docs/upstream-sync-report-v0.10.0-eval-20260918.md` を作成し、全 13 個の `requirements.txt` で `scripts/audit-python-deps.sh` 0 件脆弱性を確認。
 
 ### 🌐 LiteLLM Proxy からのモデル動的取得・UIカテゴリ分離・動的パラメータ描画アーキテクチャ設計仕様
 
