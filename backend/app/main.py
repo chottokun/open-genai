@@ -37,7 +37,19 @@ from fastapi.responses import (
 
 from shared import ssrfguard
 
-from . import audit, auth, image_store, intauth, llm, ngwords, objstore, policy, storage, teams_store
+from . import (
+    artifact_delivery,
+    audit,
+    auth,
+    image_store,
+    intauth,
+    llm,
+    ngwords,
+    objstore,
+    policy,
+    storage,
+    teams_store,
+)
 
 # ファイル添付の保存先と、ブラウザから見たバックエンドの公開 URL
 FILES_DIR = os.environ.get("FILES_DIR", "/data/files")
@@ -793,12 +805,12 @@ _ARTIFACT_ALLOWED_HOSTS = {
 _ARTIFACT_MAX_BYTES = int(os.environ.get("ARTIFACT_MAX_BYTES", str(50 * 1024 * 1024)))
 
 # 成果物の配信方式（LGWAN 対応）。
-# - "open"    : 署名付き URL を outputs に直接リンクとして提示（開発・直接 DL 可能な環境向け）。
-# - "carrier" : 署名付き URL を UI に出さず、別途「リンクファイル(.txt/.html)」として
-#               持ち出させる（LGWAN 端末から成果物本体へ直接アクセスできない環境向け）。
-ARTIFACT_DELIVERY_MODE = (os.environ.get("ARTIFACT_DELIVERY_MODE", "open").strip().lower())
-if ARTIFACT_DELIVERY_MODE not in ("open", "carrier"):
-    ARTIFACT_DELIVERY_MODE = "open"
+# - "open"    : 常に署名付き URL を直接リンク（開発・直接 DL 可能な環境向け）。
+# - "carrier" : 常に「リンクファイル(.txt/.html)」で持ち出させる。
+# - "auto"    : Host が *.lgwan.jp なら carrier、それ以外は open。
+ARTIFACT_DELIVERY_MODE = artifact_delivery.normalize_mode(
+    os.environ.get("ARTIFACT_DELIVERY_MODE", "open")
+)
 # キャリアファイルの既定形式（"txt" / "html" / "both"）。"both" は UI からの format 指定で切替。
 ARTIFACT_CARRIER_FORMAT = (os.environ.get("ARTIFACT_CARRIER_FORMAT", "txt").strip().lower())
 if ARTIFACT_CARRIER_FORMAT not in ("txt", "html", "both"):
@@ -872,9 +884,11 @@ async def _rehost_artifacts(
         final_url = presigned or file_url
         # http(s) 以外(javascript:/data:/相対 等)はリンク化・成果物化しない（注入防止）
         safe_url = final_url if _is_http_url(final_url) else ""
-        # carrier モードでは自前ストレージに保存できた成果物の署名 URL を UI から隠し、
+        # carrier では自前ストレージに保存できた成果物の署名 URL を UI から隠し、
         # object_key 経由で別途「リンクファイル」を発行させる（LGWAN 端末は本体へ直接届かない）。
-        carrier = ARTIFACT_DELIVERY_MODE == "carrier" and bool(object_key)
+        carrier = artifact_delivery.use_carrier(
+            ARTIFACT_DELIVERY_MODE, request
+        ) and bool(object_key)
         art_out = {**a, "file_url": "" if carrier else safe_url}
         if object_key:
             art_out["object_key"] = object_key

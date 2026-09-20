@@ -30,6 +30,16 @@
 
 ## [Unreleased]
 
+### 🌐 Upstream 差分評価および成果物配信 auto モードの取り込み (2026-09-20)
+
+- **成果物配信における FQDN 自動判定 (`auto` モード) の導入 (Upstream 74998d2/a42a576 統合)**
+  - `backend/app/artifact_delivery.py` をチェリーピック・統合。
+  - HTTP リクエストの Host Header (`*.lgwan.jp`) に応じて成果物の直接リンク (`open`) とリンクファイル化 (`carrier`) を自動切り替え。
+  - ユニットテスト (`tests/test_artifact_delivery.py`) を配備。
+- **依存ライブラリのセキュリティ脆弱性解消**
+  - `pypdf`: `6.15.0` -> `6.16.2` (`backend`, `rag-app`, `tests`) (CVE-2026-84309, CVE-2026-84310, CVE-2026-84311 対策)
+  - `accelerate`: `1.14.0` -> `1.15.0` (`local-sd-api`) (PYSEC-2026-3804 対策)
+
 ### 🛡️ セキュリティ更新と脆弱性解消 (v0.6.1-patch)
 
 - **pypdf を 6.15.0 へアップグレード (Upstream 同期)**
