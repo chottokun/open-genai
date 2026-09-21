@@ -30,10 +30,17 @@
 
 ## [Unreleased]
 
-### 🛡️ セキュリティ更新と脆弱性解消 (v0.6.1-patch)
+### 🛡️ セキュリティ更新と脆弱性解消
 
-- **pypdf を 6.15.0 へアップグレード (Upstream 同期)**
-  - `backend/requirements.txt`, `rag-app/requirements.txt`, `tests/requirements.txt` の `pypdf` を `6.15.0` に更新し、既知の CVE 脆弱性 (CVE-2026-71852, CVE-2026-71870) を完全に解消。
+- **pypdf を 6.16.2 へ、accelerate を 1.15.0 へアップグレード (Upstream 同期)**
+  - `backend/requirements.txt`, `rag-app/requirements.txt`, `tests/requirements.txt` の `pypdf` を `6.16.2` に更新し、既知の CVE 脆弱性 (CVE-2026-71852, CVE-2026-71870, CVE-2026-84309, CVE-2026-84310, CVE-2026-84311) を完全に解消。
+  - `local-sd-api/requirements.txt` の `accelerate` を `1.15.0` に更新し、PYSEC-2026-3804 脆弱性を解消。
+
+### 🔄 Upstream 同期アセスメントおよびセキュリティ・回帰テスト検証 (2026年9月21日)
+
+- **Upstream 同期アセスメントの実施 (`docs/upstream-sync-report-eval-20260921.md`)**
+  - Upstream 最新コミット `0dc47ee` までの 30 コミットについて差分アセスメントを実施。
+  - 独立マイクロサービス群（`procuretech-*`）および特定庁舎用テナント管理（`tenants`）は Policy B に従い除外・保留とし、成果物自動判定モード等の共通コア機能は統合済みであることを確認。
 
 ### 🌐 LiteLLM Proxy からのモデル動的取得・UIカテゴリ分離・動的パラメータ描画アーキテクチャ設計仕様
 
