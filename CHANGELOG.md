@@ -30,6 +30,16 @@
 
 ## [Unreleased]
 
+### 🔄 Upstream 同期アセスメントおよびUX/バグ修正の選択的取り込み (v0.10.0+ 評価)
+
+- **未登録ローカルモデルでのチャット添付対応**
+  - メタデータ未登録のローカル AI モデル選択時にもドキュメント添付ボタンが有効化されるよう、フォールバック判定フック (`useFileUploadable.ts`) を導入。
+- **Keycloak 利用者一括管理 (usermgmt-app) の日本語 CSV 支援**
+  - CSV 一括登録での日本語見出しエイリアス (`姓`, `名`, `family_name`, `given_name`) に対応。
+  - `name`（表示名）列で「山田 太郎」のように空白区切りの場合に Keycloak の `lastName`（山田）と `firstName`（太郎）へ自動分割して読み込む処理を追加。
+- **Upstream コミット群 (`0dc47ee`..`aeab167`) の評価**
+  - Upstream で追加された独立マイクロサービス群（`procuretech-editor`, `tenants` 棟分離, `pptx-*` プレゼン生成等）について評価を実施。LGWAN 閉域網セキュリティ境界および LiteLLM ゲートウェイ一元化ポリシーに基づき保留（方針B）とし、安全な UX/バグ修正のみを選択統合。評価結果を `docs/upstream-sync-report-eval-20260922.md` にドキュメント化。
+
 ### 🛡️ セキュリティ更新と脆弱性解消 (v0.6.1-patch)
 
 - **pypdf を 6.15.0 へアップグレード (Upstream 同期)**
