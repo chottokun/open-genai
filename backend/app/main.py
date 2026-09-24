@@ -203,11 +203,19 @@ RAG_MAINTAIN_SEED: dict[str, Any] = {
 
 # 文字起こし(Whisper) AI アプリ
 WHISPER_APP_URL = os.environ.get("WHISPER_APP_URL", "http://whisper-app:8002/invoke")
+# アップロード欄の表示は audio/* / video/* で代表的な案内に縮約する。
+# 拡張子は使い方の表にある形式を落とさないためのフォールバック。
+_WHISPER_ACCEPT = (
+    "audio/*,video/*,"
+    ".mp3,.wav,.m4a,.aac,.flac,.ogg,.mp4,.webm,"
+    ".opus,.wma,.aiff,.aif,.amr,.3gp,.mkv,.mov,.avi,.mpeg,.mpg"
+)
 _WHISPER_FORM = (
     '{'
-    '"audio":{"type":"file","title":"音声ファイル",'
-    '"desc":"文字起こしする音声を添付してください。",'
-    '"accept":"audio/*,.mp3,.wav,.m4a,.aac,.flac,.ogg","multiple":false,"required":true},'
+    '"audio":{"type":"file","title":"音声・動画ファイル",'
+    '"desc":"文字起こしする音声または動画を添付してください（目安180MBまで）。'
+    '代表例: mp3 / wav / m4a / mp4 / webm。対応形式の一覧は使い方を参照。",'
+    f'"accept":"{_WHISPER_ACCEPT}","multiple":false,"required":true}},'
     '"language":{"type":"select","title":"言語",'
     '"items":[{"title":"自動判定","value":"auto"},{"title":"日本語","value":"ja"},'
     '{"title":"英語","value":"en"}],"default_value":"auto"}'
@@ -221,14 +229,39 @@ WHISPER_SEED: dict[str, Any] = {
     "apiKey": RAG_API_KEY,
     "config": "",
     "placeholder": _WHISPER_FORM,
-    "description": "音声ファイルをテキストに書き起こします（タイムスタンプ付き）。",
+    "description": "音声・動画ファイルをテキストに書き起こします（タイムスタンプ付き）。",
     "howToUse": (
         "## このアプリでできること\n\n"
-        "会議やインタビューの録音などの音声ファイルを、テキストに書き起こします。"
+        "会議やインタビューの録音などの音声・動画ファイルを、テキストに書き起こします。"
         "音声はクラウドに送信されないため、機微な内容も扱えます。\n\n"
+        "実際に読める形式は、PyAV の同梱 FFmpeg がデコードできるものが上限です。"
+        "実務上は次が通ります。\n\n"
+        "### 音声\n\n"
+        "| 形式 | 拡張子の例 | 備考 |\n"
+        "| --- | --- | --- |\n"
+        "| MP3 | `.mp3` | 問題なく読める |\n"
+        "| WAV / PCM | `.wav` | 問題なく読める |\n"
+        "| FLAC | `.flac` | 問題なく読める |\n"
+        "| AAC | `.aac` | 問題なく読める |\n"
+        "| M4A / MP4音声 | `.m4a`, `.mp4` | AAC / ALAC が多い |\n"
+        "| Ogg Vorbis | `.ogg` | 問題なく読める |\n"
+        "| Opus | `.opus`, `.ogg` | 問題なく読める |\n"
+        "| WMA | `.wma` | だいたい読める |\n"
+        "| AIFF | `.aiff`, `.aif` | だいたい読める |\n"
+        "| AMR | `.amr`, `.3gp` | 電話音声。読めることが多い |\n\n"
+        "### 動画（音声トラックを抽出）\n\n"
+        "| 形式 | 拡張子の例 |\n"
+        "| --- | --- |\n"
+        "| MP4 | `.mp4` |\n"
+        "| WebM | `.webm` |\n"
+        "| MKV | `.mkv` |\n"
+        "| MOV | `.mov` |\n"
+        "| AVI | `.avi` |\n"
+        "| MPEG | `.mpeg`, `.mpg` |\n\n"
+        "動画でも、中に音声があれば文字起こしできます。\n\n"
         "## 操作手順\n\n"
-        "1. 「音声ファイル」に録音データを添付します"
-        "（mp3 / wav / m4a / aac / flac / ogg）。\n"
+        "1. 「音声・動画ファイル」に録音データまたは動画を添付します"
+        "（代表例: mp3 / wav / m4a / mp4 / webm。対応形式の一覧は上記）。\n"
         "2. 「言語」を選びます（迷ったら「自動判定」でOK。日本語/英語は明示指定も可）。\n"
         "3. 「実行」を押すと、タイムスタンプ付きの文字起こし結果が表示されます。\n\n"
         "## コツ・注意\n\n"
