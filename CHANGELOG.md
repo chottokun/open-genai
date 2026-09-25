@@ -30,6 +30,9 @@
 
 ## [Unreleased]
 
+- upstream 最新コミット（`31e8ead`〜`3c0ef4d`）の評価を実施（評価レポート: `docs/upstream-sync-report-eval-20260925.md`）
+- `pypdf` を 6.16.2、`accelerate` を 1.15.0 に更新し、既知脆弱性（PYSEC-2026-3910, PYSEC-2026-3911, PYSEC-2026-3913, PYSEC-2026-3804）を完全解消
+
 ### 🛡️ セキュリティ更新と脆弱性解消 (v0.6.1-patch)
 
 - **pypdf を 6.15.0 へアップグレード (Upstream 同期)**
