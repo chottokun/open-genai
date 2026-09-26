@@ -30,6 +30,13 @@
 
 ## [Unreleased]
 
+### 🛡️ セキュリティ更新と依存ライブラリ脆弱性解消 (2026-09-26)
+
+- **pypdf 6.16.2 および accelerate 1.15.0 へのアップグレード (Upstream 評価同期)**
+  - `backend/requirements.txt`, `rag-app/requirements.txt`, `tests/requirements.txt` の `pypdf` を `6.16.2` に更新し、既知の CVE 脆弱性 (CVE-2026-84309, CVE-2026-84310, CVE-2026-84311) を完全に解消。
+  - `local-sd-api/requirements.txt` の `accelerate` を `1.15.0` に更新し、PYSEC-2026-3804 を解消。
+  - 全 13 個の Python 依存ファイルについて `pip-audit` を実行し、脆弱性 0 件 (100% CLEAN) を確認。
+
 ### 🛡️ セキュリティ更新と脆弱性解消 (v0.6.1-patch)
 
 - **pypdf を 6.15.0 へアップグレード (Upstream 同期)**
