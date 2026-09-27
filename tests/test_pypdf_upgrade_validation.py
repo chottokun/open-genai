@@ -1,6 +1,6 @@
-"""pypdf 6.15.0 アップグレード後の実働テスト。
+"""pypdf 6.16.2 アップグレード後の実働テスト。
 
-CVE-2026-71852 / CVE-2026-71870 対応のバージョン検証、および
+CVE-2026-84309 / CVE-2026-84310 / CVE-2026-84311 対応のバージョン検証、および
 docextract 経由の PDF 処理の回帰・エッジケーステスト。
 """
 from __future__ import annotations
@@ -27,11 +27,11 @@ class TestPypdfVersion:
     """pypdf がセキュリティパッチ済みバージョンであることを検証する。"""
 
     def test_pypdf_version_is_6_15_0_or_later(self) -> None:
-        """CVE-2026-71852/CVE-2026-71870 修正版 (>=6.15.0) であること。"""
+        """CVE-2026-84309/CVE-2026-84310/CVE-2026-84311 修正版 (>=6.16.2) であること。"""
         parts = pypdf.__version__.split(".")
         major, minor, patch = int(parts[0]), int(parts[1]), int(parts[2])
-        assert (major, minor, patch) >= (6, 15, 0), (
-            f"pypdf {pypdf.__version__} は脆弱性修正版 6.15.0 以上が必要です"
+        assert (major, minor, patch) >= (6, 16, 2), (
+            f"pypdf {pypdf.__version__} は脆弱性修正版 6.16.2 以上が必要です"
         )
 
     def test_pypdf_imports_cleanly(self) -> None:

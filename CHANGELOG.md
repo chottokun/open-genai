@@ -30,6 +30,15 @@
 
 ## [Unreleased]
 
+### 🔄 Upstream v0.11.0 同期評価およびセキュリティ依存ライブラリ更新 (2026-09-27)
+
+- **`pypdf` 6.16.2 および `accelerate` 1.15.0 へのセキュリティアップグレード**
+  - `backend/requirements.txt`, `rag-app/requirements.txt`, `tests/requirements.txt` の `pypdf` を `6.16.2` に更新し、既知の CVE 脆弱性 (`PYSEC-2026-3910`, `PYSEC-2026-3911`, `PYSEC-2026-3913`) を完全解消。
+  - `local-sd-api/requirements.txt` の `accelerate` を `1.15.0` に更新し、既知の脆弱性 (`PYSEC-2026-3804`) を解消。
+- **Upstream (v0.11.0 / commit `0f4f088`) 適合性アセスメントの実施 (`docs/upstream-sync-report-v0.11.0-eval-20260927.md`)**
+  - 公式 Upstream の v0.11.0 リリース（`sengoku-app`, `ssh-app` asyncssh 修正, `tenants` 組織棟分離など）を詳細に評価。
+  - 方針B（地方自治体・閉域網セキュリティ優先ポリシー、LiteLLM 一元管理）に基づき、不必要なスタンドアロンマイクロサービスや大規模マルチテナント構造の直接マージを見送り、全 13 個の requirements ファイルで `pip-audit` 脆弱性 0 件およびテスト 100% SUCCESS を実証・確定。
+
 ### 🛡️ セキュリティ更新と脆弱性解消 (v0.6.1-patch)
 
 - **pypdf を 6.15.0 へアップグレード (Upstream 同期)**
