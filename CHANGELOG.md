@@ -30,10 +30,17 @@
 
 ## [Unreleased]
 
-### 🛡️ セキュリティ更新と脆弱性解消 (v0.6.1-patch)
+### 🛡️ セキュリティ更新と脆弱性解消 (2026-09-29)
 
-- **pypdf を 6.15.0 へアップグレード (Upstream 同期)**
-  - `backend/requirements.txt`, `rag-app/requirements.txt`, `tests/requirements.txt` の `pypdf` を `6.15.0` に更新し、既知の CVE 脆弱性 (CVE-2026-71852, CVE-2026-71870) を完全に解消。
+- **pypdf を 6.16.2 へ、accelerate を 1.15.0 へアップグレード**
+  - `backend/requirements.txt`, `rag-app/requirements.txt`, `tests/requirements.txt` の `pypdf` を `6.16.2` に更新し、既知の CVE 脆弱性 (CVE-2026-84309, CVE-2026-84310, CVE-2026-84311) を解消。
+  - `local-sd-api/requirements.txt` の `accelerate` を `1.15.0` に更新し、既知の CVE 脆弱性 (PYSEC-2026-3804) を解消。
+  - `scripts/audit-python-deps.sh` スキャンで 13 ファイル全域の既知脆弱性 **0件** を達成。
+
+### 🎨 Web UX 改善・フォールバック補修 (Upstream 同期)
+
+- **Web アプリ初期ロード時の白紙画面防止 (`313df96` 補修)**
+  - `useFetchExApps` の `suspense: true` 設定を解除し、初期ロード中およびアプリ一覧取得中に画面全体が白紙化するのを防ぐローディング表示フォールバックを追加。
 
 ### 🌐 LiteLLM Proxy からのモデル動的取得・UIカテゴリ分離・動的パラメータ描画アーキテクチャ設計仕様
 

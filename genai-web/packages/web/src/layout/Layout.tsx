@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router';
 import { Footer } from '@/components/ui/Footer';
 import { Header } from '@/components/ui/Header';
@@ -14,12 +15,20 @@ export const Layout = () => {
   useScrollRestoration();
 
   return (
-    <div id='layoutRoot' className='flex min-h-dvh w-screen flex-col'>
-      <Header className='sticky top-0 z-10' isLandingPage={pathname === '/'} />
-      <main id='mainContents' className='flex-1'>
-        <Outlet />
-      </main>
-      {!hideFooter && <Footer />}
-    </div>
+    <Suspense
+      fallback={
+        <div className='flex min-h-dvh items-center justify-center text-std-18N-160 text-solid-gray-800'>
+          読み込み中…
+        </div>
+      }
+    >
+      <div id='layoutRoot' className='flex min-h-dvh w-screen flex-col'>
+        <Header className='sticky top-0 z-10' isLandingPage={pathname === '/'} />
+        <main id='mainContents' className='flex-1'>
+          <Outlet />
+        </main>
+        {!hideFooter && <Footer />}
+      </div>
+    </Suspense>
   );
 };
