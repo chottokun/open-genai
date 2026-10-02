@@ -30,6 +30,15 @@
 
 ## [Unreleased]
 
+### 🔄 Upstream 同期アセスメント & セキュリティ依存更新 (2026-10-02)
+
+- **PyJWT セキュリティ更新 (2.15.1)**
+  - `backend/requirements.txt` および `tests/requirements.txt` の `PyJWT` を 2.15.1 に上げ、既知の脆弱性 (PYSEC-2026-4140〜4152) を解消。
+- **日本語表示名(非ASCII)ログイン直後のログイン画面バウンス防止**
+  - `backend/app/main.py` 内 `auth_middleware` の例外ハンドリングを修復し、認証トークン検証後の処理例外で 401（ログアウト扱い）へ落ちる不具合を解消。
+- **フロントエンド SWR ローディングフォールバック & Suspense 白紙防止**
+  - `useFetchExApps.ts` で `suspense: false` に設定し、`Layout.tsx` および `main.tsx` に Suspense フォールバックを追加。
+
 ### 🛡️ セキュリティ更新と脆弱性解消 (v0.6.1-patch)
 
 - **pypdf を 6.15.0 へアップグレード (Upstream 同期)**

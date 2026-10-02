@@ -1,5 +1,6 @@
 pytest==9.0.3
 httpx==0.28.1
-pypdf==6.15.0
+pypdf==6.16.2
 openai
 pytest-asyncio
+PyJWT==2.15.1
