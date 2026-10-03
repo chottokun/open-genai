@@ -1026,9 +1026,12 @@ async def auth_middleware(request: Request, call_next):
     if authz.startswith("Bearer "):
         try:
             auth.verify_token(authz[7:])
-            return await call_next(request)
         except Exception:  # noqa: BLE001 # nosec B110 - トークン不正は 401 に集約
             pass
+        else:
+            # トークン検証のあとで起きた例外は 401 にしない。
+            # ここに含めると、プロフィール取得の失敗がログアウトになる。
+            return await call_next(request)
 
     return JSONResponse(
         status_code=401,

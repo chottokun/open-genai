@@ -30,6 +30,19 @@
 
 ## [Unreleased]
 
+### 🛡️ セキュリティ更新・認証バグ修正・UI表示改善 (2026-10-02 Upstream 評価・同期)
+
+- **PyJWT / pypdf / accelerate のセキュリティ脆弱性更新 (Upstream 同期)**
+  - `PyJWT` を `2.15.1` へ更新し、既知の脆弱性 (PYSEC-2026-4141 等) を解消。
+  - `pypdf` を `6.16.2` へ更新し、PDF 抽出・脆弱性対応を維持。
+  - `accelerate` を `1.15.0` へ更新。
+  - `scripts/audit-python-deps.sh` で全 13 個の requirements.txt スキャンにおいて脆弱性検出 **0件** を確認。
+- **認証ミドルウェア例外処理およびヘッダー安全性向上**
+  - `backend/app/main.py` の `auth_middleware` において、トークン検証後に発生した例外を 401 Unauthorized に集約しないよう修正。プロフィール取得失敗等による不意のログアウトを防止。
+- **UI表示・SWR suspense 改善**
+  - `useFetchExApps.ts` において `suspense: false` へ変更し、ヘッダー/サイドナビ読み込み時の画面全白紙化を防止。
+  - `Layout.tsx` および `main.tsx` にグラディエントなローディング・遷移メッセージ（「読み込み中…」「ログイン画面へ移動しています…」）を追加。
+
 ### 🛡️ セキュリティ更新と脆弱性解消 (v0.6.1-patch)
 
 - **pypdf を 6.15.0 へアップグレード (Upstream 同期)**
