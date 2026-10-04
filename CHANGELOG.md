@@ -30,10 +30,13 @@
 
 ## [Unreleased]
 
-### 🛡️ セキュリティ更新と脆弱性解消 (v0.6.1-patch)
+### 🛡️ Upstream v0.12.0 評価・セキュリティ更新・依存ライブラリ脆弱性解消
 
-- **pypdf を 6.15.0 へアップグレード (Upstream 同期)**
-  - `backend/requirements.txt`, `rag-app/requirements.txt`, `tests/requirements.txt` の `pypdf` を `6.15.0` に更新し、既知の CVE 脆弱性 (CVE-2026-71852, CVE-2026-71870) を完全に解消。
+- **pypdf 6.19.0 / accelerate 1.15.0 へのアップグレード (Upstream 同期)**
+  - `backend/requirements.txt`, `rag-app/requirements.txt`, `tests/requirements.txt` の `pypdf` を `6.19.0` に更新し、既知の CVE 脆弱性 (PYSEC-2026-3910, 3911, 3913, 4153, 4154, 4155, 4156, 4157, 4158, 4159, 4160) を完全解消。
+  - `local-sd-api/requirements.txt` の `accelerate` を `1.15.0` に更新し、PYSEC-2026-3804 を解消。
+  - Upstream v0.12.0（コミット `27a66c0` まで）の評価結果を `docs/upstream-sync-report-eval-20261004.md` に記載。独立マイクロサービス（`nishukan-app` / `jigyo` 2週間の仕事 等）は LGWAN 閉域境界維持ポリシーに基づき保留（Policy B）。
+  - `scripts/audit-python-deps.sh` による全13ファイル依存脆弱性スキャン 0 件（100% CLEAN）、バックエンド pytest (109 passed / 14 pypdf validation passed) およびフロントエンド Vitest (631 passed) 100% 合格を実測・検証済み。
 
 ### 🌐 LiteLLM Proxy からのモデル動的取得・UIカテゴリ分離・動的パラメータ描画アーキテクチャ設計仕様
 
