@@ -30,10 +30,15 @@
 
 ## [Unreleased]
 
-### 🛡️ セキュリティ更新と脆弱性解消 (v0.6.1-patch)
+### 🛡️ セキュリティ更新と脆弱性解消 (v0.12.0 Upstream 評価同期)
 
-- **pypdf を 6.15.0 へアップグレード (Upstream 同期)**
-  - `backend/requirements.txt`, `rag-app/requirements.txt`, `tests/requirements.txt` の `pypdf` を `6.15.0` に更新し、既知の CVE 脆弱性 (CVE-2026-71852, CVE-2026-71870) を完全に解消。
+- **依存パッケージの脆弱性解消アップグレード (Upstream v0.12.0 同期)**
+  - `backend/requirements.txt`, `rag-app/requirements.txt`, `tests/requirements.txt` の `pypdf` を `6.19.0` に更新（CVE-2026-4153, CVE-2026-4157, CVE-2026-4159, CVE-2026-4160 等を解消）。
+  - `backend/requirements.txt`, `tests/requirements.txt` の `PyJWT` を `2.15.1` に更新（PYSEC-2026-4140 〜 4152 を解消）。
+  - `local-sd-api/requirements.txt` の `accelerate` を `1.15.0` に更新。
+  - `scripts/audit-python-deps.sh` にて全 13 個の Python 依存定義ファイルをスキャンし、脆弱性 0 件であることを検証完了。
+- **Upstream v0.12.0 評価レポートの作成 (`docs/upstream-sync-report-v0.12.0-eval-20261005.md`)**
+  - Upstream v0.12.0（コミット `27a66c0`）までの新機能マイクロサービス（`jigyo`/`nishukan-app`, `diagram-drawio`, `tenants` 棟制御）を評価。閉域自治体（LGWAN）セキュリティ境界および LiteLLM ゲートウェイ一元化方針（Policy B）に従い保留判定としてドキュメント化。
 
 ### 🌐 LiteLLM Proxy からのモデル動的取得・UIカテゴリ分離・動的パラメータ描画アーキテクチャ設計仕様
 
