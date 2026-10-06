@@ -30,6 +30,13 @@
 
 ## [Unreleased]
 
+### 🛡️ セキュリティ更新と脆弱性解消 (v0.12.0 Upstream Evaluation & Security Sync)
+
+- **Upstream 同期評価とセキュリティ依存ライブラリ更新 (v0.12.0)**
+  - 公式 Upstream の v0.12.0 リリース (`27a66c0`) までのコミット群を評価。
+  - セキュリティパッチとして `pypdf` を `6.19.0` に、`PyJWT` を `2.15.1` に、`accelerate` を `1.15.0` に更新し、13 の Python 依存ファイルすべてで `pip-audit` 既知脆弱性 0 件を達成。
+  - `docs/upstream-sync-report-v0.12.0-eval-20261006.md` に評価内容および領域分析をドキュメント化。
+
 ### 🛡️ セキュリティ更新と脆弱性解消 (v0.6.1-patch)
 
 - **pypdf を 6.15.0 へアップグレード (Upstream 同期)**
