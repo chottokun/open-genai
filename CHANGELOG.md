@@ -30,6 +30,17 @@
 
 ## [Unreleased]
 
+### 🔄 Upstream v0.12.0 同期評価およびセキュリティ依存関係アップグレード (2026-10-07)
+
+- **Upstream (v0.12.0 / `379e840`) アセスメントと評価レポートの作成 (`docs/upstream-sync-report-v0.12.0-eval-20261007.md`)**
+  - 公式 Upstream の最新コミット群について評価を実施。
+  - セキュリティ境界（LGWAN閉域網）の保護および LiteLLM Proxy による中央集項アーキテクチャ維持の方針（方針 B）に従い、セキュリティ依存パッチを個別チェリーピックし、独立マイクロサービス（`jigyo`, `diagram-drawio`, `tenants` 等）は保留。
+- **セキュリティ依存ライブラリのアップデート (100% Vulnerability-Free)**
+  - `pypdf` を `6.19.0`（`backend`, `rag-app`, `tests`）に昇格し、`PYSEC-2026-4153` 等の既知脆弱性を解消。
+  - `PyJWT` を `2.15.1`（`backend`, `tests`）に昇格し、`PYSEC-2026-4145` 等の既知脆弱性を解消。
+  - `accelerate` を `1.15.0`（`local-sd-api`）に昇格。
+  - 13 個の Python 依存定義ファイルにおいて `pip-audit` による脆弱性 **0 件** を達成。
+
 ### 🛡️ セキュリティ更新と脆弱性解消 (v0.6.1-patch)
 
 - **pypdf を 6.15.0 へアップグレード (Upstream 同期)**
