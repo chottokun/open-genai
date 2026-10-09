@@ -30,6 +30,13 @@
 
 ## [Unreleased]
 
+### 🔄 Upstream 同期・アセスメント評価（v0.12.0 / `379e840` 同期アセスメント）
+
+- **Upstream 最新コミット評価および同期判断 (`docs/upstream-sync-report-v0.12.0-eval-20261009.md`)**
+  - フォーク元（`upstream: https://github.com/hirokawaguchi/open-genai`）の最新コミット群（v0.12.0 `379e840` / PR #117 まで）に対する影響評価を実施。
+  - 本開発環境の LGWAN 閉域網セキュリティ境界と LiteLLM Proxy 集中化方針（方針B）に従い、新機能マイクロサービス群（`nishukan-app` / `jigyo` 2週間の仕事、`diagram-drawio` ダイアグラム作図、`tenants` 棟別制御）のマージ見送りを決定・検証。
+  - 全13個の依存関係ファイル（`requirements.txt`）のセキュリティ脆弱性スキャンおよびバックエンド・フロントエンド回帰テスト全件 Pass（100% 成功）を確認。
+
 ### 🛡️ セキュリティ更新と脆弱性解消 (v0.6.1-patch)
 
 - **pypdf を 6.15.0 へアップグレード (Upstream 同期)**
