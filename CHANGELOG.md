@@ -30,6 +30,17 @@
 
 ## [Unreleased]
 
+### 🔄 Upstream 同期アセスメントおよびセキュリティ依存関係更新 (Upstream v0.12.0 評価完了)
+
+- **Upstream v0.12.0 (コミット `379e840`) 差分アセスメントの実施 (`docs/upstream-sync-report-v0.12.0-eval-20261010.md`)**
+  - Upstream の最新変更（v0.12.0 `379e840` / PR #117 まで）に対する影響評価を実施。
+  - 本開発ブランチの方針（方針B：LGWAN閉域網境界の維持および LiteLLM 統合プロキシアーキテクチャ）に基づき、上流のスタンドアロン独立マイクロサービス群（`nishukan-app`/`jigyo` 2週間の仕事、`diagram-drawio`、`tenants` 棟別制御）の取り込みは見送り判断。
+- **セキュリティ依存ライブラリのパッチ適用と脆弱性監査 (100% CLEAN)**
+  - `pypdf` (`6.19.0`)、`PyJWT` (`2.15.1`)、`accelerate` (`1.15.0`) へバージョンを更新。
+  - `scripts/audit-python-deps.sh` を用いて 13 個の Python 依存定義（requirements.txt）を詳細スキャンし、既知脆弱性 **0件** (100% CLEAN) であることを確認。
+- **全体品質・回帰テスト検証の徹底 (100% PASSED)**
+  - `scripts/run-regression-tests.sh` および全 Vitest スイートを実行し、Python バックエンドテスト (pytest 109件) および React フロントエンドテスト (Vitest 631件) が全件 **PASSED** することを確認。
+
 ### 🛡️ セキュリティ更新と脆弱性解消 (v0.6.1-patch)
 
 - **pypdf を 6.15.0 へアップグレード (Upstream 同期)**
