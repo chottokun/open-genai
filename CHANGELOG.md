@@ -30,10 +30,12 @@
 
 ## [Unreleased]
 
-### 🛡️ セキュリティ更新と脆弱性解消 (v0.6.1-patch)
+### 🛡️ セキュリティ更新と Upstream 同期アセスメント (2026-10-12)
 
-- **pypdf を 6.15.0 へアップグレード (Upstream 同期)**
-  - `backend/requirements.txt`, `rag-app/requirements.txt`, `tests/requirements.txt` の `pypdf` を `6.15.0` に更新し、既知の CVE 脆弱性 (CVE-2026-71852, CVE-2026-71870) を完全に解消。
+- **pypdf を 6.19.0 へアップグレード (Upstream `cef6b9d` 同期)**
+  - `backend/requirements.txt`, `rag-app/requirements.txt`, `tests/requirements.txt` の `pypdf` を `6.19.0` に更新し、既知の CVE 脆弱性 (PYSEC-2026-4153, PYSEC-2026-4160 等) を完全に解消。
+- **Upstream 同期アセスメントの実施 (`docs/upstream-sync-report-eval-20261012.md`)**
+  - Upstream コミット `126d6ef` (v0.12.0 / LMS 関連更新) までの差分評価を実施。閉域 LGWAN 安全境界および LiteLLM ゲートウェイ統合方針（方針 B）に従い、安全なセキュリティパッチのみを選択的統合し、マイクロサービスは保留。
 
 ### 🌐 LiteLLM Proxy からのモデル動的取得・UIカテゴリ分離・動的パラメータ描画アーキテクチャ設計仕様
 
